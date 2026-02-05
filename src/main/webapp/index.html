@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOS: Sea of Shipwrecks</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #0b0433;
+      color: white;
+      text-align: center;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 3rem;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .btn {
+      padding: 0.6rem 1.4rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+      opacity: 0.9;
+    }
+
+    .btn-login {
+      background-color: #007a88;
+      color: white;
+    }
+
+    .btn-signup {
+      background-color: #9b4de3;
+      color: white;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 80vh;
+    }
+
+    .title {
+      font-size: 3rem;
+      font-family: "Papyrus", fantasy;
+      color: #1bb6d1;
+      margin-bottom: 1.5rem;
+    }
+
+    .ship {
+      width: 350px;
+      max-width: 80%;
+      margin-bottom: 2rem;
+    }
+
+    .description {
+      font-size: 1rem;
+      font-weight: 500;
+      width: 80%;
+      max-width: 700px;
+      line-height: 1.6;
+    }
+
+    footer {
+      padding: 1rem;
+      font-weight: bold;
+      color: #d0d0d0;
+      border-top: 1px solid #222;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SOS: Sea of Shipwrecks</h1>
+    <div class="buttons">
+      <button class="btn btn-login" onclick="window.location.href='pages/login.jsp'">Iniciar Sesion</button>
+      <button class="btn btn-signup" onclick="window.location.href='pages/signup.jsp'">Registrarse</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="title">Sea Of Shipwrecks</div>
+    <img src="Images/ship.png" alt="Barco en llamas" class="ship">
+    <p class="description">
+      Sea of Shipwrecks es un juego 1vs1 competitivo en el que dos jugadores se enfrentaran al clÃ¡sico juego de hundir la flota.
+    </p>
+  </main>
+
+  <footer>
+    UNIZAR 2025
+  </footer>
+</body>
+</html>
