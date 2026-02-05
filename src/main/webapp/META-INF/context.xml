@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context>
+    <Resource name="jdbc/MiDataSource"
+        auth="Container"
+        type="javax.sql.DataSource"
+        factory="org.apache.tomcat.jdbc.pool.DataSourceFactory"
+        driverClassName="org.postgresql.Driver"
+        url="jdbc:postgresql://localhost:5432/postgres"
+        username="postgres"
+        password="postgres"
+        maxActive="20"
+        maxIdle="10"
+        maxWait="10000"
+        validationQuery="SELECT 1"
+    />
+</Context>
