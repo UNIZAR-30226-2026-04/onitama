@@ -1,0 +1,14 @@
+services:
+  database:
+    image: postgis/postgis:17-3.4
+    container_name: proy-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata_pr3:/var/lib/postgresql/data
+volumes:
+  pgdata_pr3:
