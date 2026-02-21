@@ -25,7 +25,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
     
-    public boolean registrarse(Jugador jugador) throws SQLException {
+    public boolean registrarse(JugadorVO jugador) throws SQLException {
         final String sql = "INSERT INTO Jugador (Correo, Nombre_US, Contrasena_Hash, Puntos) VALUES (?, ?, ?, ?)";
         
         try (Connection conn = dataSource.getConnection();
@@ -110,23 +110,6 @@ public final class JugadorJDBC implements JugadorDAO {
         return amigos;
     }
 
-    public List<Jugador> sacarJugadoresDisp() throws SQLException {
-        final String sql = "SELECT * FROM Jugador";
-
-        List<Jugador> jugadores = new ArrayList<>();
-
-        try (Connection conn = dataSource.getConnection();
-            PreparedStatement p = conn.prepareStatement(sql)) {
-
-            try (ResultSet rs = p.executeQuery()) {
-                while (rs.next()) {
-                    jugadores.add(montarJugador(rs));
-                }
-            }
-        }
-        return jugadores;
-    }
-
     public boolean anyadirAmigo(String miNombre, String nombreAmigo) throws SQLException {
         final String sql = "INSERT INTO Amistades (Jugador_1, Jugador_2) VALUES (?, ?)";
         
@@ -175,7 +158,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
-    public void borrar(String nombreUS) throws SQLException {
+    public void delete(String nombreUS) throws SQLException {
         final String sql = "DELETE FROM Jugador WHERE Nombre_US = ?";
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -185,7 +168,7 @@ public final class JugadorJDBC implements JugadorDAO {
     }
 
     //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo Jugador
-    private Jugador montarJugador(ResultSet rs) throws SQLException {
+    private JugadorVO montarJugador(ResultSet rs) throws SQLException {
         return new Jugador(
             rs.getString("Correo"),
             rs.getString("Nombre_US"),
