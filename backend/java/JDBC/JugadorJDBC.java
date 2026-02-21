@@ -1,3 +1,5 @@
+package JDBC;
+
 import java.sql.*;
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -5,23 +7,26 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 import java.util.List;
 import java.util.ArrayList;
+import VO.Jugador;
 
-public final class JugadorJDBC implements JugadorDAO {
+public final class JugadorJDBC{
 
     private final DataSource dataSource;
 
     public JugadorJDBC() {
         try {
-            Context initialContext = new InitialContext();
-            // "java:comp/env" es el entorno de nombres específico de esta aplicación
-            Context envContext = (Context) initialContext.lookup("java:comp/env");
-            // Busca la referencia definida en context.xml / web.xml
-            this.dataSource = (DataSource) envContext.lookup("jdbc/MiDataSource");
+            String url = "jdbc:postgresql://localhost:5432/postgres"; 
+            String user = "postgres";
+            String password = "postgres";
             
-        } catch (NamingException e) {
-            System.err.println("ERROR FATAL: No se pudo obtener el recurso JNDI 'jdbc/MiDataSource'.");
-            e.printStackTrace();
-            throw new RuntimeException("Fallo al inicializar la conexión con la BD.", e);
+            org.postgresql.ds.PGSimpleDataSource ds = new org.postgresql.ds.PGSimpleDataSource();
+            ds.setURL(url);
+            ds.setUser(user);
+            ds.setPassword(password);
+            this.dataSource = ds;
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Error al conectar manualmente", e);
         }
     }
     
@@ -32,8 +37,8 @@ public final class JugadorJDBC implements JugadorDAO {
             PreparedStatement ps = conn.prepareStatement(sql)) {
             
             ps.setString(1, jugador.getCorreo());
-            ps.setString(2, jugador.getNombreUS());
-            ps.setString(3, jugador.getContrasenaHash());
+            ps.setString(2, jugador.getNombre());
+            ps.setString(3, jugador.getContrasenya());
             ps.setInt(4, jugador.getPuntos());
             int filasAfectadas = ps.executeUpdate();
             return filasAfectadas > 0;
@@ -79,7 +84,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
-    public boolean updateCorreo(String nombreUS, int nuevoCorreo) throws SQLException {
+    public boolean updateCorreo(String nombreUS, String nuevoCorreo) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Puntos = ? WHERE Nombre_US = ?")) { 
             p.setString(1, nuevoCorreo); 
