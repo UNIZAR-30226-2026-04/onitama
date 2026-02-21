@@ -2,12 +2,12 @@ CREATE TABLE Jugador (
     Correo VARCHAR(255) UNIQUE,
     Nombre_US VARCHAR(100) PRIMARY KEY,
     Contrasena_Hash VARCHAR(255),
-    Puntos INT
+    Puntos INTEGER
 );
 
 CREATE TABLE Skin (
     Nombre VARCHAR(50) PRIMARY KEY,
-    Precio INT,
+    Precio INTEGER,
     Color_tablero VARCHAR(20),
     Color_Fichas_Aliadas VARCHAR(20),
     Color_Fichas_Enemigas VARCHAR(20)
@@ -21,18 +21,18 @@ CREATE TABLE Cartas_Mov (
 CREATE TABLE Cartas_Accion (
     Nombre VARCHAR(50) PRIMARY KEY,
     Accion TEXT,
-    Puntos_min INT
+    Puntos_min INTEGER
 );
 
 CREATE TABLE Partida (
-    ID_Partida INT PRIMARY KEY,
+    ID_Partida SERIAL PRIMARY KEY, --Asignacion automatica del id
     Estado VARCHAR(20),
-    Tiempo INT,
+    Tiempo INTEGER,
     Tipo VARCHAR(20),
     Pos_Fichas_Eq1 TEXT,
     Pos_Fichas_Eq2 TEXT,
-    FichasMuertas1 INT,
-    FichasMuertas2 INT,
+    FichasMuertas1 INTEGER,
+    FichasMuertas2 INTEGER,
     J1 VARCHAR(255),
     J2 VARCHAR(255),
     Es_Ganador_J1 BOOLEAN,
@@ -58,7 +58,7 @@ CREATE TABLE Amistades (
 );
 
 CREATE TABLE Partida_Cartas_Mov (
-    ID_Partida INT,
+    ID_Partida INTEGER,
     ID_Carta_Mov VARCHAR(50),
     Estado VARCHAR(20),
     PRIMARY KEY (ID_Partida, ID_Carta_Mov),
@@ -67,10 +67,19 @@ CREATE TABLE Partida_Cartas_Mov (
 );
 
 CREATE TABLE Partida_Cartas_Accion (
-    ID_Partida INT,
+    ID_Partida INTEGER,
     ID_Carta_Accion VARCHAR(50),
     Estado VARCHAR(20),
     PRIMARY KEY (ID_Partida, ID_Carta_Accion),
     FOREIGN KEY (ID_Partida) REFERENCES Partida(ID_Partida),
     FOREIGN KEY (ID_Carta_Accion) REFERENCES Cartas_Accion(Nombre)
 );
+
+--Indices que se encargan que solo haya una partida en marcha por jugador
+CREATE UNIQUE INDEX solo1J1 
+ON PARTIDA (J1, Estado) 
+WHERE Estado = 'Jugandose';
+
+CREATE UNIQUE INDEX solo1J2 
+ON PARTIDA (J2, Estado) 
+WHERE Estado = 'Jugandose';
