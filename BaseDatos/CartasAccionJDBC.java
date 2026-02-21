@@ -6,11 +6,11 @@ import javax.sql.DataSource;
 import java.util.List;
 import java.util.ArrayList;
 
-public final class JugadorJDBC implements JugadorDAO {
+public final class CartasAccionJDBC implements movimientoDAO {
 
     private final DataSource dataSource;
 
-    public JugadorJDBC() {
+    public CartasAccionJDBC() {
         try {
             Context initialContext = new InitialContext();
             // "java:comp/env" es el entorno de nombres específico de esta aplicación
@@ -25,16 +25,15 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
     
-    public boolean registrarse(JugadorVO jugador) throws SQLException {
-        final String sql = "INSERT INTO Jugador (Correo, Nombre_US, Contrasena_Hash, Puntos) VALUES (?, ?, ?, ?)";
+    public boolean crearCarta(CartaAccion movimiento) throws SQLException {
+        final String sql = "INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES (?, ?, ?)";
         
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
             
-            ps.setString(1, jugador.getCorreo());
-            ps.setString(2, jugador.getNombreUS());
-            ps.setString(3, jugador.getContrasenaHash());
-            ps.setInt(4, jugador.getPuntos());
+            ps.setString(1, movimiento.getNombre());
+            ps.setString(2, movimiento.getAccion());
+            ps.setInt(3, movimiento.getPuntosMin());
             int filasAfectadas = ps.executeUpdate();
             return filasAfectadas > 0;
             
@@ -43,23 +42,23 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
-    public Jugador buscarJugador(String nombreUS) throws SQLException {
-        final String sql = "SELECT Correo, Nombre_US, Contrasena_Hash, Puntos FROM Jugador WHERE Nombre_US = ?";
+    public CartaAccion buscarAccion(String nombre) throws SQLException {
+        final String sql = "SELECT * FROM Cartas_Accion WHERE Nombre = ?";
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, nombreUS);
+            ps.setString(1, nombre);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
-                return montarJugador(rs);
+                return montarAccion(rs);
             }
         }
     }
 
-    public boolean updatePuntos(String nombreUS, int nuevosPuntos) throws SQLException {
+    public boolean updateAccion(String nombre, int nuevaAccion) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
-            PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Puntos = ? WHERE Nombre_US = ?")) { 
-            p.setInt(1, nuevosPuntos); 
-            p.setString(2, nombreUS); 
+            PreparedStatement p = c.prepareStatement("UPDATE Cartas_Accion SET Accion = ? WHERE Nombre = ?")) { 
+            p.setString(1, nuevaAccion); 
+            p.setString(2, nombre); 
             p.executeUpdate(); 
             return true;
         }catch (SQLException e) {
@@ -67,11 +66,11 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
-    public boolean updateContrasenya(String nombreUS, String psswd) throws SQLException {
+    public boolean updatePuntosMin(String nombre, int nuevoPunt) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
-            PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Contrasena_Hash = ? WHERE Nombre_US = ?")) { 
-            p.setString(1, psswd); 
-            p.setString(2, nombreUS); 
+            PreparedStatement p = c.prepareStatement("UPDATE Cartas_Accion SET Puntos_min = ? WHERE Nombre = ?")) { 
+            p.setInt(1, nuevoPunt); 
+            p.setString(2, nombre); 
             p.executeUpdate(); 
             return true;
         }catch (SQLException e) {
@@ -79,101 +78,38 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
-    public boolean updateCorreo(String nombreUS, int nuevoCorreo) throws SQLException {
-        try(Connection c = dataSource.getConnection(); 
-            PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Puntos = ? WHERE Nombre_US = ?")) { 
-            p.setString(1, nuevoCorreo); 
-            p.setString(2, nombreUS); 
-            p.executeUpdate(); 
-            return true;
-        }catch (SQLException e) {
-            return false; // Si hay una excepción, asumimos que no se creó
-        }
-    }
+    public List<CartaAccion> sacarCartas() throws SQLException {
+        final String sql = "SELECT * FROM Cartas_Accion";
 
-    public List<Jugador> sacarAmigos(String nombreUS) throws SQLException {
-        final String sql = "SELECT DISTINCT j.Correo, j.Nombre_US, j.Contrasena_Hash, j.Puntos FROM Jugador j, Amistades a WHERE (j.Nombre_US = a.Jugador_1 AND a.Jugador_2 = ?) OR (j.Nombre_US = a.Jugador_2 AND a.Jugador_1 = ?)";
-
-        List<Jugador> amigos = new ArrayList<>();
+        List<CartaAccion> cartas = new ArrayList<>();
 
         try (Connection conn = dataSource.getConnection();
             PreparedStatement p = conn.prepareStatement(sql)) {
-            p.setString(1, nombreUS);
-            p.setString(2, nombreUS);
 
             try (ResultSet rs = p.executeQuery()) {
                 while (rs.next()) {
-                    amigos.add(montarJugador(rs));
+                    cartas.add(montarAccion(rs));
                 }
             }
         }
-        return amigos;
+        return cartas;
     }
 
-    public boolean anyadirAmigo(String miNombre, String nombreAmigo) throws SQLException {
-        final String sql = "INSERT INTO Amistades (Jugador_1, Jugador_2) VALUES (?, ?)";
-        
+    public void borrar(String nombre) throws SQLException {
+        final String sql = "DELETE FROM Cartas_Accion WHERE Nombre = ?";
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
-            
-            ps.setString(1, miNombre);
-            ps.setString(2, nombreAmigo);
-            int filasAfectadas = ps.executeUpdate();
-            return filasAfectadas > 0;
-            
-        } catch (SQLException e) {
-            return false; // Si hay una excepción, asumimos que no se creó
-        }
-    }
-
-    public boolean borrarAmigo(String miNombre, String nombreAmigo) throws SQLException {
-        final String sql = "DELETE FROM Amistades WHERE (Jugador_1 = ? AND Jugador_2 = ?) OR (Jugador_2 = ? AND Jugador_1 = ?)";
-        try (Connection conn = dataSource.getConnection();
-            PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, miNombre);
-            ps.setString(2, nombreAmigo);
-            ps.setString(3, miNombre);
-            ps.setString(4, nombreAmigo);
-            ps.executeUpdate();
-            return true;
-            
-        } catch (SQLException e) {
-            return false; // Si hay una excepción, asumimos que no se creó
-        }
-    }
-
-    public boolean desbloquearSkin(String miNombre, String skin) throws SQLException {
-        final String sql = "INSERT INTO Jugador_Skins (Jugador, Skin) VALUES (?, ?)";
-        
-        try (Connection conn = dataSource.getConnection();
-            PreparedStatement ps = conn.prepareStatement(sql)) {
-            
-            ps.setString(1, miNombre);
-            ps.setString(2, skin);
-            int filasAfectadas = ps.executeUpdate();
-            return filasAfectadas > 0;
-            
-        } catch (SQLException e) {
-            return false; // Si hay una excepción, asumimos que no se creó
-        }
-    }
-
-    public void delete(String nombreUS) throws SQLException {
-        final String sql = "DELETE FROM Jugador WHERE Nombre_US = ?";
-        try (Connection conn = dataSource.getConnection();
-            PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, nombreUS);
+            ps.setString(1, nombre);
             ps.executeUpdate();
         }
     }
 
-    //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo Jugador
-    private JugadorVO montarJugador(ResultSet rs) throws SQLException {
-        return new Jugador(
-            rs.getString("Correo"),
-            rs.getString("Nombre_US"),
-            rs.getString("Contrasena_Hash"),
-            rs.getInt("Puntos")
+    //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo movimiento
+    private CartaAccion montarAccion(ResultSet rs) throws SQLException {
+        return new CartaAccion(
+            rs.getString("Nombre"),
+            rs.getString("Accion"),
+            rs.getInt("Puntos_min")
         );
     }
 }
