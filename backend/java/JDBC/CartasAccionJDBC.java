@@ -1,3 +1,5 @@
+package JDBC;
+
 import java.sql.*;
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -7,11 +9,11 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public final class CartasMovJDBC implements movimientoDAO {
+public final class CartasAccionJDBC implements movimientoDAO {
 
     private final DataSource dataSource;
 
-    public CartasMovJDBC() {
+    public CartasAccionJDBC() {
         try {
             Context initialContext = new InitialContext();
             // "java:comp/env" es el entorno de nombres específico de esta aplicación
@@ -26,14 +28,15 @@ public final class CartasMovJDBC implements movimientoDAO {
         }
     }
     
-    public boolean crearCarta(CartaMov movimiento) throws SQLException {
-        final String sql = "INSERT INTO Cartas_Mov (Nombre, Movimientos) VALUES (?, ?)";
+    public boolean crearCarta(CartaAccion movimiento) throws SQLException {
+        final String sql = "INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES (?, ?, ?)";
         
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
             
             ps.setString(1, movimiento.getNombre());
-            ps.setString(2, movimiento.getMovimientos());
+            ps.setString(2, movimiento.getAccion());
+            ps.setInt(3, movimiento.getPuntosMin());
             int filasAfectadas = ps.executeUpdate();
             return filasAfectadas > 0;
             
@@ -42,22 +45,22 @@ public final class CartasMovJDBC implements movimientoDAO {
         }
     }
 
-    public CartaMov buscarMovimiento(String nombre) throws SQLException {
-        final String sql = "SELECT * FROM Cartas_Mov WHERE Nombre = ?";
+    public CartaAccion buscarAccion(String nombre) throws SQLException {
+        final String sql = "SELECT * FROM Cartas_Accion WHERE Nombre = ?";
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, nombre);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
-                return montarMovimiento(rs);
+                return montarAccion(rs);
             }
         }
     }
 
-    public boolean updateMovimientos(String nombre, int nuevosMov) throws SQLException {
+    public boolean updateAccion(String nombre, int nuevaAccion) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
-            PreparedStatement p = c.prepareStatement("UPDATE Cartas_Mov SET Movimientos = ? WHERE Nombre = ?")) { 
-            p.setString(1, nuevosMov); 
+            PreparedStatement p = c.prepareStatement("UPDATE Cartas_Accion SET Accion = ? WHERE Nombre = ?")) { 
+            p.setString(1, nuevaAccion); 
             p.setString(2, nombre); 
             p.executeUpdate(); 
             return true;
@@ -66,27 +69,39 @@ public final class CartasMovJDBC implements movimientoDAO {
         }
     }
 
-    public List<CartaMov> sacarCartas() throws SQLException {
-        final String sql = "SELECT * FROM Cartas_Mov";
+    public boolean updatePuntosMin(String nombre, int nuevoPunt) throws SQLException {
+        try(Connection c = dataSource.getConnection(); 
+            PreparedStatement p = c.prepareStatement("UPDATE Cartas_Accion SET Puntos_min = ? WHERE Nombre = ?")) { 
+            p.setInt(1, nuevoPunt); 
+            p.setString(2, nombre); 
+            p.executeUpdate(); 
+            return true;
+        }catch (SQLException e) {
+            return false; // Si hay una excepción, asumimos que no se creó
+        }
+    }
 
-        List<CartaMov> cartas = new ArrayList<>();
+    public List<CartaAccion> sacarCartas() throws SQLException {
+        final String sql = "SELECT * FROM Cartas_Accion";
+
+        List<CartaAccion> cartas = new ArrayList<>();
 
         try (Connection conn = dataSource.getConnection();
             PreparedStatement p = conn.prepareStatement(sql)) {
 
             try (ResultSet rs = p.executeQuery()) {
                 while (rs.next()) {
-                    cartas.add(montarMovimiento(rs));
+                    cartas.add(montarAccion(rs));
                 }
             }
         }
         return cartas;
     }
     
-    public List<CartaMov> sacarCartasPartida(int IDPartida) throws SQLException {
-        final String sql = "SELECT c.Nombre, c.Accion, c.Puntos_min FROM Cartas_Accion c, Partida_Cartas_Mov p WHERE c.Nombre = ID_Carta_Mov AND ID_Partida = ?";
+    public List<CartaAccion> sacarCartasPartida(int IDPartida) throws SQLException {
+        final String sql = "SELECT c.Nombre, c.Accion, c.Puntos_min FROM Cartas_Accion c, Partida_Cartas_Accion p WHERE c.Nombre = ID_Carta_Accion AND ID_Partida = ?";
 
-        List<CartaMov> cartas = new ArrayList<>();
+        List<CartaAccion> cartas = new ArrayList<>();
 
         try (Connection conn = dataSource.getConnection();
             PreparedStatement p = conn.prepareStatement(sql)) {
@@ -103,7 +118,7 @@ public final class CartasMovJDBC implements movimientoDAO {
 
     public boolean updateEstadoEnPartida(int IDPartida, String nombreCarta, String estado) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
-            PreparedStatement p = c.prepareStatement("UPDATE Partida_Cartas_Mov SET Estado = ? WHERE ID_Carta_Mov = ? AND ID_Partida = ?")) { 
+            PreparedStatement p = c.prepareStatement("UPDATE Partida_Cartas_Accion SET Estado = ? WHERE ID_Carta_Accion = ? AND ID_Partida = ?")) { 
             p.setString(1, estado); 
             p.setString(2, nombreCarta); 
             p.setInt(2, IDPartida); 
@@ -114,10 +129,18 @@ public final class CartasMovJDBC implements movimientoDAO {
         }
     }
 
-    public boolean asignar8CartasPartida(int IDPartida) {
-        List<CartaMov> disponibles = sacarCartas(); //IMPORTANTE: Tiene que haber mas de 7 cartas para que funcione
+    public boolean asignar4CartasPartida(int IDPartida, int puntosMin) {
+        List<CartaAccion> disponibles = sacarCartas();
+
+        //Eliminamos de la lista las cartas que sobrepasen el minimo IMPORTANTE: Poner al menos 4 cartas que no necesiten un minimos de puntos para jugarse
+        for(CartaAccion carta : disponibles){
+            if(carta.getPuntosMin() > puntosMin){
+                disponibles.remove(carta);
+            }
+        }
+
         Collections.shuffle(disponibles);
-        for(int i = 0; i<8; i++){
+        for(int i = 0; i<4; i++){
             if(!asignarCartaPartida(IDPartida, disponibles.get(i).getNombre())){
                 return false;
             }
@@ -126,7 +149,7 @@ public final class CartasMovJDBC implements movimientoDAO {
     }
 
     public boolean asignarCartaPartida(int IDPartida, String nombreCarta) throws SQLException {
-        final String sql = "INSERT INTO Partida_Cartas_Mov (ID_Partida, ID_Carta_Mov, Estado) VALUES (?, ?, ?)";
+        final String sql = "INSERT INTO Partida_Cartas_Accion (ID_Partida, ID_Carta_Accion, Estado) VALUES (?, ?, ?)";
         
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -143,7 +166,7 @@ public final class CartasMovJDBC implements movimientoDAO {
     }
 
     public void borrar(String nombre) throws SQLException {
-        final String sql = "DELETE FROM Cartas_Mov WHERE Nombre = ?";
+        final String sql = "DELETE FROM Cartas_Accion WHERE Nombre = ?";
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, nombre);
@@ -152,10 +175,11 @@ public final class CartasMovJDBC implements movimientoDAO {
     }
 
     //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo movimiento
-    private CartaMov montarMovimiento(ResultSet rs) throws SQLException {
-        return new CartaMov(
+    private CartaAccion montarAccion(ResultSet rs) throws SQLException {
+        return new CartaAccion(
             rs.getString("Nombre"),
-            rs.getString("Movimientos")
+            rs.getString("Accion"),
+            rs.getInt("Puntos_min")
         );
     }
 }

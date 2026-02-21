@@ -1,4 +1,4 @@
-package modelo.vo;
+package VO;
 
 public class Posicion {
     private final int x, y;

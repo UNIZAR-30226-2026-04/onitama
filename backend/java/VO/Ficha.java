@@ -1,4 +1,4 @@
-package modelo.vo;
+package VO;
 
 public class Ficha {
     private final boolean rey;
