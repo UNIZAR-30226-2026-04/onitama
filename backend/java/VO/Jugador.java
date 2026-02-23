@@ -1,6 +1,7 @@
 package VO;
 
 import JDBC.JugadorJDBC;
+import JDBC.SkinJDBC;
 import java.util.List;
 import java.util.ArrayList;
 import java.sql.SQLException;
@@ -10,7 +11,9 @@ public class Jugador {
     private String nombre, password, correo;
     private int puntos;
     private List<Jugador> amigos;
+    private List<Skin> misSkines;
     private JugadorJDBC jdbc;
+    private SkinJDBC jdbcSkin;
     
     //Constructor necesario para la BD
     public Jugador(String correo, String nombre, String password, int puntos){
@@ -19,7 +22,9 @@ public class Jugador {
         this.password = password; //Faltaria hashear con BCryp
         this.puntos = puntos;
         amigos = new ArrayList<>();
+        misSkines = new ArrayList<>();
         jdbc = new JugadorJDBC();
+        jdbcSkin = new SkinJDBC();
     }
 
     public boolean registrarse(){
@@ -94,6 +99,26 @@ public class Jugador {
         amigos.remove(amigo); //Borramos de la lista para evitar tener que estar cargando de la BD
         try {
             return jdbc.borrarAmigo(nombre, amigo.getNombre());
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    public void cargarSkins(){
+        try {
+            misSkines = jdbcSkin.sacarSkinJugador(nombre);
+        } catch (SQLException e) {
+        }
+    }
+
+    public List<Skin> getSkins(){
+        return misSkines;
+    }
+
+    public boolean comprarSkin(Skin nueva){
+        misSkines.add(nueva); //Añadimos en la lista para evitar tener que estar cargando de la BD
+        try {
+            return jdbcSkin.comprarSkin(nueva.getNombre(), nombre);
         } catch (SQLException e) {
             return false;
         }

@@ -1,67 +1,68 @@
 import VO.Jugador;
-import JDBC.JugadorJDBC;
+import VO.Skin;
+import VO.CartaMov;
+import VO.Posicion;
 import java.util.List;
-import java.util.ArrayList;
 
 public class test {
     public static void main(String[] args) {
-        System.out.println("=== INICIANDO TESTS DE JUGADOR ===\n");
+        System.out.println("=== INICIANDO TESTS INTEGRALES (JUGADOR, SKINS, CARTAS) ===\n");
 
-        // 1. Crear instancias de prueba
-        Jugador j1 = new Jugador("pepe@gmail.com", "Pepe", "pass123", 100);
-        Jugador j2 = new Jugador("ana@gmail.com", "Ana", "abc456", 200);
+        // ---------------------------------------------------------
+        // 1. TESTS DE JUGADOR Y SKINS
+        // ---------------------------------------------------------
+        Jugador j1 = new Jugador("test@mail.com", "Ciro", "pass123", 1000);
+        Skin skinEspecial = new Skin("Skin Legendaria", "#FFF", "#00F", "#F00", 500);
 
-        // 2. Test de Registro
-        System.out.print("Test Registro J1: ");
-        if (j1.registrarse()) {
-            System.out.println("OK");
-        } else {
-            System.out.println("FALLO (Quizás ya existe en la BD)");
-        }
+        System.out.print("Test Registro Jugador: ");
+        System.out.println(j1.registrarse() ? "OK ✅" : "FALLO ❌");
 
-        System.out.print("Test Registro J2: ");
-        j2.registrarse(); // Registramos al segundo para poder hacerlo amigo
-        System.out.println("Hecho");
+        System.out.print("Test Comprar Skin: ");
+        System.out.println(j1.comprarSkin(skinEspecial) ? "OK ✅" : "FALLO ❌");
 
-        // 3. Test de Amigos (Añadir)
-        System.out.print("Test Añadir Amigo: ");
-        if (j1.anyadirAmigo(j2)) {
-            System.out.println("OK");
-            System.out.println("   Lista local de " + j1.getNombre() + ": " + j1.getAmigos().size() + " amigo(s)");
-        } else {
-            System.out.println("FALLO");
-        }
-
-        // 4. Test de Actualización en BD
-        System.out.print("Test Actualizar Puntos: ");
-        j1.setPuntos(500);
-        if (j1.actualizarBD()) {
-            System.out.println("OK (Nuevos puntos: 500)");
-        } else {
-            System.out.println("FALLO");
-        }
-
-        // 5. Test de Carga desde BD
-        System.out.println("\nTest Cargar Amigos desde BD:");
-        Jugador j1_recargado = new Jugador("pepe@gmail.com", "Pepe", "pass123", 500);
-        j1_recargado.cargarAmigos();
-        List<Jugador> listaAmigos = j1_recargado.getAmigos();
+        // ---------------------------------------------------------
+        // 2. TESTS DE CARTAMOV (SERIALIZACIÓN Y REGEX)
+        // ---------------------------------------------------------
+        System.out.println("\n--- Test de Cartas de Movimiento ---");
         
-        if (!listaAmigos.isEmpty()) {
-            System.out.println("   Amigos encontrados: " + listaAmigos.size());
-            for (Jugador a : listaAmigos) {
-                System.out.println("   - Amigo: " + a.getNombre());
-            }
+        // Creamos una carta con un String de movimientos
+        String movRaw = "(1,0),(0,-1),(-1,2)";
+        CartaMov cartaTest = new CartaMov("Caballo", movRaw);
+
+        // Verificamos que el Regex funcionó (Parsing)
+        System.out.print("Test Parsing Regex (de String a Lista): ");
+        if (cartaTest.getListaMovimientos().size() == 3) {
+            System.out.println("OK ✅ (Se detectaron 3 movimientos)");
         } else {
-            System.out.println("No se encontraron amigos en la BD.");
+            System.out.println("FALLO ❌ (Se detectaron " + cartaTest.getListaMovimientos().size() + ")");
         }
 
-        // 6. Test de Borrado
-        System.out.print("\nTest Borrar Amigo: ");
-        if (j1.borrarAmigo(j2)) {
-            System.out.println("OK");
+        // Verificamos el proceso inverso (Serialización a String)
+        System.out.print("Test Serialización (de Lista a String): ");
+        String resultadoString = cartaTest.getMovimientos();
+        if (resultadoString.equals(movRaw)) {
+            System.out.println("OK ✅ -> " + resultadoString);
         } else {
-            System.out.println("FALLO");
+            System.out.println("FALLO ❌ -> Esperado: " + movRaw + " | Obtenido: " + resultadoString);
+        }
+
+        // ---------------------------------------------------------
+        // 3. TESTS DE BASE DE DATOS PARA CARTAMOV
+        // ---------------------------------------------------------
+        System.out.print("Test Registro Carta en BD: ");
+        // Nota: Asegúrate de que jdbc esté inicializado en el constructor de CartaMov
+        if (cartaTest.registrarCartaMov()) {
+            System.out.println("OK ✅");
+        } else {
+            System.out.println("FALLO ❌ (Revisa conexión o si la carta ya existe)");
+        }
+
+        System.out.print("Test Actualizar Movimientos en BD: ");
+        cartaTest.addMovimiento(new Posicion(2, 2, null)); // Añadimos uno nuevo
+        if (cartaTest.actualizarBD()) {
+            System.out.println("OK ✅ (Ahora con 4 movimientos)");
+        } else {
+            System.out.println("FALLO ❌");
         }
 
         System.out.println("\n=== TESTS FINALIZADOS ===");
