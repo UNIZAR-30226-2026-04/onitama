@@ -5,25 +5,28 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
+import VO.Skin;
 import java.util.List;
 import java.util.ArrayList;
 
-public final class SkinJDBC implements SkinDAO {
+public final class SkinJDBC {
 
     private final DataSource dataSource;
 
     public SkinJDBC() {
         try {
-            Context initialContext = new InitialContext();
-            // "java:comp/env" es el entorno de nombres específico de esta aplicación
-            Context envContext = (Context) initialContext.lookup("java:comp/env");
-            // Busca la referencia definida en context.xml / web.xml
-            this.dataSource = (DataSource) envContext.lookup("jdbc/MiDataSource");
+            String url = "jdbc:postgresql://localhost:5432/postgres"; 
+            String user = "postgres";
+            String password = "postgres";
             
-        } catch (NamingException e) {
-            System.err.println("ERROR FATAL: No se pudo obtener el recurso JNDI 'jdbc/MiDataSource'.");
-            e.printStackTrace();
-            throw new RuntimeException("Fallo al inicializar la conexión con la BD.", e);
+            org.postgresql.ds.PGSimpleDataSource ds = new org.postgresql.ds.PGSimpleDataSource();
+            ds.setURL(url);
+            ds.setUser(user);
+            ds.setPassword(password);
+            this.dataSource = ds;
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Error al conectar manualmente", e);
         }
     }
     
@@ -38,6 +41,22 @@ public final class SkinJDBC implements SkinDAO {
             ps.setString(3, skin.getTablero());
             ps.setString(4, skin.getAliadas());
             ps.setString(5, skin.getEnemigas());
+            int filasAfectadas = ps.executeUpdate();
+            return filasAfectadas > 0;
+            
+        } catch (SQLException e) {
+            return false; // Si hay una excepción, asumimos que no se creó
+        }
+    }
+
+    public boolean comprarSkin(String nombre, String jugador) throws SQLException {
+        final String sql = "INSERT INTO Jugador_Skins (Jugador, Skin) VALUES (?, ?)";
+
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            ps.setString(1, jugador);
+            ps.setString(2, nombre);
             int filasAfectadas = ps.executeUpdate();
             return filasAfectadas > 0;
             
@@ -82,7 +101,7 @@ public final class SkinJDBC implements SkinDAO {
         }
     }
 
-    public boolean updateAliadas(String nombre, int nuevaAliada) throws SQLException {
+    public boolean updateAliadas(String nombre, String nuevaAliada) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Skin SET Color_Fichas_Aliadas = ? WHERE Nombre = ?")) { 
             p.setString(1, nuevaAliada); 
@@ -94,7 +113,7 @@ public final class SkinJDBC implements SkinDAO {
         }
     }
 
-    public boolean updateEnemigas(String nombre, int nuevaEnemiga) throws SQLException {
+    public boolean updateEnemigas(String nombre, String nuevaEnemiga) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Skin SET Color_Fichas_Enemigas = ? WHERE Nombre = ?")) { 
             p.setString(1, nuevaEnemiga); 
@@ -154,10 +173,10 @@ public final class SkinJDBC implements SkinDAO {
     private Skin montarSkin(ResultSet rs) throws SQLException {
         return new Skin(
             rs.getString("Nombre"),
-            rs.getInt("Precio"),
             rs.getString("Color_tablero"),
             rs.getString("Color_Fichas_Aliadas"),
-            rs.getString("Color_Fichas_Enemigas")
+            rs.getString("Color_Fichas_Enemigas"),
+            rs.getInt("Precio")
         );
     }
 }
