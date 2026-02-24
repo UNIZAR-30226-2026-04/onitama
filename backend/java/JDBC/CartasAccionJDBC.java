@@ -4,27 +4,30 @@ import java.sql.*;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import VO.CartaAccion;
 import javax.sql.DataSource;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public final class CartasAccionJDBC implements movimientoDAO {
+public final class CartasAccionJDBC {
 
     private final DataSource dataSource;
 
     public CartasAccionJDBC() {
         try {
-            Context initialContext = new InitialContext();
-            // "java:comp/env" es el entorno de nombres específico de esta aplicación
-            Context envContext = (Context) initialContext.lookup("java:comp/env");
-            // Busca la referencia definida en context.xml / web.xml
-            this.dataSource = (DataSource) envContext.lookup("jdbc/MiDataSource");
+            String url = "jdbc:postgresql://localhost:5432/postgres"; 
+            String user = "postgres";
+            String password = "postgres";
             
-        } catch (NamingException e) {
-            System.err.println("ERROR FATAL: No se pudo obtener el recurso JNDI 'jdbc/MiDataSource'.");
-            e.printStackTrace();
-            throw new RuntimeException("Fallo al inicializar la conexión con la BD.", e);
+            org.postgresql.ds.PGSimpleDataSource ds = new org.postgresql.ds.PGSimpleDataSource();
+            ds.setURL(url);
+            ds.setUser(user);
+            ds.setPassword(password);
+            this.dataSource = ds;
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Error al conectar manualmente", e);
         }
     }
     
@@ -57,7 +60,7 @@ public final class CartasAccionJDBC implements movimientoDAO {
         }
     }
 
-    public boolean updateAccion(String nombre, int nuevaAccion) throws SQLException {
+    public boolean updateAccion(String nombre, String nuevaAccion) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Cartas_Accion SET Accion = ? WHERE Nombre = ?")) { 
             p.setString(1, nuevaAccion); 
@@ -129,7 +132,7 @@ public final class CartasAccionJDBC implements movimientoDAO {
         }
     }
 
-    public boolean asignar4CartasPartida(int IDPartida, int puntosMin) {
+    public List<CartaAccion> asignar4CartasPartida(int IDPartida, int puntosMin) throws SQLException {
         List<CartaAccion> disponibles = sacarCartas();
 
         //Eliminamos de la lista las cartas que sobrepasen el minimo IMPORTANTE: Poner al menos 4 cartas que no necesiten un minimos de puntos para jugarse
@@ -142,10 +145,10 @@ public final class CartasAccionJDBC implements movimientoDAO {
         Collections.shuffle(disponibles);
         for(int i = 0; i<4; i++){
             if(!asignarCartaPartida(IDPartida, disponibles.get(i).getNombre())){
-                return false;
+                return null;
             }
         }
-        return true;
+        return disponibles.subList(0, 4);
     }
 
     public boolean asignarCartaPartida(int IDPartida, String nombreCarta) throws SQLException {
