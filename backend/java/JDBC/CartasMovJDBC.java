@@ -119,15 +119,15 @@ public final class CartasMovJDBC {
         }
     }
 
-    public boolean asignar8CartasPartida(int IDPartida) throws SQLException {
+    public List<CartaMov> asignar8CartasPartida(int IDPartida) throws SQLException {
         List<CartaMov> disponibles = sacarCartas(); //IMPORTANTE: Tiene que haber mas de 7 cartas para que funcione
         Collections.shuffle(disponibles);
         for(int i = 0; i<8; i++){
             if(!asignarCartaPartida(IDPartida, disponibles.get(i).getNombre())){
-                return false;
+                return null;
             }
         }
-        return true;
+        return disponibles.subList(0, 8);
     }
 
     public boolean asignarCartaPartida(int IDPartida, String nombreCarta) throws SQLException {
