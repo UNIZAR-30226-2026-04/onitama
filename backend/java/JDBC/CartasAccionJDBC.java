@@ -134,21 +134,25 @@ public final class CartasAccionJDBC {
 
     public List<CartaAccion> asignar4CartasPartida(int IDPartida, int puntosMin) throws SQLException {
         List<CartaAccion> disponibles = sacarCartas();
-
+        List<CartaAccion> usables = new ArrayList<>();
         //Eliminamos de la lista las cartas que sobrepasen el minimo IMPORTANTE: Poner al menos 4 cartas que no necesiten un minimos de puntos para jugarse
         for(CartaAccion carta : disponibles){
-            if(carta.getPuntosMin() > puntosMin){
-                disponibles.remove(carta);
+            if(carta.getPuntosMin() <= puntosMin){
+                usables.add(carta);
             }
         }
-
-        Collections.shuffle(disponibles);
+        if (usables.isEmpty()) {
+            System.out.println("No hay cartas de acción disponibles para " + puntosMin + " puntos.");
+            return null; // Devolvemos null si por alguna razon no me hicisteis caso en el comentario de la linea 138
+        }
+        Collections.shuffle(usables);
         for(int i = 0; i<4; i++){
-            if(!asignarCartaPartida(IDPartida, disponibles.get(i).getNombre())){
+            if(!asignarCartaPartida(IDPartida, usables.get(i).getNombre())){
                 return null;
             }
+            System.out.println(usables.get(i).getNombre());
         }
-        return disponibles.subList(0, 4);
+        return usables.subList(0, 4);
     }
 
     public boolean asignarCartaPartida(int IDPartida, String nombreCarta) throws SQLException {

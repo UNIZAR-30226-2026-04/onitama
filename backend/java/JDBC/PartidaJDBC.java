@@ -5,25 +5,30 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
+
+import VO.Partida;
+
 import java.util.List;
 import java.util.ArrayList;
 
-public final class PartidaJDBC implements PartidaDAO {
+public final class PartidaJDBC {
 
     private final DataSource dataSource;
 
     public PartidaJDBC() {
         try {
-            Context initialContext = new InitialContext();
-            // "java:comp/env" es el entorno de nombres específico de esta aplicación
-            Context envContext = (Context) initialContext.lookup("java:comp/env");
-            // Busca la referencia definida en context.xml / web.xml
-            this.dataSource = (DataSource) envContext.lookup("jdbc/MiDataSource");
+            String url = "jdbc:postgresql://localhost:5432/postgres"; 
+            String user = "postgres";
+            String password = "postgres";
             
-        } catch (NamingException e) {
-            System.err.println("ERROR FATAL: No se pudo obtener el recurso JNDI 'jdbc/MiDataSource'.");
-            e.printStackTrace();
-            throw new RuntimeException("Fallo al inicializar la conexión con la BD.", e);
+            org.postgresql.ds.PGSimpleDataSource ds = new org.postgresql.ds.PGSimpleDataSource();
+            ds.setURL(url);
+            ds.setUser(user);
+            ds.setPassword(password);
+            this.dataSource = ds;
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Error al conectar manualmente", e);
         }
     }
 

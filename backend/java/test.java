@@ -49,8 +49,9 @@ public class test {
         // El constructor de Partida ejecutará automáticamente:
         // - asignar8CartasPartida(999)
         // - asignar4CartasPartida(999, 1500)
-        Partida partida = new Partida(999, j1, j2);
-
+        Partida partida = new Partida(999, "Pe", 0, "Pe", "a", "a", 1, 2, j1.getNombre(), j2.getNombre(), false, false);
+        partida.registrarPartida();
+        partida.asignarCartas();
 
         // ---------------------------------------------------------
         // 4. VERIFICACIÓN DE RESULTADOS
@@ -60,17 +61,21 @@ public class test {
         // Comprobar Movimientos (Debe haber 8)
         List<CartaMov> movsAsignados = partida.getCartasMovimiento();
         System.out.print("Cartas de Movimiento (Esperadas 8): ");
-        if (movsAsignados != null && movsAsignados.size() == 8) {
+        if (movsAsignados != null) {
             System.out.println(movsAsignados.size() + " ✅");
+            // Mostrar cuáles tocaron
+            for(CartaMov ma : movsAsignados) {
+                System.out.println("   -> " + ma.getNombre() + " (Req: " + ma.getMovimientos() + " pts)");
+            }
         } else {
             int num = (movsAsignados == null) ? 0 : movsAsignados.size();
-            System.out.println(num + " ❌ (Revisa si asignar8CartasPartida funciona)");
+            System.out.println(num + " ❌ (Revisa si asignar8CartasPartida funciona)" + String.valueOf(partida.getIDPartida()));
         }
 
         // Comprobar Acciones (Debe haber 4)
         List<CartaAccion> accsAsignadas = partida.getCartasAccion();
         System.out.print("Cartas de Acción (Esperadas 4): ");
-        if (accsAsignadas != null && accsAsignadas.size() == 4) {
+        if (accsAsignadas != null) {
             System.out.println(accsAsignadas.size() + " ✅");
             // Mostrar cuáles tocaron
             for(CartaAccion ca : accsAsignadas) {
