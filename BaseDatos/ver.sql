@@ -4,3 +4,6 @@ SELECT * FROM Jugador_Skins;
 SELECT * FROM Cartas_Mov;
 SELECT * FROM Cartas_Accion;
 SELECT * FROM Partida;
+SELECT * FROM Partida_Jugador;
+SELECT * FROM Partida_Cartas_Mov;
+SELECT * FROM Partida_Cartas_Accion;

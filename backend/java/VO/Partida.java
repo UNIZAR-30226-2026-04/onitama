@@ -1,12 +1,11 @@
 package VO;
 
-import java.util.List;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import JDBC.PartidaJDBC;
 import JDBC.CartasAccionJDBC;
 import JDBC.CartasMovJDBC;
 import JDBC.JugadorJDBC;
+import JDBC.PartidaJDBC;
+import java.sql.SQLException;
+import java.util.List;
 
 public class Partida {
     private int IDPartida, tiempo, muertesJ1, muertesJ2;
@@ -129,5 +128,26 @@ public class Partida {
 
     public void setJ2(Jugador j){
         this.jugador2 = j;
-     }
+    }
+
+    public void repartirCartas() {
+        int i = 0;
+        for (CartaAccion ca : cartasA) {
+            ca.setEquipo((i%2)+1);
+            ca.setEstado("USABLE"); //Que se puede jugar (si se juega -> USADA)
+            i++;
+            ca.actualizarDatosPartida(IDPartida);    
+        }
+        i = 0;
+        for (CartaMov cm : cartasM) {
+            if (i%2 == 0) {
+                cm.setEstado("EQ1"); //Que se asigna al equipo 1 (si se juega -> MAZO)
+            } else {
+                cm.setEstado("EQ2"); //Que se asigna al equipo 2 (si se juega -> MAZO)
+            }
+            cm.actualizarDatosPartida(IDPartida);
+            i++;
+            if(i == 4) break; //Asignamos las primeras 4, el resto al mazo
+        }
+    }
 }

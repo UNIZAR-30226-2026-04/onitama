@@ -65,7 +65,7 @@ public class test {
             System.out.println(movsAsignados.size() + " ✅");
             // Mostrar cuáles tocaron
             for(CartaMov ma : movsAsignados) {
-                System.out.println("   -> " + ma.getNombre() + " (Req: " + ma.getMovimientos() + " pts)");
+                System.out.println("   -> " + ma.getNombre() + " MOVIMIENTOS: " + ma.getMovimientos());
             }
         } else {
             int num = (movsAsignados == null) ? 0 : movsAsignados.size();
@@ -86,6 +86,16 @@ public class test {
             System.out.println(num + " ❌ (Revisa puntosMin o asignar4CartasPartida)");
         }
 
+        System.out.println("\nREPARTIR CARTAS " + partida.getCartasMovimiento().size() + " " + partida.getCartasAccion().size());
+        partida.repartirCartas();
+
+        for(CartaMov ma : partida.getCartasMovimiento()) {
+                System.out.println("   -> " + ma.getNombre() + " MOVIMIENTOS: " + ma.getMovimientos() + " ESTADO: " + ma.getEstado());
+        }
+        System.out.println("\n");
+        for(CartaAccion ca : partida.getCartasAccion()) {
+                System.out.println("   -> " + ca.getNombre() + " (Req: " + ca.getPuntosMin() + " pts)" + " ESTADO: " + ca.getEstado() + " EQUIPO: " + ca.getEquipo());
+        }
         System.out.println("\n=== TEST FINALIZADO ===");
     }
 }

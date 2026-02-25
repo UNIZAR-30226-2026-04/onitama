@@ -102,21 +102,34 @@ public final class CartasAccionJDBC {
     }
     
     public List<CartaAccion> sacarCartasPartida(int IDPartida) throws SQLException {
-        final String sql = "SELECT c.Nombre, c.Accion, c.Puntos_min FROM Cartas_Accion c, Partida_Cartas_Accion p WHERE c.Nombre = ID_Carta_Accion AND ID_Partida = ?";
+        final String sql = "SELECT c.Nombre, c.Accion, c.Puntos_min, p.Estado, p.Equipo FROM Cartas_Accion c, Partida_Cartas_Accion p WHERE c.Nombre = p.ID_Carta_Accion AND ID_Partida = ?";
 
         List<CartaAccion> cartas = new ArrayList<>();
 
         try (Connection conn = dataSource.getConnection();
             PreparedStatement p = conn.prepareStatement(sql)) {
-            p.setInt(2, IDPartida); 
+            p.setInt(1, IDPartida); 
 
             try (ResultSet rs = p.executeQuery()) {
                 while (rs.next()) {
-                    cartas.add(montarAccion(rs));
+                    cartas.add(montarAccionPartida(rs));
                 }
             }
         }
         return cartas;
+    }
+
+    public boolean asignarEquipo(int IDPartida, String nombreCarta, int equipo) throws SQLException {
+        try(Connection c = dataSource.getConnection(); 
+            PreparedStatement p = c.prepareStatement("UPDATE Partida_Cartas_Accion SET Equipo = ? WHERE ID_Carta_Accion = ? AND ID_Partida = ?")) { 
+            p.setInt(1, equipo); 
+            p.setString(2, nombreCarta); 
+            p.setInt(3, IDPartida); 
+            p.executeUpdate(); 
+            return true;
+        }catch (SQLException e) {
+            return false; // Si hay una excepción, asumimos que no se creó
+        }
     }
 
     public boolean updateEstadoEnPartida(int IDPartida, String nombreCarta, String estado) throws SQLException {
@@ -163,7 +176,7 @@ public final class CartasAccionJDBC {
             
             ps.setInt(1, IDPartida);
             ps.setString(2, nombreCarta);
-            ps.setString(3, "Mazo");
+            ps.setString(3, "MAZO");
             int filasAfectadas = ps.executeUpdate();
             return filasAfectadas > 0;
             
@@ -187,6 +200,17 @@ public final class CartasAccionJDBC {
             rs.getString("Nombre"),
             rs.getString("Accion"),
             rs.getInt("Puntos_min")
+        );
+    }
+
+    //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo movimiento
+    private CartaAccion montarAccionPartida(ResultSet rs) throws SQLException {
+        return new CartaAccion(
+            rs.getString("Nombre"),
+            rs.getString("Accion"),
+            rs.getInt("Puntos_min"),
+            rs.getString("Estado"),
+            rs.getInt("Equipo")
         );
     }
 }

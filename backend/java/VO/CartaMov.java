@@ -1,19 +1,20 @@
 package VO;
 
 import JDBC.CartasMovJDBC;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.sql.SQLException;
 
 public class CartaMov {
-    private String nombre;
+    private String nombre, estado;
     private List<Posicion> movimientos;
     private CartasMovJDBC jdbc;
 
     public CartaMov(String nombre, String mov){
         this.nombre = nombre;
+        this.estado = "MAZO";
         movimientos = new ArrayList<>();
         jdbc = new CartasMovJDBC();
         
@@ -28,6 +29,33 @@ public class CartaMov {
             int y = Integer.parseInt(m.group(2));
             movimientos.add(new Posicion(x, y, null));
         }
+    }
+
+    public CartaMov(String nombre, String mov, String estado){
+        this.nombre = nombre;
+        this.estado = estado;
+        movimientos = new ArrayList<>();
+        jdbc = new CartasMovJDBC();
+        
+        // Esta expresión regular busca grupos de dígitos separados por una coma
+        // \d+ coincide con uno o más números, -? para decir que pueden ser negativos
+        Pattern p = Pattern.compile("(-?\\d+),(-?\\d+)");
+        Matcher m = p.matcher(mov);
+
+        while (m.find()) {
+            // m.group(1) es la X, m.group(2) es la Y
+            int x = Integer.parseInt(m.group(1));
+            int y = Integer.parseInt(m.group(2));
+            movimientos.add(new Posicion(x, y, null));
+        }
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public boolean registrarCartaMov(){
@@ -79,6 +107,14 @@ public class CartaMov {
     public boolean actualizarBD(){
         try {
             return jdbc.updateMovimientos(nombre, getMovimientos()); //| para que se ejecuten todos
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    public boolean actualizarDatosPartida(int IDPartida){
+        try {
+            return jdbc.updateEstadoEnPartida(IDPartida, nombre, estado);
         } catch (SQLException e) {
             return false;
         }

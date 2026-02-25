@@ -70,6 +70,7 @@ CREATE TABLE Partida_Cartas_Accion (
     ID_Partida INTEGER,
     ID_Carta_Accion VARCHAR(50),
     Estado VARCHAR(20),
+    Equipo INTEGER,
     PRIMARY KEY (ID_Partida, ID_Carta_Accion),
     FOREIGN KEY (ID_Partida) REFERENCES Partida(ID_Partida),
     FOREIGN KEY (ID_Carta_Accion) REFERENCES Cartas_Accion(Nombre)

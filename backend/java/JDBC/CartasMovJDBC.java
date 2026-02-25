@@ -89,17 +89,17 @@ public final class CartasMovJDBC {
     }
     
     public List<CartaMov> sacarCartasPartida(int IDPartida) throws SQLException {
-        final String sql = "SELECT c.Nombre, c.Movimientos FROM Cartas_Mov c, Partida_Cartas_Mov p WHERE c.Nombre = ID_Carta_Mov AND ID_Partida = ?";
+        final String sql = "SELECT c.Nombre, c.Movimientos, p.Estado FROM Cartas_Mov c, Partida_Cartas_Mov p WHERE c.Nombre = p.ID_Carta_Mov AND p.ID_Partida = ?";
 
         List<CartaMov> cartas = new ArrayList<>();
 
         try (Connection conn = dataSource.getConnection();
             PreparedStatement p = conn.prepareStatement(sql)) {
-            p.setInt(2, IDPartida); 
+            p.setInt(1, IDPartida); 
 
             try (ResultSet rs = p.executeQuery()) {
                 while (rs.next()) {
-                    cartas.add(montarMovimiento(rs));
+                    cartas.add(montarMovimientoPartida(rs));
                 }
             }
         }
@@ -138,7 +138,7 @@ public final class CartasMovJDBC {
             
             ps.setInt(1, IDPartida);
             ps.setString(2, nombreCarta);
-            ps.setString(3, "Mazo");
+            ps.setString(3, "MAZO");
             int filasAfectadas = ps.executeUpdate();
             return filasAfectadas > 0;
             
@@ -161,6 +161,15 @@ public final class CartasMovJDBC {
         return new CartaMov(
             rs.getString("Nombre"),
             rs.getString("Movimientos")
+        );
+    }
+
+    //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo movimiento
+    private CartaMov montarMovimientoPartida(ResultSet rs) throws SQLException {
+        return new CartaMov(
+            rs.getString("Nombre"),
+            rs.getString("Movimientos"),
+            rs.getString("Estado")
         );
     }
 }
