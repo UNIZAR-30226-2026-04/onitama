@@ -11,7 +11,7 @@ Si ya tienes datos en la base de datos y solo quieres añadir las nuevas columna
 Ejecuta: "Get-Content .\actualizar.sql | docker exec -i proy-postgres psql -U postgres -d postgres"
 ( En actualizar.sql pondras los comandos sql para añadir columnas nuevas,...)
 
-(tambien puedes borrar todo y hacerlo todo de nuevo xd)
+(tambien puedes borrar todo y hacerlo todo de nuevo)
 BORRAR Y RECREAR TABLAS:
 =========================
 Si quieres borrar todas las tablas y empezar de cero:
@@ -23,6 +23,7 @@ VER DATOS:
 Para ver el contenido de las tablas: "Get-Content .\ver.sql | docker exec -i proy-postgres psql -U postgres -d postgres"
 
 EJECUTAR TESTs:
+===============
 (en la carpeta backend/java)
 Compilar(NO hace falta): javac -cp ".;*" 'nombreTest'.java
 Ejecutar: java -cp ".;*" 'nombreTest'
