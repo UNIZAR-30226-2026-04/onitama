@@ -86,7 +86,7 @@ public final class JugadorJDBC{
 
     public boolean updateCorreo(String nombreUS, String nuevoCorreo) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
-            PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Puntos = ? WHERE Nombre_US = ?")) { 
+            PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Correo = ? WHERE Nombre_US = ?")) { 
             p.setString(1, nuevoCorreo); 
             p.setString(2, nombreUS); 
             p.executeUpdate(); 

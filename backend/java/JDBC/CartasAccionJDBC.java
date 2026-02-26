@@ -137,7 +137,7 @@ public final class CartasAccionJDBC {
             PreparedStatement p = c.prepareStatement("UPDATE Partida_Cartas_Accion SET Estado = ? WHERE ID_Carta_Accion = ? AND ID_Partida = ?")) { 
             p.setString(1, estado); 
             p.setString(2, nombreCarta); 
-            p.setInt(2, IDPartida); 
+            p.setInt(3, IDPartida); 
             p.executeUpdate(); 
             return true;
         }catch (SQLException e) {
