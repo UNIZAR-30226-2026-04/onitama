@@ -15,11 +15,12 @@ public class Jugador {
     private JugadorJDBC jdbc;
     private SkinJDBC jdbcSkin;
     
-    //Constructor necesario para la BD
-    public Jugador(String correo, String nombre, String password, int puntos, int cores, int partidasGanadas, int partidasJugadas){
+    //Constructor necesario para la BD (usado por JugadorJDBC.montarJugador)
+    //IMPORTANTE: Este constructor espera que la contraseña YA esté hasheada
+    public Jugador(String correo, String nombre, String passwordHash, int puntos, int cores, int partidasGanadas, int partidasJugadas){
         this.correo = correo;
         this.nombre = nombre;
-        this.password = password; //Faltaria hashear con BCryp
+        this.password = passwordHash; // Ya está hasheada con BCrypt
         this.puntos = puntos;
         this.cores = cores;
         this.partidasGanadas = partidasGanadas;
@@ -31,8 +32,9 @@ public class Jugador {
     }
     
     //Constructor simplificado para registro (valores por defecto)
-    public Jugador(String correo, String nombre, String password){
-        this(correo, nombre, password, 0, 0, 0, 0);
+    //IMPORTANTE: Este constructor espera la contraseña en texto plano y la hashea automáticamente
+    public Jugador(String correo, String nombre, String passwordTextoPlano){
+        this(correo, nombre, Autenticacion.hashearPassword(passwordTextoPlano), 0, 0, 0, 0);
     }
 
     public boolean registrarse(){
@@ -40,6 +42,43 @@ public class Jugador {
             return jdbc.registrarse(this);
         } catch (SQLException e) {
             return false;
+        }
+    }
+    
+    /**
+     * Verifica si una contraseña en texto plano coincide con la contraseña almacenada.
+     * Utiliza BCrypt para verificación segura.
+     */
+    public boolean verificarPassword(String passwordTextoPlano){
+        try {
+            return Autenticacion.verificarPassword(passwordTextoPlano, this.password);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Método estático para iniciar sesión.
+     * Busca al jugador en la BD y verifica su contraseña.
+     */
+    public static Jugador iniciarSesion(String nombreUsuario, String passwordTextoPlano){
+        try {
+            JugadorJDBC jdbc = new JugadorJDBC();
+            Jugador jugador = jdbc.buscarJugador(nombreUsuario);
+            
+            if (jugador == null) {
+                return null; // Usuario no existe
+            }
+            
+            // Verificar contraseña
+            if (jugador.verificarPassword(passwordTextoPlano)) {
+                return jugador; // Login exitoso
+            } else {
+                return null; // Contraseña incorrecta
+            }
+            
+        } catch (SQLException e) {
+            return null;
         }
     }
 
@@ -51,8 +90,9 @@ public class Jugador {
         this.correo = correo;
     }
 
-    public void setContrasenya(String password){
-        this.password = password;
+    public void setContrasenya(String passwordTextoPlano){
+        // Hashear automáticamente la nueva contraseña
+        this.password = Autenticacion.hashearPassword(passwordTextoPlano);
     }
 
     public void setPuntos(int puntos){

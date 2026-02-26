@@ -22,10 +22,11 @@ VER DATOS:
 ==========
 Para ver el contenido de las tablas: "Get-Content .\ver.sql | docker exec -i proy-postgres psql -U postgres -d postgres"
 
-EJECUTAR TEST:
+EJECUTAR TESTs:
 (en la carpeta backend/java)
-Compilar: javac -cp ".;*" test.java
-Ejecutar: java -cp ".;*" test
+Compilar(NO hace falta): javac -cp ".;*" 'nombreTest'.java
+Ejecutar: java -cp ".;*" 'nombreTest'
+Limpiar (en PowerShell de Windows): Get-ChildItem -Filter *.class -Recurse | Remove-Item
 
 IMPORTANTE: Tienes que tener el docker instalado en tu ordenador y que los ficheros SQL estén preferiblemente en la misma carpeta que el compose
 

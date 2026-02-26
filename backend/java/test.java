@@ -34,11 +34,18 @@ public class test {
         // 2. CREACIÓN DE JUGADORES
         // ---------------------------------------------------------
         System.out.println("\n--- Paso 2: Registrando Jugadores ---");
-        Jugador j1 = new Jugador("admin@test.com", "Ciro", "pass123", 2000, 500, 10, 15); // 2000 puntos, 500 cores, 10 ganadas, 15 jugadas
-        Jugador j2 = new Jugador("rival@test.com", "Rival", "pass456", 1500, 300, 5, 12); // 1500 puntos, 300 cores, 5 ganadas, 12 jugadas
-        
+        Jugador j1 = new Jugador("admin@test.com", "Ciro", "pass1234", 2000, 500, 10, 15); // 2000 puntos, 500 cores, 10 ganadas, 15 jugadas
+        Jugador j2 = new Jugador("rival@test.com", "Rival", "pass4567", 1500, 300, 5, 12); // 1500 puntos, 300 cores, 5 ganadas, 12 jugadas
+
+        //Probar autenticación(mirar en la base de datos)
+        String password1 = "MiPassword123!";
+        String passwordHash1 = Autenticacion.hashearPassword(password1);
+        Jugador j3 = new Jugador("bot1@test.com", "Bot1", passwordHash1, 2000, 500, 10, 15);
+        Jugador j4 = new Jugador("bot2@test.com", "Bot2", "pass0002");
         j1.registrarse();
         j2.registrarse();
+        j3.registrarse();
+        j4.registrarse();
         System.out.println("   Jugadores listos: " + j1.getNombre() + " (" + j1.getCores() + " cores) y " + j2.getNombre() + " (" + j2.getCores() + " cores)");
 
 
