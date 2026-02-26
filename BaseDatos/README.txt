@@ -22,6 +22,11 @@ VER DATOS:
 ==========
 Para ver el contenido de las tablas: "Get-Content .\ver.sql | docker exec -i proy-postgres psql -U postgres -d postgres"
 
+EJECUTAR TEST:
+(en la carpeta backend/java)
+Compilar: javac -cp ".;*" test.java
+Ejecutar: java -cp ".;*" test
+
 IMPORTANTE: Tienes que tener el docker instalado en tu ordenador y que los ficheros SQL estén preferiblemente en la misma carpeta que el compose
 
 Si no tienes docker: https://docs.docker.com/engine/install/
