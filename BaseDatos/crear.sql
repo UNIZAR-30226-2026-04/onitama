@@ -2,7 +2,10 @@ CREATE TABLE Jugador (
     Correo VARCHAR(255) UNIQUE,
     Nombre_US VARCHAR(100) PRIMARY KEY,
     Contrasena_Hash VARCHAR(255),
-    Puntos INTEGER
+    Puntos INTEGER DEFAULT 0,
+    Cores INTEGER DEFAULT 0,
+    Partidas_Ganadas INTEGER DEFAULT 0,
+    Partidas_Jugadas INTEGER DEFAULT 0
 );
 
 CREATE TABLE Skin (
