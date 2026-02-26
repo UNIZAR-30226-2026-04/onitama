@@ -9,22 +9,30 @@ import java.sql.SQLException;
 //Faltan las skins
 public class Jugador {
     private String nombre, password, correo;
-    private int puntos;
+    private int puntos, cores, partidasGanadas, partidasJugadas;
     private List<Jugador> amigos;
     private List<Skin> misSkines;
     private JugadorJDBC jdbc;
     private SkinJDBC jdbcSkin;
     
     //Constructor necesario para la BD
-    public Jugador(String correo, String nombre, String password, int puntos){
+    public Jugador(String correo, String nombre, String password, int puntos, int cores, int partidasGanadas, int partidasJugadas){
         this.correo = correo;
         this.nombre = nombre;
         this.password = password; //Faltaria hashear con BCryp
         this.puntos = puntos;
+        this.cores = cores;
+        this.partidasGanadas = partidasGanadas;
+        this.partidasJugadas = partidasJugadas;
         amigos = new ArrayList<>();
         misSkines = new ArrayList<>();
         jdbc = new JugadorJDBC();
         jdbcSkin = new SkinJDBC();
+    }
+    
+    //Constructor simplificado para registro (valores por defecto)
+    public Jugador(String correo, String nombre, String password){
+        this(correo, nombre, password, 0, 0, 0, 0);
     }
 
     public boolean registrarse(){
@@ -51,6 +59,18 @@ public class Jugador {
         this.puntos = puntos;
     }
 
+    public void setCores(int cores){
+        this.cores = cores;
+    }
+
+    public void setPartidasGanadas(int partidasGanadas){
+        this.partidasGanadas = partidasGanadas;
+    }
+
+    public void setPartidasJugadas(int partidasJugadas){
+        this.partidasJugadas = partidasJugadas;
+    }
+
     public String getCorreo(){
         return correo;
     }
@@ -67,9 +87,21 @@ public class Jugador {
         return puntos;
     }
 
+    public int getCores(){
+        return cores;
+    }
+
+    public int getPartidasGanadas(){
+        return partidasGanadas;
+    }
+
+    public int getPartidasJugadas(){
+        return partidasJugadas;
+    }
+
     public boolean actualizarBD(){
         try {
-            return jdbc.updateContrasenya(nombre, password) | jdbc.updateCorreo(nombre, correo) | jdbc.updatePuntos(nombre, puntos); //| para que se ejecuten todos
+            return jdbc.updateContrasenya(nombre, password) | jdbc.updateCorreo(nombre, correo) | jdbc.updatePuntos(nombre, puntos) | jdbc.updateCores(nombre, cores) | jdbc.updatePartidasGanadas(nombre, partidasGanadas) | jdbc.updatePartidasJugadas(nombre, partidasJugadas); //| para que se ejecuten todos
         } catch (SQLException e) {
             return false;
         }
@@ -116,11 +148,41 @@ public class Jugador {
     }
 
     public boolean comprarSkin(Skin nueva){
+        // Verificar si el jugador tiene suficientes cores
+        if (this.cores < nueva.getPrecio()) {
+            return false; // No tiene suficientes cores
+        }
+        
+        // Restar el precio de los cores
+        this.cores -= nueva.getPrecio();
+        
         misSkines.add(nueva); //Añadimos en la lista para evitar tener que estar cargando de la BD
         try {
-            return jdbcSkin.comprarSkin(nueva.getNombre(), nombre);
+            // Actualizar cores en la BD
+            boolean coresActualizados = jdbc.updateCores(nombre, cores);
+            // Registrar la compra de la skin
+            boolean skinComprada = jdbcSkin.comprarSkin(nueva.getNombre(), nombre);
+            
+            return coresActualizados && skinComprada;
         } catch (SQLException e) {
+            // Si falla, revertir el descuento de cores en memoria
+            this.cores += nueva.getPrecio();
+            misSkines.remove(nueva);
             return false;
         }
     }
+    
+    // Método para incrementar partidas jugadas
+    public void incrementarPartidasJugadas(){
+        this.partidasJugadas++;
+    }
+    
+    // Método para registrar victoria (incrementa partidas ganadas y jugadas)
+    public void registrarVictoria(int coresGanados, int puntosGanados){
+        this.partidasGanadas++;
+        this.partidasJugadas++;
+        this.cores += coresGanados;
+        this.puntos += puntosGanados;
+    }
+    
 }

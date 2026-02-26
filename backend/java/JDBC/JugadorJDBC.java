@@ -31,7 +31,7 @@ public final class JugadorJDBC{
     }
     
     public boolean registrarse(Jugador jugador) throws SQLException {
-        final String sql = "INSERT INTO Jugador (Correo, Nombre_US, Contrasena_Hash, Puntos) VALUES (?, ?, ?, ?)";
+        final String sql = "INSERT INTO Jugador (Correo, Nombre_US, Contrasena_Hash, Puntos, Cores, Partidas_Ganadas, Partidas_Jugadas) VALUES (?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -40,6 +40,9 @@ public final class JugadorJDBC{
             ps.setString(2, jugador.getNombre());
             ps.setString(3, jugador.getContrasenya());
             ps.setInt(4, jugador.getPuntos());
+            ps.setInt(5, jugador.getCores());
+            ps.setInt(6, jugador.getPartidasGanadas());
+            ps.setInt(7, jugador.getPartidasJugadas());
             int filasAfectadas = ps.executeUpdate();
             return filasAfectadas > 0;
             
@@ -49,7 +52,7 @@ public final class JugadorJDBC{
     }
 
     public Jugador buscarJugador(String nombreUS) throws SQLException {
-        final String sql = "SELECT Correo, Nombre_US, Contrasena_Hash, Puntos FROM Jugador WHERE Nombre_US = ?";
+        final String sql = "SELECT Correo, Nombre_US, Contrasena_Hash, Puntos, Cores, Partidas_Ganadas, Partidas_Jugadas FROM Jugador WHERE Nombre_US = ?";
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, nombreUS);
@@ -96,8 +99,44 @@ public final class JugadorJDBC{
         }
     }
 
+    public boolean updateCores(String nombreUS, int nuevosCores) throws SQLException {
+        try(Connection c = dataSource.getConnection(); 
+            PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Cores = ? WHERE Nombre_US = ?")) { 
+            p.setInt(1, nuevosCores); 
+            p.setString(2, nombreUS); 
+            p.executeUpdate(); 
+            return true;
+        }catch (SQLException e) {
+            return false; // Si hay una excepción, asumimos que no se creó
+        }
+    }
+
+    public boolean updatePartidasGanadas(String nombreUS, int nuevasPartidasGanadas) throws SQLException {
+        try(Connection c = dataSource.getConnection(); 
+            PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Partidas_Ganadas = ? WHERE Nombre_US = ?")) { 
+            p.setInt(1, nuevasPartidasGanadas); 
+            p.setString(2, nombreUS); 
+            p.executeUpdate(); 
+            return true;
+        }catch (SQLException e) {
+            return false; // Si hay una excepción, asumimos que no se creó
+        }
+    }
+
+    public boolean updatePartidasJugadas(String nombreUS, int nuevasPartidasJugadas) throws SQLException {
+        try(Connection c = dataSource.getConnection(); 
+            PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Partidas_Jugadas = ? WHERE Nombre_US = ?")) { 
+            p.setInt(1, nuevasPartidasJugadas); 
+            p.setString(2, nombreUS); 
+            p.executeUpdate(); 
+            return true;
+        }catch (SQLException e) {
+            return false; // Si hay una excepción, asumimos que no se creó
+        }
+    }
+
     public List<Jugador> sacarAmigos(String nombreUS) throws SQLException {
-        final String sql = "SELECT DISTINCT j.Correo, j.Nombre_US, j.Contrasena_Hash, j.Puntos FROM Jugador j, Amistades a WHERE (j.Nombre_US = a.Jugador_1 AND a.Jugador_2 = ?) OR (j.Nombre_US = a.Jugador_2 AND a.Jugador_1 = ?)";
+        final String sql = "SELECT DISTINCT j.Correo, j.Nombre_US, j.Contrasena_Hash, j.Puntos, j.Cores, j.Partidas_Ganadas, j.Partidas_Jugadas FROM Jugador j, Amistades a WHERE (j.Nombre_US = a.Jugador_1 AND a.Jugador_2 = ?) OR (j.Nombre_US = a.Jugador_2 AND a.Jugador_1 = ?)";
 
         List<Jugador> amigos = new ArrayList<>();
 
@@ -189,13 +228,16 @@ public final class JugadorJDBC{
         }
     }
 
-    //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo Jugador
+    //Metodo auxiliar que saca los campos de la BD y crea un objeto de tipo Jugador
     private Jugador montarJugador(ResultSet rs) throws SQLException {
         return new Jugador(
             rs.getString("Correo"),
             rs.getString("Nombre_US"),
             rs.getString("Contrasena_Hash"),
-            rs.getInt("Puntos")
+            rs.getInt("Puntos"),
+            rs.getInt("Cores"),
+            rs.getInt("Partidas_Ganadas"),
+            rs.getInt("Partidas_Jugadas")
         );
     }
 }

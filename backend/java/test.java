@@ -34,12 +34,12 @@ public class test {
         // 2. CREACIÓN DE JUGADORES
         // ---------------------------------------------------------
         System.out.println("\n--- Paso 2: Registrando Jugadores ---");
-        Jugador j1 = new Jugador("admin@test.com", "Ciro", "pass123", 2000);
-        Jugador j2 = new Jugador("rival@test.com", "Rival", "pass456", 1500);
+        Jugador j1 = new Jugador("admin@test.com", "Ciro", "pass123", 2000, 500, 10, 15); // 2000 puntos, 500 cores, 10 ganadas, 15 jugadas
+        Jugador j2 = new Jugador("rival@test.com", "Rival", "pass456", 1500, 300, 5, 12); // 1500 puntos, 300 cores, 5 ganadas, 12 jugadas
         
         j1.registrarse();
         j2.registrarse();
-        System.out.println("   Jugadores listos.");
+        System.out.println("   Jugadores listos: " + j1.getNombre() + " (" + j1.getCores() + " cores) y " + j2.getNombre() + " (" + j2.getCores() + " cores)");
 
 
         // ---------------------------------------------------------
