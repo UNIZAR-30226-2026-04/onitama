@@ -60,7 +60,7 @@ public class Partida {
         try {
             int puntosMin = Math.min(this.jugador1.getPuntos(), this.jugador2.getPuntos());
             this.cartasA = jdbcAccion.asignar4CartasPartida(IDPartida, puntosMin);
-            this.cartasM = jdbcMov.asignar8CartasPartida(IDPartida, puntosMin);
+            this.cartasM = jdbcMov.asignar7CartasPartida(IDPartida, puntosMin);
         } catch (java.sql.SQLException e) {
             this.cartasA = new java.util.ArrayList<>();
             this.cartasM = new java.util.ArrayList<>();

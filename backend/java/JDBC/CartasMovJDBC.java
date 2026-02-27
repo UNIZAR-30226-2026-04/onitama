@@ -132,7 +132,7 @@ public final class CartasMovJDBC {
         }
     }
 
-    public List<CartaMov> asignar8CartasPartida(int IDPartida, int puntosMin) throws SQLException {
+    public List<CartaMov> asignar7CartasPartida(int IDPartida, int puntosMin) throws SQLException {
         List<CartaMov> disponibles = sacarCartas(); //IMPORTANTE: Tiene que haber mas de 7 cartas para que funcione
         List<CartaMov> usables = new ArrayList<>();
         //Eliminamos de la lista las cartas que sobrepasen el minimo IMPORTANTE: Poner al menos 4 cartas que no necesiten un minimos de puntos para jugarse
@@ -146,12 +146,12 @@ public final class CartasMovJDBC {
             return null; // Devolvemos null si por alguna razon no me hicisteis caso en el comentario de la linea 138
         }
         Collections.shuffle(usables);
-        for(int i = 0; i<8; i++){
+        for(int i = 0; i<7; i++){
             if(!asignarCartaPartida(IDPartida, usables.get(i).getNombre())){
                 return null;
             }
         }
-        return usables.subList(0, 8);
+        return usables.subList(0, 7);
     }
 
     public boolean asignarCartaPartida(int IDPartida, String nombreCarta) throws SQLException {
