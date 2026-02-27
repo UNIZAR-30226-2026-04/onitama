@@ -29,4 +29,8 @@ public class Ficha {
     public int getEquipo(){
         return equipo;
     }
+
+    public int isRey(){
+        return rey;
+    }
 }

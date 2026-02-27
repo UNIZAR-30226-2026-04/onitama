@@ -1,5 +1,8 @@
 package VO;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class Tablero {
     public Posicion[][] tablero;
     public Posicion trono1, trono2;
@@ -12,26 +15,7 @@ public class Tablero {
             
             for (int i=0; i<DIM; i++) {
                 for(int j=0; j<DIM; j++) {
-                    if (i == 0) {
-                        //  Equipo 1
-                        if (j == centro) {
-                            // rey
-                            tablero[i][j] = new Posicion(j, i, new Ficha(true, 1));
-                        } else {
-                            // peones
-                            tablero[i][j] = new Posicion(j, i, new Ficha(false, 1));
-                        }
-                    } else if (i == DIM - 1) {
-                        //  Equipo 2
-                        if (j == centro) {
-                            tablero[i][j] = new Posicion(j, i, new Ficha(true, 2));
-                        } else {
-                            tablero[i][j] = new Posicion(j, i, new Ficha(false, 2));
-                        }
-                    } else {
-                        // Filas del medio: Vacías
-                        tablero[i][j] = new Posicion(j, i, null);
-                    }
+                    tablero[i][j] = new Posicion(j, i, null);
                 }
             }
             
@@ -40,8 +24,125 @@ public class Tablero {
             trono2 = tablero[DIM-1][centro]; // Trono del Equipo 2 (última fila, columna centro)
         }
     }
+
+    //Cargar tablero desde dos posiciones dadas
+    public void cargarTablero(String p1, String p2){
+        Pattern rey = Pattern.compile("[-?\\d+],[-?\\d+]");
+        Matcher r1 = rey.matcher(p1);
+        Matcher r2 = rey.matcher(p2);
+        int x, y;
+
+        if (r1.find()) {
+            x = Integer.parseInt(r1.group(1)); // Primer grupo capturado (-?\\d+)
+            y = Integer.parseInt(r1.group(2)); // Segundo grupo capturado (-?\\d+)
+            tablero[y][x].setFicha(new Ficha(true, 1));
+            System.out.println("Rey J1 detectado en: [" + x + "," + y + "]");
+        }
+
+        if (r2.find()) {
+            x = Integer.parseInt(r2.group(1));
+            y = Integer.parseInt(r2.group(2));
+            tablero[y][x].setFicha(new Ficha(true, 2));
+            System.out.println("Rey J2 detectado en: [" + x + "," + y + "]");
+        }
+
+        // Esta expresión regular busca grupos de dígitos separados por una coma
+        // \d+ coincide con uno o más números, -? para decir que pueden ser negativos
+        Pattern posiciones = Pattern.compile("(-?\\d+),(-?\\d+)");
+        Matcher m1 = posiciones.matcher(p1);
+        Matcher m2 = posiciones.matcher(p2);
+
+        while (m1.find()) {
+            // m.group(1) es la X, m.group(2) es la Y
+            x = Integer.parseInt(m1.group(1));
+            y = Integer.parseInt(m1.group(2));
+            tablero[y][x].setFicha(new Ficha(false, 1));
+        }
+
+        while (m2.find()) {
+            // m.group(1) es la X, m.group(2) es la Y
+            x = Integer.parseInt(m2.group(1));
+            y = Integer.parseInt(m2.group(2));
+            tablero[y][x].setFicha(new Ficha(false, 2));
+        }
+    }
+
+    public void cargarTablero(){
+        int centro = DIM / 2; 
+        for (int i=0; i<DIM; i++) {
+            for(int j=0; j<DIM; j++) {
+                if (i == 0) {
+                    //  Equipo 1
+                    if (j == centro) {
+                        // rey
+                        tablero[i][j] = new Posicion(j, i, new Ficha(true, 1));
+                    } else {
+                        // peones
+                        tablero[i][j] = new Posicion(j, i, new Ficha(false, 1));
+                    }
+                } else if (i == DIM - 1) {
+                    //  Equipo 2
+                    if (j == centro) {
+                        tablero[i][j] = new Posicion(j, i, new Ficha(true, 2));
+                    } else {
+                        tablero[i][j] = new Posicion(j, i, new Ficha(false, 2));
+                    }
+                }
+            }
+        }
+    }
     
     public Posicion getPosicion(int x, int y){
     	return tablero[y][x];
+    }
+
+    public void getPosicionesEquipos(StringPorReferencia p1, StringPorReferencia p2) {
+        StringBuilder pos1 = "";
+        StringBuilder pos2 = "";
+        boolean primerElemento1 = true;
+        boolean primerElemento2 = true;
+
+        for (int i = 0; i < DIM; i++) {
+            for (int j = 0; j < DIM; j++) {
+                Posicion p = tablero[i][j];
+                
+                if (p.getFicha().getEquipo() == 1) {
+                    
+                    // Si no es el primero, ponemos una coma separadora
+                    if (!primerElemento1) {
+                        pos1 = pos1 + ",";
+                    }
+                    
+                    if (p.getFicha().isRey()) {
+                        // Formato Rey: [x,y]
+                        pos1 = pos1 + "[" + p.getX() + "," + p.getY() + "]";
+                    } else {
+                        // Formato Ficha: (x,y)
+                        pos1 = pos1 + "(" + p.getX() + "," + p.getY() + ")";
+                    }
+                    
+                    primerElemento1 = false;
+                } else if (p.getFicha().getEquipo() == 2) {
+                    
+                    // Si no es el primero, ponemos una coma separadora
+                    if (!primerElemento2) {
+                        pos2 = pos2 + ",";
+                    }
+                    
+                    if (p.getFicha().isRey()) {
+                        // Formato Rey: [x,y]
+                        pos2 = pos2 + "[" + p.getX() + "," + p.getY() + "]";
+                    } else {
+                        // Formato Ficha: (x,y)
+                        pos2 = pos2 + "(" + p.getX() + "," + p.getY() + ")";
+                    }
+                    
+                    primerElemento2 = false;
+                }
+            }
+        }
+
+        p2.setValor(pos2);
+        p1.serValor(pos1);
     }
 }

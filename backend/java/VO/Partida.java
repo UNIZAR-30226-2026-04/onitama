@@ -9,11 +9,12 @@ import java.util.List;
 
 public class Partida {
     private int IDPartida, tiempo, muertesJ1, muertesJ2;
-    String estado, tipo, fichasJ1, fichasJ2; //Cambiar fichas por su correspondiente clase
+    private String estado, tipo; //Cambiar fichas por su correspondiente clase
     private boolean j1Ganador, j2Ganador;
     private Jugador jugador1, jugador2;
     private List<CartaAccion> cartasA;
     private List<CartaMov> cartasM;
+    private Tablero tablero;
     private PartidaJDBC jdbc;
     private CartasAccionJDBC jdbcAccion;
     private CartasMovJDBC jdbcMov;
@@ -28,12 +29,12 @@ public class Partida {
         this.estado = estado;
         this.tiempo = tiempo;
         this.tipo = tipo;
-        this.fichasJ1 = p1;
-        this.fichasJ2 = p2;
         this.muertesJ1 = m1;
         this.muertesJ2 = m2;
         this.j1Ganador = g1;
         this.j2Ganador = g2;
+        this.tablero = new Tablero(7);
+        this.tablero.cargarTablero(p1, p2);
 
         try {
             // 1. Buscamos los objetos Jugador
@@ -148,6 +149,17 @@ public class Partida {
             cm.actualizarDatosPartida(IDPartida);
             i++;
             if(i == 4) break; //Asignamos las primeras 4, el resto al mazo
+        }
+    }
+
+    public boolean actualizarBD(){
+        StringPorReferencia p1 = new StringPorReferencia("");
+        StringPorReferencia p2 = new StringPorReferencia("");
+        tablero.getPosicionesEquipos(p1, p2);
+        try {
+            return jdbc.updateEstado(IDPartida, estado) | jdbc.updateMuertesFichas2(IDPartida, muertesJ2) | jdbc.updateMuertesFichas1(IDPartida, muertesJ1) | jdbc.updateTiempo(IDPartida, tiempo) | jdbc.updateGanadorJ2(IDPartida, j2Ganador) | jdbc.updateGanadorJ1(IDPartida, j1Ganador) | jdbc.updatePosFichas1(IDPartida, p1) | jdbc.updatePosFichas2(IDPartida, p2); //| para que se ejecuten todos
+        } catch (SQLException e) {
+            return false;
         }
     }
 }
