@@ -11,6 +11,7 @@ public class Jugador {
     private String nombre, password, correo;
     private int puntos, cores, partidasGanadas, partidasJugadas;
     private List<Jugador> amigos;
+    private List<Jugador> solicitudesPendientes;
     private List<Skin> misSkines;
     private JugadorJDBC jdbc;
     private SkinJDBC jdbcSkin;
@@ -26,6 +27,7 @@ public class Jugador {
         this.partidasGanadas = partidasGanadas;
         this.partidasJugadas = partidasJugadas;
         amigos = new ArrayList<>();
+        solicitudesPendientes = new ArrayList<>();
         misSkines = new ArrayList<>();
         jdbc = new JugadorJDBC();
         jdbcSkin = new SkinJDBC();
@@ -154,23 +156,64 @@ public class Jugador {
         }
     }
 
+    public void cargarSolicitudesPendientes(){
+        try {
+            solicitudesPendientes = jdbc.sacarSolicitudesPendientes(nombre);
+        } catch (SQLException e) {
+        }
+    }
+
     public List<Jugador> getAmigos(){
         return amigos;
     }
 
+    public List<Jugador> getSolicitudesPendientes(){
+        return solicitudesPendientes;
+    }
+
+    public boolean solicitarAmistad(String destinatario){
+        try{
+            return jdbc.enviarSolicitud(nombre, destinatario);
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
     public boolean anyadirAmigo(Jugador amigo){
-        amigos.add(amigo); //Añadimos en la lista para evitar tener que estar cargando de la BD
         try {
-            return jdbc.anyadirAmigo(nombre, amigo.getNombre());
+            if(jdbc.anyadirAmigo(amigo.getNombre(), nombre)) {
+                amigos.add(amigo); 
+                solicitudesPendientes.remove(amigo);
+                return true;
+            }
+            return false;    
+
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    public boolean rechazarSolicitud(Jugador amigo){
+        try {
+            if (jdbc.rechazarSolicitud(amigo.getNombre(), nombre)) {
+                solicitudesPendientes.remove(amigo); 
+                return true;
+            }
+            return false;    
+
         } catch (SQLException e) {
             return false;
         }
     }
     
     public boolean borrarAmigo(Jugador amigo){
-        amigos.remove(amigo); //Borramos de la lista para evitar tener que estar cargando de la BD
         try {
-            return jdbc.borrarAmigo(nombre, amigo.getNombre());
+            if(jdbc.borrarAmigo(nombre, amigo.getNombre())) {
+                amigos.remove(amigo); 
+                return true;
+            }
+            return false;    
+
         } catch (SQLException e) {
             return false;
         }

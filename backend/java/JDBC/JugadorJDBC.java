@@ -135,8 +135,24 @@ public final class JugadorJDBC{
         }
     }
 
+    public boolean enviarSolicitud(String miNombre, String nombreAmigo) throws SQLException {
+        final String sql = "INSERT INTO Amistades (Jugador_1, Jugador_2, Estado) VALUES (?, ?, 'PENDIENTE')";
+
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            ps.setString(1, miNombre);
+            ps.setString(2, nombreAmigo);
+            int filasAfectadas = ps.executeUpdate();
+            return filasAfectadas > 0;
+            
+        } catch (SQLException e) {
+            return false; 
+        }
+    }
+
     public List<Jugador> sacarAmigos(String nombreUS) throws SQLException {
-        final String sql = "SELECT DISTINCT j.Correo, j.Nombre_US, j.Contrasena_Hash, j.Puntos, j.Cores, j.Partidas_Ganadas, j.Partidas_Jugadas FROM Jugador j, Amistades a WHERE (j.Nombre_US = a.Jugador_1 AND a.Jugador_2 = ?) OR (j.Nombre_US = a.Jugador_2 AND a.Jugador_1 = ?)";
+        final String sql = "SELECT DISTINCT j.Correo, j.Nombre_US, j.Contrasena_Hash, j.Puntos, j.Cores, j.Partidas_Ganadas, j.Partidas_Jugadas FROM Jugador j, Amistades a WHERE ((j.Nombre_US = a.Jugador_1 AND a.Jugador_2 = ?) OR (j.Nombre_US = a.Jugador_2 AND a.Jugador_1 = ?)) AND a.Estado = 'ACEPTADA'";
 
         List<Jugador> amigos = new ArrayList<>();
 
@@ -152,6 +168,24 @@ public final class JugadorJDBC{
             }
         }
         return amigos;
+    }
+
+    public List<Jugador> sacarSolicitudesPendientes(String nombreUS) throws SQLException {
+        final String sql = "SELECT j.Correo, j.Nombre_US, j.Contrasena_Hash, j.Puntos, j.Cores, j.Partidas_Ganadas, j.Partidas_Jugadas FROM Jugador j, Amistades a WHERE j.Nombre_US = a.Jugador_1 AND a.Jugador_2 = ? AND a.Estado = 'PENDIENTE'";
+
+        List<Jugador> pendientes = new ArrayList<>();
+
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement p = conn.prepareStatement(sql)) {
+            p.setString(1, nombreUS);
+
+            try (ResultSet rs = p.executeQuery()) {
+                while (rs.next()) {
+                    pendientes.add(montarJugador(rs));
+                }
+            }
+        }
+        return pendientes;
     }
 
     public List<Jugador> sacarJugadoresDisp() throws SQLException {
@@ -172,7 +206,7 @@ public final class JugadorJDBC{
     }
 
     public boolean anyadirAmigo(String miNombre, String nombreAmigo) throws SQLException {
-        final String sql = "INSERT INTO Amistades (Jugador_1, Jugador_2) VALUES (?, ?)";
+        final String sql = "UPDATE Amistades SET Estado = 'ACEPTADA' WHERE Jugador_1 = ? AND Jugador_2 = ? AND Estado = 'PENDIENTE'";
         
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -183,14 +217,30 @@ public final class JugadorJDBC{
             return filasAfectadas > 0;
             
         } catch (SQLException e) {
-            return false; // Si hay una excepción, asumimos que no se creó
+            return false; 
         }
     }
 
-    public boolean borrarAmigo(String miNombre, String nombreAmigo) throws SQLException {
-        final String sql = "DELETE FROM Amistades WHERE (Jugador_1 = ? AND Jugador_2 = ?) OR (Jugador_2 = ? AND Jugador_1 = ?)";
+public boolean rechazarSolicitud(String miNombre, String nombreAmigo) throws SQLException {
+        final String sql = "DELETE FROM Amistades WHERE Jugador_1 = ? AND Jugador_2 = ? AND Estado = 'PENDIENTE'";
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            ps.setString(1, miNombre);
+            ps.setString(2, nombreAmigo);
+            int filasAfectadas = ps.executeUpdate();
+            return filasAfectadas > 0;
+            
+        } catch (SQLException e) {
+            return false; 
+        }
+    }
+    
+    public boolean borrarAmigo(String miNombre, String nombreAmigo) throws SQLException {
+        final String sql = "DELETE FROM Amistades WHERE ((Jugador_1 = ? AND Jugador_2 = ?) OR (Jugador_2 = ? AND Jugador_1 = ?)) AND Estado = 'ACEPTADA'";
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)) {
+            
             ps.setString(1, miNombre);
             ps.setString(2, nombreAmigo);
             ps.setString(3, miNombre);
