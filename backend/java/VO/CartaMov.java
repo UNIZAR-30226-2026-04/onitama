@@ -9,12 +9,14 @@ import java.util.regex.Pattern;
 
 public class CartaMov {
     private String nombre, estado;
+    private int puntosMin;
     private List<Posicion> movimientos;
     private CartasMovJDBC jdbc;
 
-    public CartaMov(String nombre, String mov){
+    public CartaMov(String nombre, String mov, int puntosMin){
         this.nombre = nombre;
         this.estado = "MAZO";
+        this.puntosMin = puntosMin;
         movimientos = new ArrayList<>();
         jdbc = new CartasMovJDBC();
         
@@ -31,9 +33,10 @@ public class CartaMov {
         }
     }
 
-    public CartaMov(String nombre, String mov, String estado){
+    public CartaMov(String nombre, String mov, int puntosMin, String estado){
         this.nombre = nombre;
         this.estado = estado;
+        this.puntosMin = puntosMin;
         movimientos = new ArrayList<>();
         jdbc = new CartasMovJDBC();
         
@@ -56,6 +59,14 @@ public class CartaMov {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public int getPuntosMin() {
+        return puntosMin;
+    }
+
+    public void setPuntosMin(int puntosMin) {
+        this.puntosMin = puntosMin;
     }
 
     public boolean registrarCartaMov(){
@@ -106,7 +117,7 @@ public class CartaMov {
 
     public boolean actualizarBD(){
         try {
-            return jdbc.updateMovimientos(nombre, getMovimientos()); //| para que se ejecuten todos
+            return jdbc.updateMovimientos(nombre, getMovimientos()) | jdbc.updatePuntosMin(nombre, puntosMin); //| para que se ejecuten todos
         } catch (SQLException e) {
             return false;
         }

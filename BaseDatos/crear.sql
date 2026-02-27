@@ -18,7 +18,8 @@ CREATE TABLE Skin (
 
 CREATE TABLE Cartas_Mov (
     Nombre VARCHAR(50) PRIMARY KEY,
-    Movimientos TEXT
+    Movimientos TEXT,
+    Puntos_min INTEGER
 );
 
 CREATE TABLE Cartas_Accion (

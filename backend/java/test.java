@@ -14,7 +14,7 @@ public class test {
         String[] nombresM = {"Tigre", "Cangrejo", "Mono", "Grulla", "Dragon", 
                              "Elefante", "Mantis", "Jabali", "Buey", "Cobra"};
         for (String n : nombresM) {
-            CartaMov m = new CartaMov(n, "(1,1),(-1,-1)");
+            CartaMov m = new CartaMov(n, "(1,1),(-1,-1)", 0);
             m.registrarCartaMov(); // El método devuelve false si ya existe, no rompe el test
         }
         System.out.println("   [OK] 10 Cartas de Movimiento procesadas.");
