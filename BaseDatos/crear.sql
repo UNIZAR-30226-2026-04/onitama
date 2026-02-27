@@ -56,6 +56,7 @@ CREATE TABLE Jugador_Skins (
 CREATE TABLE Amistades (
     Jugador_1 VARCHAR(255),
     Jugador_2 VARCHAR(255),
+    Estado VARCHAR(20),
     PRIMARY KEY (Jugador_1, Jugador_2),
     FOREIGN KEY (Jugador_1) REFERENCES Jugador(Nombre_US),
     FOREIGN KEY (Jugador_2) REFERENCES Jugador(Nombre_US)
