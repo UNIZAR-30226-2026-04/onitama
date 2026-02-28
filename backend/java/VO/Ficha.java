@@ -30,7 +30,7 @@ public class Ficha {
         return equipo;
     }
 
-    public int isRey(){
+    public boolean isRey(){
         return rey;
     }
 }

@@ -84,11 +84,19 @@ public class Partida {
     }
 
     public String getPos_Fichas_Eq1(){
-        return fichasJ1;
+        //return fichasJ1; //Parche de compilacion
+        StringPorReferencia p1 = new StringPorReferencia("");
+        StringPorReferencia p2 = new StringPorReferencia("");
+        tablero.getPosicionesEquipos(p1, p2);
+        return p1.getValor();
     }
 
     public String getPos_Fichas_Eq2(){
-        return fichasJ2;
+        //return fichasJ2; //Parche de compilacion
+        StringPorReferencia p1 = new StringPorReferencia("");
+        StringPorReferencia p2 = new StringPorReferencia("");
+        tablero.getPosicionesEquipos(p1, p2);
+        return p2.getValor();
     }
 
     public int getFichasMuertas1(){
@@ -113,6 +121,10 @@ public class Partida {
 
     public String getJ2(){
         return jugador2.getNombre();
+    }
+
+    public Tablero getTablero(){
+        return tablero;
     }
 
     public List<CartaAccion> getCartasAccion(){
@@ -157,9 +169,171 @@ public class Partida {
         StringPorReferencia p2 = new StringPorReferencia("");
         tablero.getPosicionesEquipos(p1, p2);
         try {
-            return jdbc.updateEstado(IDPartida, estado) | jdbc.updateMuertesFichas2(IDPartida, muertesJ2) | jdbc.updateMuertesFichas1(IDPartida, muertesJ1) | jdbc.updateTiempo(IDPartida, tiempo) | jdbc.updateGanadorJ2(IDPartida, j2Ganador) | jdbc.updateGanadorJ1(IDPartida, j1Ganador) | jdbc.updatePosFichas1(IDPartida, p1) | jdbc.updatePosFichas2(IDPartida, p2); //| para que se ejecuten todos
+            return jdbc.updateEstado(IDPartida, estado) | jdbc.updateMuertesFichas2(IDPartida, muertesJ2) | jdbc.updateMuertesFichas1(IDPartida, muertesJ1) | jdbc.updateTiempo(IDPartida, tiempo) | jdbc.updateGanadorJ2(IDPartida, j2Ganador) | jdbc.updateGanadorJ1(IDPartida, j1Ganador) | jdbc.updatePosFichas1(IDPartida, p1.getValor()) | jdbc.updatePosFichas2(IDPartida, p2.getValor()); //| para que se ejecuten todos
         } catch (SQLException e) {
             return false;
         }
+    }
+
+    //Inicia la partida: cambia estado a Jugandose, asigna las cartas y las reparte
+    public boolean iniciarPartida(){
+        this.estado = "Jugandose";
+        this.tiempo = 0;
+        this.tablero.cargarTablero();
+        asignarCartas();
+        repartirCartas();
+        return actualizarBD();
+    }
+
+    //Pausa la partida cambiando su estado
+    public boolean pausarPartida(){
+        if (!"Jugandose".equals(estado)) {
+            return false; //Solo se puede pausar una partida en curso
+        }
+        this.estado = "Pausada";
+        try {
+            return jdbc.updateEstado(IDPartida, estado);
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    //Reanuda la partida desde el estado de pausa
+    public boolean reanudarPartida(){
+        if (!"Pausada".equals(estado)) {
+            return false; //Solo se puede reanudar una partida pausada
+        }
+        this.estado = "Jugandose";
+        try {
+            return jdbc.updateEstado(IDPartida, estado);
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    //Un jugador abandona la partida, el otro gana automaticamente
+    public boolean abandonarPartida(int equipoQueAbandona){
+        this.estado = "Abandonada";
+        if (equipoQueAbandona == 1) {
+            this.j2Ganador = true;
+            this.j1Ganador = false;
+        } else {
+            this.j1Ganador = true;
+            this.j2Ganador = false;
+        }
+        return actualizarBD();
+    }
+
+    //Finaliza la partida y actualiza las estadisticas de los jugadores
+    public boolean finalizarPartida(){
+        this.estado = "Finalizada";
+        //Actualizar estadisticas de los jugadores
+        if (j1Ganador && jugador1 != null) {
+            jugador1.registrarVictoria(10, 50); //Cores y puntos por ganar
+            jugador1.actualizarBD();
+        }
+        if (j2Ganador && jugador2 != null) {
+            jugador2.registrarVictoria(10, 50);
+            jugador2.actualizarBD();
+        }
+        //El perdedor solo incrementa partidas jugadas
+        if (!j1Ganador && jugador1 != null) {
+            jugador1.incrementarPartidasJugadas();
+            jugador1.actualizarBD();
+        }
+        if (!j2Ganador && jugador2 != null) {
+            jugador2.incrementarPartidasJugadas();
+            jugador2.actualizarBD();
+        }
+        return actualizarBD();
+    }
+
+    //Comprueba si hay condicion de victoria:
+    //1. Rey capturado (no hay rey en el tablero)
+    //2. Rey en trono enemigo
+    //Devuelve 0 si no hay victoria, 1 si gana equipo 1, 2 si gana equipo 2
+    public int verificarVictoria(){
+        boolean reyJ1Vivo = false;
+        boolean reyJ2Vivo = false;
+        int DIM = tablero.getDIM();
+
+        for (int i = 0; i < DIM; i++) {
+            for (int j = 0; j < DIM; j++) {
+                Posicion pos = tablero.getPosicion(j, i);
+                Ficha ficha = pos.getFicha();
+                if (ficha != null && ficha.getVivo()) {
+                    if (ficha.isRey() && ficha.getEquipo() == 1) {
+                        reyJ1Vivo = true;
+                        //Victoria por trono: rey del equipo 1 llega al trono del equipo 2
+                        if (pos == tablero.trono2) {
+                            j1Ganador = true;
+                            return 1;
+                        }
+                    }
+                    if (ficha.isRey() && ficha.getEquipo() == 2) {
+                        reyJ2Vivo = true;
+                        //Victoria por trono: rey del equipo 2 llega al trono del equipo 1
+                        if (pos == tablero.trono1) {
+                            j2Ganador = true;
+                            return 2;
+                        }
+                    }
+                }
+            }
+        }
+
+        //Victoria por captura: si un rey esta muerto, gana el otro equipo
+        if (!reyJ1Vivo) {
+            j2Ganador = true;
+            return 2;
+        }
+        if (!reyJ2Vivo) {
+            j1Ganador = true;
+            return 1;
+        }
+
+        return 0; //No hay victoria todavia
+    }
+
+    //Rota las cartas de movimiento segun la mecanica de Onitama:
+    //La carta usada por un equipo pasa al mazo y se le asigna una del mazo
+    public boolean rotarCartas(String cartaUsada, int equipo){
+        CartaMov usada = null;
+        CartaMov nuevaDelMazo = null;
+
+        //Buscar la carta usada
+        for (CartaMov cm : cartasM) {
+            if (cm.getNombre().equals(cartaUsada) && 
+                ((equipo == 1 && "EQ1".equals(cm.getEstado())) || (equipo == 2 && "EQ2".equals(cm.getEstado())))) {
+                usada = cm;
+                break;
+            }
+        }
+
+        if (usada == null) {
+            return false; //Carta no encontrada o no pertenece al equipo
+        }
+
+        //Buscar una carta del mazo para darle al equipo
+        for (CartaMov cm : cartasM) {
+            if ("MAZO".equals(cm.getEstado())) {
+                nuevaDelMazo = cm;
+                break;
+            }
+        }
+
+        if (nuevaDelMazo == null) {
+            return false; //No hay cartas en el mazo
+        }
+
+        //La carta usada pasa al mazo
+        usada.setEstado("MAZO");
+        usada.actualizarDatosPartida(IDPartida);
+
+        //La carta del mazo pasa al equipo
+        nuevaDelMazo.setEstado(equipo == 1 ? "EQ1" : "EQ2");
+        nuevaDelMazo.actualizarDatosPartida(IDPartida);
+
+        return true;
     }
 }

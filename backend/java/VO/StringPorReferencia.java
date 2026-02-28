@@ -1,3 +1,5 @@
+package VO;
+
 public class StringPorReferencia{
     private String valor;
 

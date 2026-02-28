@@ -6,16 +6,21 @@ import java.util.regex.Pattern;
 public class Tablero {
     public Posicion[][] tablero;
     public Posicion trono1, trono2;
+    private int DIM;
+    private boolean[][] casillaTrampa; //Para marcar casillas trampa
 
     public Tablero(int DIM){
+        this.DIM = DIM;
         // Solo crear tablero si la dimensión es impar
         if(DIM%2!=0){
             tablero = new Posicion[DIM][DIM];
+            casillaTrampa = new boolean[DIM][DIM];
             int centro = DIM / 2; // Posición de los tronos
             
             for (int i=0; i<DIM; i++) {
                 for(int j=0; j<DIM; j++) {
                     tablero[i][j] = new Posicion(j, i, null);
+                    casillaTrampa[i][j] = false;
                 }
             }
             
@@ -96,9 +101,58 @@ public class Tablero {
     	return tablero[y][x];
     }
 
+    public int getDIM(){
+        return DIM;
+    }
+
+    //Captura la ficha en la posicion (x, y) y la mata
+    //Devuelve true si la ficha capturada era el rey (fin de partida)
+    public boolean capturarFicha(int x, int y){
+        if (!esCasillaValida(x, y)) {
+            return false;
+        }
+        Posicion pos = tablero[y][x];
+        Ficha ficha = pos.getFicha();
+        if (ficha == null) {
+            return false; //No hay ficha que capturar
+        }
+        boolean eraRey = ficha.matar();
+        pos.setFicha(null); //Vaciar la casilla
+        return eraRey;
+    }
+
+    //Comprueba si las coordenadas (x, y) estan dentro del tablero
+    public boolean esCasillaValida(int x, int y){
+        return x >= 0 && x < DIM && y >= 0 && y < DIM;
+    }
+
+    //Coloca una casilla trampa en las coordenadas (x, y) indicadas por el jugador
+    //No se puede poner en tronos, casillas ocupadas ni casillas que ya son trampa
+    public boolean seleccionarCasillaTrampa(int x, int y){
+        if (!esCasillaValida(x, y)) {
+            return false;
+        }
+        Posicion pos = tablero[y][x];
+
+        //No poner trampa en tronos, en casillas ocupadas, ni en casillas que ya son trampa
+        if (pos != trono1 && pos != trono2 && pos.ocupado() == -1 && !casillaTrampa[y][x]) {
+            casillaTrampa[y][x] = true;
+            return true;
+        }
+        return false; //Casilla no valida para trampa
+    }
+
+    //Comprueba si la casilla (x, y) es una trampa
+    public boolean verificarCasillaTrampa(int x, int y){
+        if (!esCasillaValida(x, y)) {
+            return false;
+        }
+        return casillaTrampa[y][x];
+    }
+
     public void getPosicionesEquipos(StringPorReferencia p1, StringPorReferencia p2) {
-        StringBuilder pos1 = "";
-        StringBuilder pos2 = "";
+        String pos1 = ""; //ya concatenan con + así que funciona
+        String pos2 = ""; //ya concatenan con + así que funciona
         boolean primerElemento1 = true;
         boolean primerElemento2 = true;
 
@@ -143,6 +197,6 @@ public class Tablero {
         }
 
         p2.setValor(pos2);
-        p1.serValor(pos1);
+        p1.setValor(pos1);
     }
 }
