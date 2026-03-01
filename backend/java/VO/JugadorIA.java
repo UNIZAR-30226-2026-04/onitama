@@ -330,11 +330,12 @@ public class JugadorIA {
                 break;
         }
 
-        //Marcar la carta de accion como usada en el estado
+        //Quitar la carta de accion de la lista del estado (NO llamar marcarComoUsada
+        //porque modificaria el objeto real compartido entre ramas del minimax)
         List<CartaAccion> acciones = (equipoActual == 1) ? estado.accionesEq1 : estado.accionesEq2;
-        for (CartaAccion ca : acciones) {
-            if (ca.getNombre().equals(jugada.cartaAccion)) {
-                ca.marcarComoUsada();
+        for (int i = 0; i < acciones.size(); i++) {
+            if (acciones.get(i).getNombre().equals(jugada.cartaAccion)) {
+                acciones.remove(i);
                 break;
             }
         }
