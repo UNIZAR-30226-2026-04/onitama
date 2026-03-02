@@ -34,7 +34,15 @@ public class Partida extends Subject {
         this.j1Ganador = g1;
         this.j2Ganador = g2;
         this.tablero = new Tablero(7);
-        this.tablero.cargarTablero(p1, p2);
+        if ((p1 == null || p1.isEmpty()) && (p2 == null || p2.isEmpty())) {
+            this.tablero.cargarTablero();
+        } else {
+            try {
+                this.tablero.cargarTablero(p1, p2);
+            } catch (Exception e) {
+                this.tablero.cargarTablero();
+            }
+        }
 
         try {
             // 1. Buscamos los objetos Jugador
