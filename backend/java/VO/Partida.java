@@ -374,4 +374,12 @@ public class Partida extends Subject {
 
         return true;
     }
+
+    //FALTA EL TEMA DE LOS TURNOS REVISAR
+    public boolean jugarAccion(CartaAccion carta) {
+        //Yo esperaria a tener hecha una partida normal para implementar las cartas de accion, 
+        //porque pueden ser muy variadas y no se me ocurre una implementacion general que sirva 
+        //para todas, habria que ir viendo carta por carta
+        return false;
+    }
 }
