@@ -66,6 +66,20 @@ public final class PartidaJDBC {
         }
     }
 
+    public Partida buscarPorId(int idPartida) throws SQLException {
+        final String sql = "SELECT * FROM Partida WHERE ID_Partida = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement p = conn.prepareStatement(sql)) {
+            p.setInt(1, idPartida);
+            try (ResultSet rs = p.executeQuery()) {
+                if (rs.next()) {
+                    return montarPartida(rs);
+                }
+            }
+        }
+        return null;
+    }
+
     public List<Partida> buscarPartidasJugadorPublicas(String nombreUS) throws SQLException {
         final String sql = "SELECT * FROM Partida WHERE (J1 = ? OR J2 = ?) AND Tipo = 'Publico'";
 
