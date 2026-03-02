@@ -7,7 +7,7 @@ import JDBC.PartidaJDBC;
 import java.sql.SQLException;
 import java.util.List;
 
-public class Partida {
+public class Partida extends Subject {
     private int IDPartida, tiempo, muertesJ1, muertesJ2;
     private String estado, tipo; //Cambiar fichas por su correspondiente clase
     private boolean j1Ganador, j2Ganador;
@@ -248,6 +248,7 @@ public class Partida {
         return actualizarBD();
     }
 
+    /* REVISAR (Ciro): Creo que seria mejor comprobar la victoria al realizar el movimiento
     //Comprueba si hay condicion de victoria:
     //1. Rey capturado (no hay rey en el tablero)
     //2. Rey en trono enemigo
@@ -281,6 +282,7 @@ public class Partida {
                 }
             }
         }
+        
 
         //Victoria por captura: si un rey esta muerto, gana el otro equipo
         if (!reyJ1Vivo) {
@@ -294,7 +296,43 @@ public class Partida {
 
         return 0; //No hay victoria todavia
     }
+    */
 
+   //FALTA EL TEMA DE LOS TURNOS REVISAR
+    public boolean moverFicha(int equipo, Posicion origen, Posicion destino, CartaMov carta) {
+        Ficha fOrigen = origen.getFicha();
+        Ficha fDestino = destino.getFicha();
+        List<Posicion> movimientosValidos = carta.getListaMovimientos();
+        Posicion movimientoARealizar = new Posicion(destino.getX() - origen.getX(), destino.getY() - origen.getY(), null);
+        //Por si acaso comprobamos que el movimiento existe
+        if (fOrigen == null || fOrigen.getEquipo() != equipo || !movimientosValidos.contains(movimientoARealizar) || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
+            return false; //Movimiento no valido segun la carta
+        }
+        //Posibilidad de que se requiera modificaciones
+        if (fDestino != null || fDestino.getEquipo() != equipo) {
+            if (fDestino.matar()) { //Si se mata al rey, se acaba la partida
+                //Posible implementacion de patron observer para notificar victoria al matar al rey
+                if (equipo == 1) {
+                    j1Ganador = true;
+                    nootify(); //Notificar a los observers que el equipo 1 ha ganado (Esta implementado en la clase Subject)
+                } else {
+                    j2Ganador = true;
+                    nootify(); //Notificar a los observers que el equipo 2 ha ganado
+                }
+            }
+            if (equipo == 1) {
+                muertesJ2++;
+            } else {
+                muertesJ1++;
+            }
+        }
+        destino.setFicha(fOrigen);
+        origen.setFicha(null);
+        rotarCartas(carta.getNombre(), equipo);
+        return true; //Movimiento realizado con exito
+    }
+
+    //REVISAR (Ciro): Creo que igual seria mejor actualizar la base al abandonar, parar, o terminar la partida
     //Rota las cartas de movimiento segun la mecanica de Onitama:
     //La carta usada por un equipo pasa al mazo y se le asigna una del mazo
     public boolean rotarCartas(String cartaUsada, int equipo){
