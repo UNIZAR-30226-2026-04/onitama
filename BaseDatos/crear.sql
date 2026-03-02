@@ -53,13 +53,31 @@ CREATE TABLE Jugador_Skins (
     FOREIGN KEY (Skin) REFERENCES Skin(Nombre)
 );
 
+-- Amistades: solo amistades aceptadas. Las solicitudes pendientes van en Notificaciones.
 CREATE TABLE Amistades (
-    Jugador_1 VARCHAR(255),
-    Jugador_2 VARCHAR(255),
-    Estado VARCHAR(20),
+    Jugador_1 VARCHAR(100),
+    Jugador_2 VARCHAR(100),
     PRIMARY KEY (Jugador_1, Jugador_2),
     FOREIGN KEY (Jugador_1) REFERENCES Jugador(Nombre_US),
-    FOREIGN KEY (Jugador_2) REFERENCES Jugador(Nombre_US)
+    FOREIGN KEY (Jugador_2) REFERENCES Jugador(Nombre_US),
+    CONSTRAINT orden_amistad CHECK (Jugador_1 < Jugador_2)
+);
+
+-- Notificaciones unificadas: amistad, invitación partida, pausa, reanudar
+CREATE TABLE Notificaciones (
+    ID_Notificacion SERIAL PRIMARY KEY,
+    Tipo VARCHAR(30) NOT NULL,
+    Remitente VARCHAR(100) NOT NULL,
+    Destinatario VARCHAR(100) NOT NULL,
+    Estado VARCHAR(20) DEFAULT 'PENDIENTE',
+    Fecha_Creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Fecha_Expiracion TIMESTAMP,
+    ID_Partida INTEGER,
+    FOREIGN KEY (Remitente) REFERENCES Jugador(Nombre_US),
+    FOREIGN KEY (Destinatario) REFERENCES Jugador(Nombre_US),
+    FOREIGN KEY (ID_Partida) REFERENCES Partida(ID_Partida),
+    CONSTRAINT tipo_valido CHECK (Tipo IN ('SOLICITUD_AMISTAD', 'INVITACION_PARTIDA', 'SOLICITUD_PAUSA', 'REANUDAR_PARTIDA')),
+    CONSTRAINT estado_valido CHECK (Estado IN ('PENDIENTE', 'ACEPTADA', 'RECHAZADA'))
 );
 
 CREATE TABLE Partida_Cartas_Mov (
@@ -89,3 +107,8 @@ WHERE Estado = 'Jugandose';
 CREATE UNIQUE INDEX solo1J2 
 ON PARTIDA (J2, Estado) 
 WHERE Estado = 'Jugandose';
+
+-- Índice para notificaciones pendientes por destinatario
+CREATE INDEX idx_notif_dest_pendiente 
+ON Notificaciones (Destinatario, Estado) 
+WHERE Estado = 'PENDIENTE';
