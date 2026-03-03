@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/azulFondo">
+
+    <ImageView
+        android:layout_width="346dp"
+        android:layout_height="79dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="150dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/onitamaText" />
+
+    <Button
+        android:layout_width="200dp"
+        android:layout_height="60dp"
+        android:layout_marginLeft="100dp"
+        android:layout_marginTop="20dp"
+        android:
+        android:background="@drawable/boton_redondeado"
+        android:text="INICIAR SESIÓN"
+        android:textSize="20dp"></Button>
+    <Button
+        android:layout_width="200dp"
+        android:layout_height="60dp"
+        android:layout_marginLeft="100dp"
+        android:layout_marginTop="20dp"
+        android:
+        android:background="@drawable/boton_redondeado"
+        android:text="CREAR CUENTA"
+        android:textSize="20dp"></Button>
+
+
+</LinearLayout>
