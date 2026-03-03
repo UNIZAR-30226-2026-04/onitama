@@ -24,8 +24,9 @@ public class Posicion {
 
     public int setFicha(Ficha F){
         if (F != null && this.ocupado() != -1 && this.ocupado() != F.getEquipo()) {
+            boolean reyMatado = this.matar(); // Mata la ficha actual ANTES de reemplazarla
             ficha = F;
-            if(this.matar()){
+            if(reyMatado){
                 return 3; //Mata al rey
             }else{
                 return 2; //Mata un peon

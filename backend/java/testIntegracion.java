@@ -98,15 +98,17 @@ public class testIntegracion {
     void testRevivirTronoOcupado() {
         Tablero tab = new Tablero(7);
         tab.cargarTablero();
-        // Nota: cargarTablero() crea nuevos Posicion que reemplazan tablero[i][j],
-        // pero trono1/trono2 siguen apuntando a los objetos del constructor.
-        // Se comprueba via getPosicion en vez de via trono1/trono2.
-        Posicion posReal = tab.getPosicion(3, 0);
-        assertNotNull(posReal.getFicha());
-        assertTrue(posReal.getFicha().isRey());
+        
+        // Ahora que el bug esta arreglado, trono1 y trono2 estan correctamente mapeados
+        assertNotNull(tab.trono1.getFicha());
+        assertTrue(tab.trono1.getFicha().isRey());
 
-        Posicion posRealEq2 = tab.getPosicion(3, 6);
-        assertNotNull(posRealEq2.getFicha());
+        assertNotNull(tab.trono2.getFicha());
+        assertTrue(tab.trono2.getFicha().isRey());
+        
+        CartaAccion revivir = new CartaAccion("Revivir2", "REVIVIR", 0, "USABLE", 1);
+        boolean ok = revivir.ejecutarAccion(tab, 1);
+        assertFalse(ok, "REVIVIR debe fallar si el trono (trono1) esta ocupado");
         System.out.println("[4] Tronos ocupados tras cargarTablero OK");
     }
 
@@ -278,11 +280,10 @@ public class testIntegracion {
         int resultado = pos.setFicha(new Ficha(false, 1));
         assertEquals(2, resultado);
 
-        // Peon EQ1 ataca rey EQ2: setFicha hace ficha=F antes de matar(),
-        // asi que matar() actua sobre la nueva ficha y devuelve 2 en vez de 3
+        // Peon EQ1 ataca rey EQ2 -> captura rey (devuelve 3)
         Posicion posRey = new Posicion(0, 0, new Ficha(true, 2));
         int resultadoRey = posRey.setFicha(new Ficha(false, 1));
-        assertEquals(2, resultadoRey); // Deberia ser 3, bug en setFicha
+        assertEquals(3, resultadoRey);
 
         // Aliado -> devuelve 1 (no puede mover)
         Posicion posAliada = new Posicion(0, 0, new Ficha(false, 1));

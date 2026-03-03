@@ -73,21 +73,24 @@ public class Tablero {
         int centro = DIM / 2; 
         for (int i=0; i<DIM; i++) {
             for(int j=0; j<DIM; j++) {
+                // Limpiar casilla primero por si acaso
+                tablero[i][j].setFicha(null);
+
                 if (i == 0) {
                     //  Equipo 1
                     if (j == centro) {
                         // rey
-                        tablero[i][j] = new Posicion(j, i, new Ficha(true, 1));
+                        tablero[i][j].setFicha(new Ficha(true, 1));
                     } else {
                         // peones
-                        tablero[i][j] = new Posicion(j, i, new Ficha(false, 1));
+                        tablero[i][j].setFicha(new Ficha(false, 1));
                     }
                 } else if (i == DIM - 1) {
                     //  Equipo 2
                     if (j == centro) {
-                        tablero[i][j] = new Posicion(j, i, new Ficha(true, 2));
+                        tablero[i][j].setFicha(new Ficha(true, 2));
                     } else {
-                        tablero[i][j] = new Posicion(j, i, new Ficha(false, 2));
+                        tablero[i][j].setFicha(new Ficha(false, 2));
                     }
                 }
             }
