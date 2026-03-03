@@ -30,9 +30,9 @@ public class Tablero {
         }
     }
 
-    //Cargar tablero desde dos posiciones dadas
+    //Cargar tablero desde dos posiciones dadas. Formato: Rey [x,y], Peon (x,y)
     public void cargarTablero(String p1, String p2){
-        Pattern rey = Pattern.compile("[-?\\d+],[-?\\d+]");
+        Pattern rey = Pattern.compile("\\[(-?\\d+),(-?\\d+)\\]");
         Matcher r1 = rey.matcher(p1);
         Matcher r2 = rey.matcher(p2);
         int x, y;
@@ -41,19 +41,16 @@ public class Tablero {
             x = Integer.parseInt(r1.group(1)); // Primer grupo capturado (-?\\d+)
             y = Integer.parseInt(r1.group(2)); // Segundo grupo capturado (-?\\d+)
             tablero[y][x].setFicha(new Ficha(true, 1));
-            System.out.println("Rey J1 detectado en: [" + x + "," + y + "]");
         }
 
         if (r2.find()) {
             x = Integer.parseInt(r2.group(1));
             y = Integer.parseInt(r2.group(2));
             tablero[y][x].setFicha(new Ficha(true, 2));
-            System.out.println("Rey J2 detectado en: [" + x + "," + y + "]");
         }
 
-        // Esta expresión regular busca grupos de dígitos separados por una coma
-        // \d+ coincide con uno o más números, -? para decir que pueden ser negativos
-        Pattern posiciones = Pattern.compile("(-?\\d+),(-?\\d+)");
+        // Peones: formato (x,y). No usar el genérico para no pisar las posiciones de rey [x,y]
+        Pattern posiciones = Pattern.compile("\\((-?\\d+),(-?\\d+)\\)");
         Matcher m1 = posiciones.matcher(p1);
         Matcher m2 = posiciones.matcher(p2);
 
@@ -76,21 +73,24 @@ public class Tablero {
         int centro = DIM / 2; 
         for (int i=0; i<DIM; i++) {
             for(int j=0; j<DIM; j++) {
+                // Limpiar casilla primero por si acaso
+                tablero[i][j].setFicha(null);
+
                 if (i == 0) {
                     //  Equipo 1
                     if (j == centro) {
                         // rey
-                        tablero[i][j] = new Posicion(j, i, new Ficha(true, 1));
+                        tablero[i][j].setFicha(new Ficha(true, 1));
                     } else {
                         // peones
-                        tablero[i][j] = new Posicion(j, i, new Ficha(false, 1));
+                        tablero[i][j].setFicha(new Ficha(false, 1));
                     }
                 } else if (i == DIM - 1) {
                     //  Equipo 2
                     if (j == centro) {
-                        tablero[i][j] = new Posicion(j, i, new Ficha(true, 2));
+                        tablero[i][j].setFicha(new Ficha(true, 2));
                     } else {
-                        tablero[i][j] = new Posicion(j, i, new Ficha(false, 2));
+                        tablero[i][j].setFicha(new Ficha(false, 2));
                     }
                 }
             }
@@ -151,43 +151,37 @@ public class Tablero {
     }
 
     public void getPosicionesEquipos(StringPorReferencia p1, StringPorReferencia p2) {
-        String pos1 = ""; //ya concatenan con + así que funciona
-        String pos2 = ""; //ya concatenan con + así que funciona
+        String pos1 = "";
+        String pos2 = "";
         boolean primerElemento1 = true;
         boolean primerElemento2 = true;
 
         for (int i = 0; i < DIM; i++) {
             for (int j = 0; j < DIM; j++) {
                 Posicion p = tablero[i][j];
-                
-                if (p.getFicha().getEquipo() == 1) {
+                Ficha f = (p != null) ? p.getFicha() : null;
+                if (f == null) continue;
+                if (f.getEquipo() == 1) {
                     
                     // Si no es el primero, ponemos una coma separadora
                     if (!primerElemento1) {
                         pos1 = pos1 + ",";
                     }
                     
-                    if (p.getFicha().isRey()) {
-                        // Formato Rey: [x,y]
+                    if (f.isRey()) {
                         pos1 = pos1 + "[" + p.getX() + "," + p.getY() + "]";
                     } else {
-                        // Formato Ficha: (x,y)
                         pos1 = pos1 + "(" + p.getX() + "," + p.getY() + ")";
                     }
-                    
                     primerElemento1 = false;
-                } else if (p.getFicha().getEquipo() == 2) {
-                    
-                    // Si no es el primero, ponemos una coma separadora
+                } else if (f.getEquipo() == 2) {
                     if (!primerElemento2) {
                         pos2 = pos2 + ",";
                     }
-                    
-                    if (p.getFicha().isRey()) {
+                    if (f.isRey()) {
                         // Formato Rey: [x,y]
                         pos2 = pos2 + "[" + p.getX() + "," + p.getY() + "]";
                     } else {
-                        // Formato Ficha: (x,y)
                         pos2 = pos2 + "(" + p.getX() + "," + p.getY() + ")";
                     }
                     

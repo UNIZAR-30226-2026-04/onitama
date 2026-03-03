@@ -2,16 +2,18 @@ package VO;
 
 import JDBC.JugadorJDBC;
 import JDBC.SkinJDBC;
+import gestor.GestorNotificaciones;
 import java.util.List;
 import java.util.ArrayList;
 import java.sql.SQLException;
+import VO.Notificacion;
 
 //Faltan las skins
 public class Jugador {
     private String nombre, password, correo;
     private int puntos, cores, partidasGanadas, partidasJugadas;
     private List<Jugador> amigos;
-    private List<Jugador> solicitudesPendientes;
+    private List<Notificacion> notificacionesPendientes;
     private List<Skin> misSkines;
     private JugadorJDBC jdbc;
     private SkinJDBC jdbcSkin;
@@ -27,7 +29,7 @@ public class Jugador {
         this.partidasGanadas = partidasGanadas;
         this.partidasJugadas = partidasJugadas;
         amigos = new ArrayList<>();
-        solicitudesPendientes = new ArrayList<>();
+        notificacionesPendientes = new ArrayList<>();
         misSkines = new ArrayList<>();
         jdbc = new JugadorJDBC();
         jdbcSkin = new SkinJDBC();
@@ -156,10 +158,12 @@ public class Jugador {
         }
     }
 
-    public void cargarSolicitudesPendientes(){
+    public void cargarNotificaciones(){
         try {
-            solicitudesPendientes = jdbc.sacarSolicitudesPendientes(nombre);
+            GestorNotificaciones gestor = new GestorNotificaciones();
+            notificacionesPendientes = gestor.obtenerPendientes(nombre);
         } catch (SQLException e) {
+            notificacionesPendientes = new ArrayList<>();
         }
     }
 
@@ -167,40 +171,50 @@ public class Jugador {
         return amigos;
     }
 
-    public List<Jugador> getSolicitudesPendientes(){
-        return solicitudesPendientes;
+    public List<Notificacion> getNotificacionesPendientes(){
+        return notificacionesPendientes;
     }
 
     public boolean solicitarAmistad(String destinatario){
-        try{
-            return jdbc.enviarSolicitud(nombre, destinatario);
+        try {
+            GestorNotificaciones gestor = new GestorNotificaciones();
+            return gestor.enviarSolicitudAmistad(nombre, destinatario) > 0;
         } catch (SQLException e) {
             return false;
         }
     }
 
-    public boolean anyadirAmigo(Jugador amigo){
+    public boolean enviarInvitacionPartida(String destinatario){
         try {
-            if(jdbc.anyadirAmigo(amigo.getNombre(), nombre)) {
-                amigos.add(amigo); 
-                solicitudesPendientes.remove(amigo);
-                return true;
-            }
-            return false;    
-
+            GestorNotificaciones gestor = new GestorNotificaciones();
+            return gestor.enviarInvitacionPartida(nombre, destinatario) > 0;
         } catch (SQLException e) {
             return false;
         }
     }
 
-    public boolean rechazarSolicitud(Jugador amigo){
+    public boolean aceptarNotificacion(int idNotificacion){
         try {
-            if (jdbc.rechazarSolicitud(amigo.getNombre(), nombre)) {
-                solicitudesPendientes.remove(amigo); 
+            GestorNotificaciones gestor = new GestorNotificaciones();
+            if (gestor.aceptarNotificacion(idNotificacion, nombre)) {
+                cargarAmigos();
+                cargarNotificaciones();
                 return true;
             }
-            return false;    
+            return false;
+        } catch (SQLException e) {
+            return false;
+        }
+    }
 
+    public boolean rechazarNotificacion(int idNotificacion){
+        try {
+            GestorNotificaciones gestor = new GestorNotificaciones();
+            if (gestor.rechazarNotificacion(idNotificacion, nombre)) {
+                cargarNotificaciones();
+                return true;
+            }
+            return false;
         } catch (SQLException e) {
             return false;
         }
