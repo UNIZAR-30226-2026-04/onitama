@@ -1,4 +1,4 @@
-package modelo.vo;
+package VO;
 
 public class Ficha {
     private final boolean rey;
@@ -28,5 +28,9 @@ public class Ficha {
 
     public int getEquipo(){
         return equipo;
+    }
+
+    public boolean isRey(){
+        return rey;
     }
 }
