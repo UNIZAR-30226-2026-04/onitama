@@ -18,19 +18,19 @@
         android:layout_height="60dp"
         android:layout_marginLeft="100dp"
         android:layout_marginTop="20dp"
-        android:
         android:background="@drawable/boton_redondeado"
         android:text="INICIAR SESIÓN"
-        android:textSize="20dp"></Button>
+        android:textSize="20dp"
+        android:fontFamily="@font/quattrocento_bold"></Button>
     <Button
         android:layout_width="200dp"
         android:layout_height="60dp"
         android:layout_marginLeft="100dp"
         android:layout_marginTop="20dp"
-        android:
         android:background="@drawable/boton_redondeado"
         android:text="CREAR CUENTA"
-        android:textSize="20dp"></Button>
+        android:textSize="20dp"
+        android:fontFamily="@font/quattrocento_bold"></Button>
 
 
 </LinearLayout>

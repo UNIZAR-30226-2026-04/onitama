@@ -17,11 +17,11 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="30dp"
+        android:layout_marginLeft="75dp"
         android:layout_marginTop="20dp"
         android:fontFamily="@font/quattrocento_bold"
         android:scaleType="fitCenter"
-        android:text="INICIO DE SESIÓN"
+        android:text="REGÍSTRATE"
         android:textColor="#E8E8E8"
         android:textSize="40dp"></TextView>
     <TextView
@@ -32,18 +32,40 @@
         android:layout_marginTop="20dp"
         android:fontFamily="@font/quattrocento_bold"
         android:scaleType="fitCenter"
-        android:text="Introduce tu correo o nombre de usuario:"
+        android:text="Introduce tu correo electónico:"
         android:textColor="#E8E8E8"
         android:textSize="19dp"></TextView>
 
     <EditText
-        android:id="@+id/IniSesUsr"
+        android:id="@+id/RegEmail"
         android:layout_width="380dp"
         android:layout_height="48dp"
         android:layout_marginLeft="15dp"
         android:layout_marginRight="15dp"
         android:background="@drawable/campo_texto"
-        android:text="ejemplo@correo.com/ejemplodeusuario"
+        android:text="ejemplo@correo.com"
+        android:textColor="#B8B7B7"
+        android:fontFamily="@font/quattrocento_bold"></EditText>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="19dp"
+        android:layout_marginRight="10dp"
+        android:layout_marginTop="30dp"
+        android:fontFamily="@font/quattrocento_bold"
+        android:scaleType="fitCenter"
+        android:text="Introduce tu nombre de usuario:"
+        android:textColor="#E8E8E8"
+        android:textSize="19dp"></TextView>
+
+    <EditText
+        android:id="@+id/RegUsr"
+        android:layout_width="380dp"
+        android:layout_height="48dp"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
+        android:background="@drawable/campo_texto"
+        android:text="ejemplodeusuario"
         android:textColor="#B8B7B7"
         android:fontFamily="@font/quattrocento_bold"></EditText>
 
@@ -51,11 +73,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginLeft="19dp"
-        android:layout_marginTop="50dp"
+        android:layout_marginTop="30dp"
         android:layout_marginRight="10dp"
         android:fontFamily="@font/quattrocento_bold"
         android:scaleType="fitCenter"
-        android:text="Introduce tu contraseña:"
+        android:text="Introduce una contraseña segura:"
         android:textColor="#E8E8E8"
         android:textSize="20dp"></TextView>
 
@@ -68,21 +90,9 @@
         android:background="@drawable/campo_texto"
         android:textColor="#B8B7B7"
         android:fontFamily="@font/quattrocento_bold"></EditText>
-    <TextView
-        android:id="@+id/olvidarPwd"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="80dp"
-        android:layout_marginRight="80dp"
-        android:layout_marginTop="10dp"
-        android:fontFamily="@font/quattrocento_bold"
-        android:scaleType="fitCenter"
-        android:text="¿Olvidaste tu contraseña?"
-        android:textColor="#3e63ff"
-        android:textSize="20dp"
-        android:clickable="true"></TextView>
+
     <Button
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="60dp"
         android:layout_width="180dp"
         android:layout_height="60dp"
         android:layout_marginLeft="110dp"
@@ -91,18 +101,6 @@
         android:text="CONTINUAR"
         android:textSize="20dp"
         android:fontFamily="@font/quattrocento_bold"></Button>
-    <TextView
-        android:id="@+id/notAccount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="70dp"
-        android:layout_marginRight="70dp"
-        android:layout_marginTop="10dp"
-        android:fontFamily="@font/quattrocento_bold"
-        android:scaleType="fitCenter"
-        android:text="¿No tienes cuenta? Registrate"
-        android:textColor="#3e63ff"
-        android:textSize="20dp"
-        android:clickable="true"></TextView>
+
 
 </LinearLayout>
