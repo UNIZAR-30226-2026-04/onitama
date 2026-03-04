@@ -130,4 +130,16 @@ public class CartaMov {
             return false;
         }
     }
+    
+    public String pasarFormatoScript(){
+    	String pos = "";
+    	for(int i=0; i<movimientos.size(); i++) {
+    		Posicion P = movimientos.get(i);
+    		pos = pos + "{x: " + String.valueOf(P.getX()) + ", y: " + String.valueOf(P.getY()) + "}";
+    		if(i < movimientos.size()-1) {
+    			pos = pos + ", ";
+    		}
+    	}
+    	return pos;
+    }
 }

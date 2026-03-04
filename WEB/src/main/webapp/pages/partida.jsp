@@ -2,7 +2,7 @@
 <%@ page import="VO.Jugador" %>
 <%@ page import="VO.Ficha" %>
 <%@ page import="VO.Posicion" %>
-<%@ page import="VO.Carta" %>
+<%@ page import="VO.CartaMov" %>
 <%@ page import="VO.Tablero" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ArrayList" %>
@@ -14,35 +14,37 @@
 	String YF = request.getParameter("yF");
 	String YI = request.getParameter("yA");
 	Partida partida = (Partida) session.getAttribute("partida");
+	String carta = (String) session.getAttribute("carta");
 	
-    String correo = (String) session.getAttribute("correo");
     int DIM = 7;
     int dis_casilla = 85;
     
     //Esto es para la prueba, si es null de normal debe saltar error
     if (partida == null) {
+    	//CAMBIAR: Los jugadores en este caso no son reales
     	Jugador j1 = new Jugador("admin@test.com", "Ciro", "pass1234", 2000, 500, 10, 15); // 2000 puntos, 500 cores, 10 ganadas, 15 jugadas
         Jugador j2 = new Jugador("rival@test.com", "Rival", "pass4567", 1500, 300, 5, 12); // 1500 puntos, 300 cores, 5 ganadas, 12 jugadas
         j1.registrarse();
         j2.registrarse();
         partida = new Partida(999, "Pe", "Pe", j1.getNombre(), j2.getNombre());
         partida.registrarPartida();
+        partida.asignarCartas();
+        session.setAttribute("partida", partida);
     }
-    
-    //--------CARTAS-----------
-	Carta tigre = new Carta("tigre");
-    tigre.anyadirMovimiento(new Posicion(1,1,null));
-    tigre.anyadirMovimiento(new Posicion(0,4,null));
-    tigre.anyadirMovimiento(new Posicion(-1,0,null));
-    tigre.anyadirMovimiento(new Posicion(0,-1,null));
+
+    //Cartas mov --------------
+    List<CartaMov> cartMov = partida.getCartasMovimiento();
+    CartaMov tigre = cartMov.get(1);
     //-------------------------
     
     Tablero tablero = partida.getTablero();
 	if(XF!=null && XI!=null && YF!=null && YI!=null){
 		Posicion origen = tablero.getPosicion(Integer.parseInt(XI), Integer.parseInt(YI));		
 		Posicion destino = tablero.getPosicion(Integer.parseInt(XF), Integer.parseInt(YF));	
-		destino.setFicha(origen.getFicha());
-		origen.setFicha(null);
+		//De momento seremos siempre el equipo 2 -> Cambiar cuando este todo lo demas completado
+		if(!partida.moverFicha(2, origen, destino, tigre)){
+			System.out.print("ERROR"+origen.getFicha().getEquipo());
+		}
 	}
 %>
 
@@ -90,7 +92,7 @@
 
 <div class="carta" 
 	style="--Y: 50px; --X: 1000px;"
-	onclick="añadirDestinos([<%=tigre.pasarAString(tigre.getMov())%>])"></div>
+	onclick="añadirDestinos([<%=tigre.pasarFormatoScript()%>])"></div>
 
 <%for(int i=0; i<DIM; i++){
 	for(int j=0; j<DIM; j++){%>
