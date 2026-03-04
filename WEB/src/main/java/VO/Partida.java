@@ -333,10 +333,11 @@ public class Partida extends Subject {
         Posicion movimientoARealizar = new Posicion(destino.getX() - origen.getX(), destino.getY() - origen.getY(), null);
         //Por si acaso comprobamos que el movimiento existe
         if (fOrigen == null || fOrigen.getEquipo() != equipo || !movimientosValidos.contains(movimientoARealizar) || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
-            return false; //Movimiento no valido segun la carta
+        	System.out.print("Origen invalido, carta invalida o destino invalido");
+        	return false; //Movimiento no valido segun la carta
         }
         //Posibilidad de que se requiera modificaciones
-        if (fDestino != null || fDestino.getEquipo() != equipo) {
+        if (fDestino != null && fDestino.getEquipo() != equipo) {
             if (fDestino.matar()) { //Si se mata al rey, se acaba la partida
                 //Posible implementacion de patron observer para notificar victoria al matar al rey
                 if (equipo == 1) {
