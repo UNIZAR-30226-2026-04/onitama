@@ -8,15 +8,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CartaMov {
-    private String nombre, estado;
+    private String nombre, estado, img;
     private int puntosMin;
     private List<Posicion> movimientos;
     private CartasMovJDBC jdbc;
 
-    public CartaMov(String nombre, String mov, int puntosMin){
+    public CartaMov(String nombre, String mov, int puntosMin, String img){
         this.nombre = nombre;
         this.estado = "MAZO";
         this.puntosMin = puntosMin;
+        this.img = img;
         movimientos = new ArrayList<>();
         jdbc = new CartasMovJDBC();
         
@@ -33,10 +34,11 @@ public class CartaMov {
         }
     }
 
-    public CartaMov(String nombre, String mov, int puntosMin, String estado){
+    public CartaMov(String nombre, String mov, int puntosMin, String img, String estado){
         this.nombre = nombre;
         this.estado = estado;
         this.puntosMin = puntosMin;
+        this.img = img;
         movimientos = new ArrayList<>();
         jdbc = new CartasMovJDBC();
         
@@ -51,6 +53,14 @@ public class CartaMov {
             int y = Integer.parseInt(m.group(2));
             movimientos.add(new Posicion(x, y, null));
         }
+    }
+
+    public String getImg() {
+        return img;
+    }
+
+    public void setImg(String img) {
+        this.img = img;
     }
 
     public String getEstado() {
@@ -113,6 +123,14 @@ public class CartaMov {
 
     public void removeMovimiento(Posicion pos){
         movimientos.remove(pos);
+    }
+
+    public boolean cambiarImg(){
+        try {
+            return jdbc.updateImg(nombre, img); 
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     public boolean actualizarBD(){

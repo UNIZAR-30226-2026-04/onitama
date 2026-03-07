@@ -4,27 +4,37 @@ import JDBC.CartasAccionJDBC;
 import java.sql.SQLException;
 
 public class CartaAccion {
-    private String nombre, accion, estado;
+    private String nombre, accion, estado, img;
     private int puntosMin, equipo;
     private CartasAccionJDBC jdbc;
     
-    public CartaAccion(String nombre, String accion, int puntosMin){
+    public CartaAccion(String nombre, String accion, int puntosMin, String img){
         this.nombre = nombre;
         this.accion = accion;
         this.puntosMin = puntosMin;
+        this.img = img;
         this.estado = "VISION"; //Esta en modo vision (Para ver en la tienda)
         this.equipo = -1;
         jdbc = new CartasAccionJDBC();
     }
 
     //Constructor para cartas en partida, con estado y equipo
-    public CartaAccion(String nombre, String accion, int puntosMin, String estado, int equipo){
+    public CartaAccion(String nombre, String accion, int puntosMin, String img, String estado, int equipo){
         this.nombre = nombre;
         this.accion = accion;
         this.puntosMin = puntosMin;
+        this.img = img;
         this.estado = estado;
         this.equipo = equipo;
         jdbc = new CartasAccionJDBC();
+    }
+
+    public String getImg() {
+        return img;
+    }
+
+    public void setImg(String img) {
+        this.img = img;
     }
 
     public String getEstado() {
