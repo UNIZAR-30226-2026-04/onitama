@@ -31,15 +31,16 @@ public final class CartasAccionJDBC {
         }
     }
     
-    public boolean crearCarta(CartaAccion movimiento) throws SQLException {
-        final String sql = "INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES (?, ?, ?)";
+    public boolean crearCarta(CartaAccion accion) throws SQLException {
+        final String sql = "INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min, img) VALUES (?, ?, ?, ?)";
         
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
             
-            ps.setString(1, movimiento.getNombre());
-            ps.setString(2, movimiento.getAccion());
-            ps.setInt(3, movimiento.getPuntosMin());
+            ps.setString(1, accion.getNombre());
+            ps.setString(2, accion.getAccion());
+            ps.setInt(3, accion.getPuntosMin());
+            ps.setString(4, accion.getImg());
             int filasAfectadas = ps.executeUpdate();
             return filasAfectadas > 0;
             
@@ -102,7 +103,7 @@ public final class CartasAccionJDBC {
     }
     
     public List<CartaAccion> sacarCartasPartida(int IDPartida) throws SQLException {
-        final String sql = "SELECT c.Nombre, c.Accion, c.Puntos_min, p.Estado, p.Equipo FROM Cartas_Accion c, Partida_Cartas_Accion p WHERE c.Nombre = p.ID_Carta_Accion AND ID_Partida = ?";
+        final String sql = "SELECT c.Nombre, c.Accion, c.Puntos_min, c.img, p.Estado, p.Equipo FROM Cartas_Accion c, Partida_Cartas_Accion p WHERE c.Nombre = p.ID_Carta_Accion AND ID_Partida = ?";
 
         List<CartaAccion> cartas = new ArrayList<>();
 
@@ -194,21 +195,23 @@ public final class CartasAccionJDBC {
         }
     }
 
-    //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo movimiento
+    //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo accion
     private CartaAccion montarAccion(ResultSet rs) throws SQLException {
         return new CartaAccion(
             rs.getString("Nombre"),
             rs.getString("Accion"),
-            rs.getInt("Puntos_min")
+            rs.getInt("Puntos_min"),
+            rs.getString("img")
         );
     }
 
-    //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo movimiento
+    //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo accion
     private CartaAccion montarAccionPartida(ResultSet rs) throws SQLException {
         return new CartaAccion(
             rs.getString("Nombre"),
             rs.getString("Accion"),
             rs.getInt("Puntos_min"),
+            rs.getString("img"),
             rs.getString("Estado"),
             rs.getInt("Equipo")
         );

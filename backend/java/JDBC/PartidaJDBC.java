@@ -33,7 +33,7 @@ public final class PartidaJDBC {
     }
 
     public int registrarPartida(Partida partida) throws SQLException {
-        final String sql = "INSERT INTO Partida (Estado, Tiempo, Tipo, Pos_Fichas_Eq1, Pos_Fichas_Eq2, FichasMuertas1, FichasMuertas2, J1, J2, Es_Ganador_J1, Es_Ganador_J2) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO Partida (Estado, Tiempo, Tipo, Pos_Fichas_Eq1, Pos_Fichas_Eq2, FichasMuertas1, FichasMuertas2, J1, J2, Es_Ganador_J1, Es_Ganador_J2, Turno) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         //Añadimos Statement.RETURN_GENERATED_KEYS al preparar la sentencia para que nos devuelva el id generado
         try (Connection conn = dataSource.getConnection();
@@ -50,6 +50,7 @@ public final class PartidaJDBC {
             ps.setString(9, partida.getJ2());
             ps.setBoolean(10, partida.isEs_Ganador_J1());
             ps.setBoolean(11, partida.isEs_Ganador_J2());
+            ps.setInt(12, partida.getTurno());
             
             int filasAfectadas = ps.executeUpdate();
             if (filasAfectadas > 0) {
@@ -118,6 +119,18 @@ public final class PartidaJDBC {
             }
         }
         return partidas;
+    }
+
+    public boolean updateTurno(int ID, int turno) throws SQLException {
+        try(Connection c = dataSource.getConnection(); 
+            PreparedStatement p = c.prepareStatement("UPDATE Partida SET Turno = ? WHERE ID_Partida = ?")) { 
+            p.setInt(1, turno); 
+            p.setInt(2, ID); 
+            p.executeUpdate(); 
+            return true;
+        }catch (SQLException e) {
+            return false; // Si hay una excepción, asumimos que no se creó
+        }
     }
 
     public boolean updateEstado(int ID, String nuevoEstado) throws SQLException {
@@ -263,7 +276,8 @@ public final class PartidaJDBC {
             rs.getString("J1"),
             rs.getString("J2"),
             rs.getBoolean("Es_Ganador_J1"),
-            rs.getBoolean("Es_Ganador_J2")
+            rs.getBoolean("Es_Ganador_J2"),
+            rs.getInt("Turno")
         );
     }
 }

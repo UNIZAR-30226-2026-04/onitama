@@ -19,13 +19,15 @@ CREATE TABLE Skin (
 CREATE TABLE Cartas_Mov (
     Nombre VARCHAR(50) PRIMARY KEY,
     Movimientos TEXT,
-    Puntos_min INTEGER
+    Puntos_min INTEGER,
+    img VARCHAR(30) DEFAULT 'SIN_IMG'
 );
 
 CREATE TABLE Cartas_Accion (
     Nombre VARCHAR(50) PRIMARY KEY,
     Accion TEXT,
-    Puntos_min INTEGER
+    Puntos_min INTEGER,
+    img VARCHAR(30) DEFAULT 'SIN_IMG' --La idea es que haya una imagen de error para todas que no tengan img
 );
 
 CREATE TABLE Partida (
@@ -41,6 +43,7 @@ CREATE TABLE Partida (
     J2 VARCHAR(255),
     Es_Ganador_J1 BOOLEAN,
     Es_Ganador_J2 BOOLEAN,
+    Turno INTEGER,
     FOREIGN KEY (J1) REFERENCES Jugador(Nombre_US),
     FOREIGN KEY (J2) REFERENCES Jugador(Nombre_US)
 );

@@ -8,7 +8,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 public class Partida extends Subject {
-    private int IDPartida, tiempo, muertesJ1, muertesJ2;
+    private int IDPartida, tiempo, muertesJ1, muertesJ2, turno;
     private String estado, tipo; //Cambiar fichas por su correspondiente clase
     private boolean j1Ganador, j2Ganador;
     private Jugador jugador1, jugador2;
@@ -20,7 +20,7 @@ public class Partida extends Subject {
     private CartasMovJDBC jdbcMov;
     private JugadorJDBC jdbcJugador;
 
-    public Partida(int IDPartida, String estado, int tiempo, String tipo, String p1, String p2, int m1, int m2, String jugador1, String jugador2, boolean g1, boolean g2) {
+    public Partida(int IDPartida, String estado, int tiempo, String tipo, String p1, String p2, int m1, int m2, String jugador1, String jugador2, boolean g1, boolean g2, int turno) {
         this.IDPartida = IDPartida;
         this.jdbc = new PartidaJDBC();
         this.jdbcAccion = new CartasAccionJDBC();
@@ -29,6 +29,7 @@ public class Partida extends Subject {
         this.estado = estado;
         this.tiempo = tiempo;
         this.tipo = tipo;
+        this.turno = turno;
         this.muertesJ1 = m1;
         this.muertesJ2 = m2;
         this.j1Ganador = g1;
@@ -55,8 +56,13 @@ public class Partida extends Subject {
         }
     }
 
+    public int getTurno(){
+        return turno;
+    }
+
     public boolean registrarPartida(){
         try {
+            turno = 0; //Ciro: Mi idea es que siempre uno de los jugadores (siempre J1 por ejemplo)
             IDPartida = jdbc.registrarPartida(this);
             return IDPartida >= 0; //Se devuelve el id que asigna la base a la partida, si hay algun problema devuelve -1
         } catch (SQLException e) {
@@ -177,7 +183,7 @@ public class Partida extends Subject {
         StringPorReferencia p2 = new StringPorReferencia("");
         tablero.getPosicionesEquipos(p1, p2);
         try {
-            return jdbc.updateEstado(IDPartida, estado) | jdbc.updateMuertesFichas2(IDPartida, muertesJ2) | jdbc.updateMuertesFichas1(IDPartida, muertesJ1) | jdbc.updateTiempo(IDPartida, tiempo) | jdbc.updateGanadorJ2(IDPartida, j2Ganador) | jdbc.updateGanadorJ1(IDPartida, j1Ganador) | jdbc.updatePosFichas1(IDPartida, p1.getValor()) | jdbc.updatePosFichas2(IDPartida, p2.getValor()); //| para que se ejecuten todos
+            return jdbc.updateTurno(IDPartida, turno) | jdbc.updateEstado(IDPartida, estado) | jdbc.updateMuertesFichas2(IDPartida, muertesJ2) | jdbc.updateMuertesFichas1(IDPartida, muertesJ1) | jdbc.updateTiempo(IDPartida, tiempo) | jdbc.updateGanadorJ2(IDPartida, j2Ganador) | jdbc.updateGanadorJ1(IDPartida, j1Ganador) | jdbc.updatePosFichas1(IDPartida, p1.getValor()) | jdbc.updatePosFichas2(IDPartida, p2.getValor()); //| para que se ejecuten todos
         } catch (SQLException e) {
             return false;
         }
@@ -337,6 +343,7 @@ public class Partida extends Subject {
         destino.setFicha(fOrigen);
         origen.setFicha(null);
         rotarCartas(carta.getNombre(), equipo);
+        turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado)
         return true; //Movimiento realizado con exito
     }
 

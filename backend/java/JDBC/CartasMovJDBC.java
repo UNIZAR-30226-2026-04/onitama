@@ -32,7 +32,7 @@ public final class CartasMovJDBC {
     }
     
     public boolean crearCarta(CartaMov movimiento) throws SQLException {
-        final String sql = "INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES (?, ?, ?)";
+        final String sql = "INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min, img) VALUES (?, ?, ?, ?)";
         
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -40,6 +40,7 @@ public final class CartasMovJDBC {
             ps.setString(1, movimiento.getNombre());
             ps.setString(2, movimiento.getMovimientos());
             ps.setInt(3, movimiento.getPuntosMin());
+            ps.setString(4, movimiento.getImg());
             int filasAfectadas = ps.executeUpdate();
             return filasAfectadas > 0;
             
@@ -84,6 +85,18 @@ public final class CartasMovJDBC {
         }
     }
 
+    public boolean updateImg(String nombre, String img) throws SQLException {
+        try(Connection c = dataSource.getConnection(); 
+            PreparedStatement p = c.prepareStatement("UPDATE Cartas_Mov SET img = ? WHERE Nombre = ?")) { 
+            p.setString(1, img); 
+            p.setString(2, nombre); 
+            p.executeUpdate(); 
+            return true;
+        }catch (SQLException e) {
+            return false; // Si hay una excepción, asumimos que no se creó
+        }
+    }
+
     public List<CartaMov> sacarCartas() throws SQLException {
         final String sql = "SELECT * FROM Cartas_Mov";
 
@@ -102,7 +115,7 @@ public final class CartasMovJDBC {
     }
     
     public List<CartaMov> sacarCartasPartida(int IDPartida) throws SQLException {
-        final String sql = "SELECT c.Nombre, c.Movimientos, c.Puntos_min, p.Estado FROM Cartas_Mov c, Partida_Cartas_Mov p WHERE c.Nombre = p.ID_Carta_Mov AND p.ID_Partida = ?";
+        final String sql = "SELECT c.Nombre, c.Movimientos, c.Puntos_min, c.img, p.Estado FROM Cartas_Mov c, Partida_Cartas_Mov p WHERE c.Nombre = p.ID_Carta_Mov AND p.ID_Partida = ?";
 
         List<CartaMov> cartas = new ArrayList<>();
 
@@ -185,7 +198,8 @@ public final class CartasMovJDBC {
         return new CartaMov(
             rs.getString("Nombre"),
             rs.getString("Movimientos"),
-            rs.getInt("Puntos_min")
+            rs.getInt("Puntos_min"),
+            rs.getString("img")
         );
     }
 
@@ -195,6 +209,7 @@ public final class CartasMovJDBC {
             rs.getString("Nombre"),
             rs.getString("Movimientos"),
             rs.getInt("Puntos_min"),
+            rs.getString("img"),
             rs.getString("Estado")
         );
     }
