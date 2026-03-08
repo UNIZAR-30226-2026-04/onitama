@@ -1,14 +1,20 @@
 /**
- * Componente de fondo reutilizable para pantallas de auth (login, registro).
- * Muestra la imagen de paisaje oriental con overlay azul, igual que la pantalla de inicio.
+ * Fondo reutilizable con la imagen principal del juego (fondoMainPage.png),
+ * el mismo que se usa en la landing page.
+ * Se usa en las pantallas de auth (inicio de sesión, registro) y búsqueda de partida.
  */
 export default function FondoPantalla() {
   return (
     <div
-      className="absolute inset-0 bg-cover bg-center bg-no-repeat -z-10"
+      className="fixed inset-0 bg-cover bg-center bg-no-repeat -z-10"
       style={{
-        backgroundImage: `linear-gradient(to bottom, rgba(26, 45, 74, 0.7) 0%, rgba(26, 45, 74, 0.5) 40%, rgba(26, 45, 74, 0.6) 100%),
-          url('https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=1920')`,
+        backgroundImage: `
+          linear-gradient(to bottom,
+            rgba(26, 45, 74, 0.75) 0%,
+            rgba(26, 45, 74, 0.55) 40%,
+            rgba(26, 45, 74, 0.70) 100%
+          ),
+          url('/fondoMainPage.png')`,
       }}
     />
   );

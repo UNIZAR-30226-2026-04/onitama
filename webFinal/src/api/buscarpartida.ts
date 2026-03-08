@@ -116,20 +116,19 @@ export function buscarPartida(
 
     ws.onerror = () => {
       clearTimeout(timer);
-      resolve({
-        estado: "ERROR",
-        mensaje: "Error de conexión con el servidor.",
-      });
+      // Servidor no disponible → caemos al mock para no bloquear el desarrollo.
+      // Así se puede probar el flujo completo aunque el servidor esté apagado.
+      // TODO: cuando el servidor esté estable, sustituir por un mensaje de error real.
+      console.warn("[buscar] Servidor no disponible. Usando mock de partida.");
+      mockBuscarPartida().then(resolve);
     };
 
     ws.onclose = (event) => {
-      // Si se cerró sin que onmessage resolviera la promesa
+      // Si se cerró sin que onmessage ni onerror resolvieran la promesa
       if (!event.wasClean) {
         clearTimeout(timer);
-        resolve({
-          estado: "ERROR",
-          mensaje: `Conexión cerrada inesperadamente (código ${event.code}).`,
-        });
+        console.warn("[buscar] Conexión cerrada inesperadamente. Usando mock.");
+        mockBuscarPartida().then(resolve);
       }
     };
   });
