@@ -36,11 +36,13 @@ Si esta variable no está definida (o el servidor no responde), el frontend usa 
 ### 2.2 Mensajes que envía el CLIENTE al servidor
 
 #### `BUSCAR_PARTIDA`
-Se envía al abrir `/buscar`. No tiene parámetros adicionales por ahora.
+Se envía al abrir `/buscar`. No tiene parámetros adicionales por ahora. MODIFICACION DEL BACKEND -> Se debe pasar tus puntos y nombres para decirselos a tu adversario y para buscar un adversario que este parejo
 
 ```json
 {
-  "tipo": "BUSCAR_PARTIDA"
+  "tipo": "BUSCAR_PARTIDA",
+  "puntos": "1000",
+  "nombre": "Iron" 
 }
 ```
 
@@ -49,7 +51,7 @@ Se envía al abrir `/buscar`. No tiene parámetros adicionales por ahora.
 ---
 
 #### `MOVER`
-Se envía cuando el jugador ejecuta un movimiento. Solo se incluyen los datos mínimos (sin estado del tablero) para que el servidor valide.
+Se envía cuando el jugador ejecuta un movimiento. Solo se incluyen los datos mínimos (sin estado del tablero) para que el servidor valide. MODIFICACION DEL BACKEND -> El server no utiliza el id de la partida, asi que es irrelevante 
 
 ```json
 {
