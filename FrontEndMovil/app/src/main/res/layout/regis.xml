@@ -1,106 +1,134 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/azulFondo">
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/main_background" />
 
-    <ImageView
-        android:layout_width="346dp"
-        android:layout_height="79dp"
-        android:layout_marginLeft="20dp"
-        android:layout_marginTop="50dp"
-        android:scaleType="fitCenter"
-        android:src="@drawable/onitamaText" />
+    <View
+        android:id="@+id/v_gradient_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/fading_blue"/>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="75dp"
-        android:layout_marginTop="20dp"
-        android:fontFamily="@font/quattrocento_bold"
-        android:scaleType="fitCenter"
-        android:text="REGÍSTRATE"
-        android:textColor="#E8E8E8"
-        android:textSize="40dp"></TextView>
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="19dp"
-        android:layout_marginRight="10dp"
-        android:layout_marginTop="20dp"
-        android:fontFamily="@font/quattrocento_bold"
-        android:scaleType="fitCenter"
-        android:text="Introduce tu correo electónico:"
-        android:textColor="#E8E8E8"
-        android:textSize="19dp"></TextView>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <ImageView
+            android:layout_width="346dp"
+            android:layout_height="79dp"
+            android:layout_marginLeft="20dp"
+            android:layout_marginTop="50dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/onitamaText" />
 
-    <EditText
-        android:id="@+id/RegEmail"
-        android:layout_width="380dp"
-        android:layout_height="48dp"
-        android:layout_marginLeft="15dp"
-        android:layout_marginRight="15dp"
-        android:background="@drawable/campo_texto"
-        android:text="ejemplo@correo.com"
-        android:textColor="#B8B7B7"
-        android:fontFamily="@font/quattrocento_bold"></EditText>
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="19dp"
-        android:layout_marginRight="10dp"
-        android:layout_marginTop="30dp"
-        android:fontFamily="@font/quattrocento_bold"
-        android:scaleType="fitCenter"
-        android:text="Introduce tu nombre de usuario:"
-        android:textColor="#E8E8E8"
-        android:textSize="19dp"></TextView>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="75dp"
+            android:layout_marginTop="20dp"
+            android:fontFamily="@font/quattrocento_bold"
+            android:scaleType="fitCenter"
+            android:text="REGÍSTRATE"
+            android:textColor="#E8E8E8"
+            android:textSize="40dp"></TextView>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="19dp"
+            android:layout_marginRight="10dp"
+            android:layout_marginTop="20dp"
+            android:fontFamily="@font/quattrocento_bold"
+            android:scaleType="fitCenter"
+            android:text="Introduce tu correo electónico:"
+            android:textColor="#E8E8E8"
+            android:textSize="19dp"></TextView>
 
-    <EditText
-        android:id="@+id/RegUsr"
-        android:layout_width="380dp"
-        android:layout_height="48dp"
-        android:layout_marginLeft="15dp"
-        android:layout_marginRight="15dp"
-        android:background="@drawable/campo_texto"
-        android:text="ejemplodeusuario"
-        android:textColor="#B8B7B7"
-        android:fontFamily="@font/quattrocento_bold"></EditText>
+        <EditText
+            android:id="@+id/RegEmail"
+            android:layout_width="380dp"
+            android:layout_height="48dp"
+            android:layout_marginLeft="15dp"
+            android:layout_marginRight="15dp"
+            android:background="@drawable/campo_texto"
+            android:text="ejemplo@correo.com"
+            android:textColor="#B8B7B7"
+            android:fontFamily="@font/quattrocento_bold"></EditText>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="19dp"
+            android:layout_marginRight="10dp"
+            android:layout_marginTop="30dp"
+            android:fontFamily="@font/quattrocento_bold"
+            android:scaleType="fitCenter"
+            android:text="Introduce tu nombre de usuario:"
+            android:textColor="#E8E8E8"
+            android:textSize="19dp"></TextView>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="19dp"
-        android:layout_marginTop="30dp"
-        android:layout_marginRight="10dp"
-        android:fontFamily="@font/quattrocento_bold"
-        android:scaleType="fitCenter"
-        android:text="Introduce una contraseña segura:"
-        android:textColor="#E8E8E8"
-        android:textSize="20dp"></TextView>
+        <EditText
+            android:id="@+id/RegUsr"
+            android:layout_width="380dp"
+            android:layout_height="48dp"
+            android:layout_marginLeft="15dp"
+            android:layout_marginRight="15dp"
+            android:background="@drawable/campo_texto"
+            android:text="ejemplodeusuario"
+            android:textColor="#B8B7B7"
+            android:fontFamily="@font/quattrocento_bold"></EditText>
 
-    <EditText
-        android:id="@+id/IniSesPwd"
-        android:layout_width="380dp"
-        android:layout_height="48dp"
-        android:layout_marginLeft="15dp"
-        android:layout_marginRight="15dp"
-        android:background="@drawable/campo_texto"
-        android:textColor="#B8B7B7"
-        android:fontFamily="@font/quattrocento_bold"></EditText>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="19dp"
+            android:layout_marginTop="30dp"
+            android:layout_marginRight="10dp"
+            android:fontFamily="@font/quattrocento_bold"
+            android:scaleType="fitCenter"
+            android:text="Introduce una contraseña segura:"
+            android:textColor="#E8E8E8"
+            android:textSize="20dp"></TextView>
 
-    <Button
-        android:layout_marginTop="60dp"
-        android:layout_width="180dp"
-        android:layout_height="60dp"
-        android:layout_marginLeft="110dp"
-        android:layout_marginRight="110dp"
-        android:background="@drawable/boton_esquinas_redondas"
-        android:text="CONTINUAR"
-        android:textSize="20dp"
-        android:fontFamily="@font/quattrocento_bold"></Button>
+        <EditText
+            android:id="@+id/IniSesPwd"
+            android:layout_width="380dp"
+            android:layout_height="48dp"
+            android:layout_marginLeft="15dp"
+            android:layout_marginRight="15dp"
+            android:background="@drawable/campo_texto"
+            android:textColor="#B8B7B7"
+            android:fontFamily="@font/quattrocento_bold"></EditText>
+
+        <Button
+            android:layout_marginTop="60dp"
+            android:layout_width="180dp"
+            android:layout_height="60dp"
+            android:layout_marginLeft="110dp"
+            android:layout_marginRight="110dp"
+            android:background="@drawable/boton_esquinas_redondas"
+            android:text="CONTINUAR"
+            android:textSize="20dp"
+            android:fontFamily="@font/quattrocento_bold"></Button>
+        <TextView
+            android:id="@+id/yeaAccount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="60dp"
+            android:layout_marginRight="60dp"
+            android:layout_marginTop="10dp"
+            android:fontFamily="@font/quattrocento_bold"
+            android:scaleType="fitCenter"
+            android:text="¿Ya tienes cuenta? Inicia Sesión"
+            android:textColor="#3e63ff"
+            android:textSize="20dp"
+            android:clickable="true"></TextView>
+    </LinearLayout>
 
 
-</LinearLayout>
+</FrameLayout>
