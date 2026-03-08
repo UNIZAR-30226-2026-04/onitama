@@ -41,7 +41,7 @@ Se envía al abrir `/buscar`. No tiene parámetros adicionales por ahora. MODIFI
 ```json
 {
   "tipo": "BUSCAR_PARTIDA",
-  "puntos": "1000",
+  "puntos": 1000,
   "nombre": "Iron" 
 }
 ```
@@ -76,7 +76,7 @@ Se envía cuando el jugador ejecuta un movimiento. Solo se incluyen los datos m�
 ### 2.3 Mensajes que envía el SERVIDOR al cliente
 
 #### `PARTIDA_ENCONTRADA`
-Responde al `BUSCAR_PARTIDA` cuando se ha emparejado a dos jugadores.
+Responde al `BUSCAR_PARTIDA` cuando se ha emparejado a dos jugadores. MODIFICACION DEL BACKEND -> El server te dira tambien que puntos tiene tu oponenete
 
 ```json
 {
@@ -84,6 +84,7 @@ Responde al `BUSCAR_PARTIDA` cuando se ha emparejado a dos jugadores.
   "partida_id": "123",
   "equipo": 2,
   "oponente": "granluchador",
+  "oponentePt": 1000,
   "cartas_jugador": ["Tigre", "Dragon"],
   "cartas_oponente": ["Rana", "Conejo"],
   "carta_siguiente": ["Oso", "Elefante", "Cobra"]
