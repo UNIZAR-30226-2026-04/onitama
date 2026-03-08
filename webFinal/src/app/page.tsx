@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -7,18 +8,18 @@ export default function Home() {
 
       {/* Hero Section */}
       <main className="flex-1 relative min-h-[calc(100vh-72px)] overflow-hidden">
-        {/* Background */}
+        {/* Fondo: imagen local del proyecto */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `linear-gradient(to bottom, rgba(26, 45, 74, 0.7) 0%, rgba(26, 45, 74, 0.5) 40%, rgba(26, 45, 74, 0.6) 100%),
-              url('https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=1920')`,
+            backgroundImage: `linear-gradient(to bottom, rgba(26, 45, 74, 0.65) 0%, rgba(26, 45, 74, 0.45) 40%, rgba(26, 45, 74, 0.6) 100%),
+              url('/fondoMainPage.png')`,
           }}
         />
 
-        {/* Content */}
+        {/* Contenido */}
         <div className="relative z-10 h-full flex flex-col lg:flex-row items-center justify-between px-6 py-16 lg:px-16 lg:py-24 max-w-7xl mx-auto">
-          {/* Text block */}
+          {/* Bloque de texto */}
           <div className="max-w-xl lg:max-w-2xl space-y-8">
             <p className="text-white/95 text-lg leading-relaxed">
               En las cumbres azules, dos maestros se miden en un duelo de
@@ -33,24 +34,16 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Character placeholders */}
-          <div className="hidden lg:flex items-end gap-4 mt-8 lg:mt-0">
-            <div
-              className="w-32 h-48 rounded-lg bg-blue-900/60 border-2 border-blue-400/50 flex items-end justify-center pb-4"
-              aria-hidden
-            >
-              <span className="text-blue-200/80 text-xs uppercase tracking-wider">
-                Maestro azul
-              </span>
-            </div>
-            <div
-              className="w-32 h-48 rounded-lg bg-red-900/60 border-2 border-red-400/50 flex items-end justify-center pb-4"
-              aria-hidden
-            >
-              <span className="text-red-200/80 text-xs uppercase tracking-wider">
-                Maestro rojo
-              </span>
-            </div>
+          {/* Imagen de los dos luchadores */}
+          <div className="hidden lg:flex items-end mt-8 lg:mt-0">
+            <Image
+              src="/luchadores.png"
+              alt="Dos maestros enfrentados"
+              width={420}
+              height={320}
+              className="h-72 w-auto object-contain drop-shadow-2xl"
+              priority
+            />
           </div>
         </div>
       </main>

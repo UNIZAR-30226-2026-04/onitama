@@ -20,14 +20,15 @@ export default function Header() {
         />
       </Link>
 
-      {/* Enlaces de navegación - sin funcionalidad por ahora */}
+      {/* Navegación */}
       <nav className="flex items-center gap-6 md:gap-12">
-        <button
-          type="button"
+        {/* Temporalmente apunta a /partidas para probar la pantalla principal del jugador */}
+        <Link
+          href="/partidas"
           className="text-white uppercase text-sm font-medium tracking-wide hover:opacity-80 transition-opacity"
         >
           Sobre el juego
-        </button>
+        </Link>
         <button
           type="button"
           className="text-white uppercase text-sm font-medium tracking-wide hover:opacity-80 transition-opacity"

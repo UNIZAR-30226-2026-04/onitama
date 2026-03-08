@@ -1,95 +1,81 @@
 "use client";
 
 /**
- * Pantalla – Buscar Partida
- * Muestra un botón para iniciar la búsqueda de partida.
- * La búsqueda se realiza enviando un mensaje vía WebSocket al servidor Java
- * (ver src/api/buscarpartida.ts).
- * Mientras el servidor no esté listo se usa la respuesta mock.
+ * Pantalla – Buscar Partida Pública
+ * La búsqueda comienza automáticamente al cargar la pantalla.
+ * Cuando el servidor (o el mock) responde con ENCONTRADA, navega a /partida.
+ *
+ * Flujo:
+ *  1. Al montar el componente → llamar a buscarPartida()
+ *  2. ENCONTRADA → router.push("/partida?id=<partida_id>")
+ *  3. ERROR / TIMEOUT → mostrar mensaje y botón de reintento
  */
-import { useState } from "react";
-import Header from "@/components/Header";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import HeaderLogo from "@/components/HeaderLogo";
 import FondoPantalla from "@/components/FondoPantalla";
 import { buscarPartida, type RespuestaBuscarPartida } from "@/api/buscarpartida";
 
-type EstadoUI = "idle" | "buscando" | "resultado";
+type EstadoUI = "buscando" | "error" | "timeout";
 
 export default function BuscarPartidaPage() {
-  const [estadoUI, setEstadoUI] = useState<EstadoUI>("idle");
+  const router = useRouter();
+  const [estadoUI, setEstadoUI] = useState<EstadoUI>("buscando");
   const [respuesta, setRespuesta] = useState<RespuestaBuscarPartida | null>(null);
 
-  const handleBuscar = async () => {
+  /** Inicia la búsqueda de partida (se llama al montar y en reintentos) */
+  const iniciarBusqueda = () => {
     setEstadoUI("buscando");
     setRespuesta(null);
 
-    const resultado = await buscarPartida();
+    buscarPartida().then((resultado) => {
+      setRespuesta(resultado);
 
-    setRespuesta(resultado);
-    setEstadoUI("resultado");
+      if (resultado.estado === "ENCONTRADA") {
+        // Navegar a la pantalla de partida con el id recibido
+        const id = resultado.partida_id ?? "local";
+        router.push(`/partida?id=${encodeURIComponent(id)}`);
+      } else if (resultado.estado === "TIMEOUT") {
+        setEstadoUI("timeout");
+      } else {
+        setEstadoUI("error");
+      }
+    });
   };
 
-  const handleReintentar = () => {
-    setEstadoUI("idle");
-    setRespuesta(null);
-  };
-
-  // Color de la tarjeta de respuesta según el estado recibido
-  const colorEstado: Record<string, string> = {
-    ENCONTRADA: "border-green-400 bg-green-900/40 text-green-200",
-    BUSCANDO:   "border-blue-400  bg-blue-900/40  text-blue-200",
-    ERROR:      "border-red-400   bg-red-900/40   text-red-200",
-    TIMEOUT:    "border-yellow-400 bg-yellow-900/40 text-yellow-200",
-  };
-
-  const claseEstado = respuesta
-    ? (colorEstado[respuesta.estado] ?? "border-gray-400 bg-gray-900/40 text-gray-200")
-    : "";
+  // Iniciar búsqueda al montar el componente
+  useEffect(() => {
+    iniciarBusqueda();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col relative">
-      <Header />
       <FondoPantalla />
+      <HeaderLogo />
 
       <main className="flex-1 flex flex-col items-center justify-center gap-8 px-4 py-12">
-        {/* Tarjeta central */}
         <div className="w-full max-w-md bg-[#1a2d4a]/80 backdrop-blur-sm border border-white/10 rounded-2xl shadow-2xl p-10 flex flex-col items-center gap-6">
           <h1 className="text-3xl font-bold text-white uppercase tracking-widest text-center">
-            Buscar Partida
+            Partida Pública
           </h1>
-
-          <p className="text-white/70 text-sm text-center">
-            Pulsa el botón para buscar un oponente.<br />
-            El servidor responderá en cuanto encuentre una partida disponible.
-          </p>
-
-          {/* Botón principal */}
-          {estadoUI !== "buscando" && (
-            <button
-              type="button"
-              onClick={estadoUI === "resultado" ? handleReintentar : handleBuscar}
-              className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-lg transition-all duration-200 ${
-                estadoUI === "resultado"
-                  ? "bg-white/10 text-white/80 border border-white/20 hover:bg-white/20"
-                  : "bg-[#e8e8e8] text-[#1a2d4a] hover:bg-white hover:scale-[1.02] active:scale-100"
-              }`}
-            >
-              {estadoUI === "resultado" ? "Buscar de nuevo" : "Buscar partida"}
-            </button>
-          )}
 
           {/* Estado: buscando */}
           {estadoUI === "buscando" && (
-            <div className="flex flex-col items-center gap-4 py-4">
-              {/* Spinner */}
+            <>
+              <p className="text-white/70 text-sm text-center">
+                Buscando un oponente en línea…
+              </p>
+              {/* Spinner animado */}
               <svg
-                className="animate-spin h-12 w-12 text-white/70"
+                className="animate-spin h-14 w-14 text-white/60"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 aria-hidden
               >
                 <circle
-                  className="opacity-25"
+                  className="opacity-20"
                   cx="12"
                   cy="12"
                   r="10"
@@ -97,42 +83,46 @@ export default function BuscarPartidaPage() {
                   strokeWidth="4"
                 />
                 <path
-                  className="opacity-75"
+                  className="opacity-80"
                   fill="currentColor"
                   d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                 />
               </svg>
-              <p className="text-white/80 text-sm animate-pulse">Buscando partida…</p>
-            </div>
+              <p className="text-white/50 text-xs animate-pulse">
+                Esto puede tardar unos segundos…
+              </p>
+            </>
           )}
 
-          {/* Respuesta del servidor */}
-          {estadoUI === "resultado" && respuesta && (
-            <div
-              className={`w-full rounded-xl border-2 px-6 py-5 flex flex-col gap-2 ${claseEstado}`}
-            >
-              <p className="text-xs font-bold uppercase tracking-widest opacity-70">
-                Respuesta del servidor
-              </p>
-              <p className="font-semibold text-base break-words">{respuesta.mensaje}</p>
-
-              <div className="flex flex-wrap gap-x-6 gap-y-1 mt-1 text-xs opacity-80">
-                <span>
-                  Estado:{" "}
-                  <span className="font-bold">{respuesta.estado}</span>
-                </span>
-                {respuesta.partida_id && (
-                  <span>
-                    ID partida:{" "}
-                    <span className="font-mono font-bold">{respuesta.partida_id}</span>
-                  </span>
-                )}
+          {/* Estado: error o timeout */}
+          {(estadoUI === "error" || estadoUI === "timeout") && respuesta && (
+            <>
+              <div className="w-full rounded-xl border-2 border-red-400 bg-red-900/30 px-6 py-4 text-red-200 text-sm text-center">
+                <p className="font-bold mb-1 uppercase tracking-wide">
+                  {estadoUI === "timeout" ? "Tiempo agotado" : "Error de conexión"}
+                </p>
+                <p>{respuesta.mensaje}</p>
               </div>
-            </div>
+
+              <button
+                type="button"
+                onClick={iniciarBusqueda}
+                className="w-full py-4 rounded-xl font-bold uppercase tracking-widest text-lg bg-[#e8e8e8] text-[#1a2d4a] hover:bg-white hover:scale-[1.02] active:scale-100 transition-all duration-200"
+              >
+                Reintentar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => router.push("/partidas")}
+                className="text-white/50 text-sm hover:text-white/80 transition-colors"
+              >
+                ← Volver a partidas
+              </button>
+            </>
           )}
         </div>
       </main>
     </div>
   );
 }
-

@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import Link from "next/link";
-import Header from "@/components/Header";
+import HeaderLogo from "@/components/HeaderLogo";
 import FondoPantalla from "@/components/FondoPantalla";
 import { verificarEmail, login } from "@/api/auth";
 
@@ -64,8 +64,8 @@ export default function IniciarSesionPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
       <FondoPantalla />
+      <HeaderLogo />
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
