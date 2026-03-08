@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/fondo_partida">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:background="@color/azulFondo">
+        <ImageView
+            android:layout_width="195dp"
+            android:layout_height="60dp"
+            android:layout_marginLeft="70dp"
+            android:layout_marginRight="100dp"
+            android:src="@drawable/onitamaText"></ImageView>
+
+        <ImageButton
+            android:id="@+id/btn_perfil"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginLeft="-50dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginRight="20dp"
+            android:background="@drawable/boton_redondeado"></ImageButton>
+
+        <LinearLayout
+            android:layout_width="254dp"
+            android:layout_height="34dp"
+            android:layout_marginLeft="-340dp"
+            android:layout_marginTop="60dp">
+
+            <ImageView
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:src="@drawable/katanas">
+
+            </ImageView>
+
+            <TextView
+                android:id="@+id/honor_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dp"
+                android:fontFamily="@font/quattrocento_bold"
+                android:text="123"
+                android:textColor="@color/white"
+                android:textSize="30dp">
+
+            </TextView>
+
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="40dp"
+                android:layout_marginLeft="35dp"
+                android:scaleType="fitStart"
+                android:src="@drawable/CORE">
+
+            </ImageView>
+
+            <TextView
+                android:id="@+id/core_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="-10dp"
+                android:fontFamily="@font/quattrocento_bold"
+                android:text="123"
+                android:textColor="@color/white"
+                android:textSize="30dp">
+
+            </TextView>
+        </LinearLayout>
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/img_perfil_rival"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:layout_marginTop="110dp"
+        android:background="@drawable/boton_redondeado"
+        ></ImageView>
+
+    <LinearLayout
+        android:layout_width="170dp"
+        android:layout_height="76dp"
+        android:layout_marginLeft="70dp"
+        android:layout_marginTop="100dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/txt_nombre_rival"
+            android:layout_width="170dp"
+            android:layout_height="30dp"
+            android:layout_marginTop="10dp"
+            android:fontFamily="@font/quattrocento_bold"
+            android:text="Nombre del rival"
+            android:textColor="#4c595c"
+            android:textSize="20dp"></TextView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="30dp">
+
+            <ImageView
+                android:id="@+id/img_katanas_rival"
+                android:layout_width="30dp"
+                android:layout_height="match_parent"
+                android:src="@drawable/katanas"
+                android:layout_marginLeft="20dp">
+            </ImageView>
+
+            <TextView
+                android:id="@+id/txt_katanas_rival"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fontFamily="@font/quattrocento_bold"
+                android:text="123"
+                android:textSize="25dp">
+
+            </TextView>
+
+        </LinearLayout>
+    </LinearLayout>
+    <Button
+        android:id="@+id/btn_stop"
+        android:layout_width="150dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="110dp"
+        android:layout_marginLeft="250dp"
+        android:text="STOP"
+        android:textSize="20sp"
+        android:background="@drawable/boton_esquinas_redondas"
+        android:fontFamily="@font/quattrocento_bold"
+        android:textColor="@color/azulFondo">
+    </Button>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="88dp"
+        android:layout_marginTop="190dp"
+
+        >
+
+        <ImageView
+            android:id="@+id/img_carta_rival_1"
+            android:layout_width="150dp"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="50dp"
+            android:background="@drawable/boton_esquinas_redondas">
+
+        </ImageView>
+        <ImageView
+            android:id="@+id/img_carta_rival_2"
+            android:layout_width="150dp"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="10dp"
+            android:background="@drawable/boton_esquinas_redondas">
+
+        </ImageView>
+
+    </LinearLayout>
+    <GridLayout
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        android:id="@+id/grid_tablero"
+        android:layout_gravity="center"
+        android:layout_marginTop="55dp"
+        android:columnCount="7"
+        android:rowCount="7"
+        >
+        <View
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/celdas_tablero"/>
+
+    </GridLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="88dp"
+        android:layout_marginBottom="80dp"
+        android:layout_gravity="bottom">
+
+        <ImageButton
+            android:id="@+id/img_carta_propia_1"
+            android:layout_width="150dp"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="50dp"
+            android:background="@drawable/boton_esquinas_redondas">
+
+        </ImageButton>
+
+        <ImageButton
+            android:id="@+id/img_carta_propia_2"
+            android:layout_width="150dp"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="10dp"
+            android:background="@drawable/boton_esquinas_redondas">
+
+        </ImageButton>
+    </LinearLayout>
+    <ImageView
+        android:id="@+id/img_perfil_propio"
+        android:layout_width="70dp"
+        android:layout_gravity="bottom|right"
+        android:layout_height="70dp"
+        android:layout_marginTop="110dp"
+        android:background="@drawable/boton_redondeado"
+        ></ImageView>
+    <LinearLayout
+        android:layout_gravity="bottom|right"
+        android:layout_width="170dp"
+        android:layout_height="76dp"
+        android:layout_marginRight="70dp"
+        android:layout_marginTop="100dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/txt_nombre_propio"
+            android:layout_width="170dp"
+            android:layout_height="30dp"
+            android:layout_marginTop="10dp"
+            android:fontFamily="@font/quattrocento_bold"
+            android:text="Nombre propio"
+            android:textColor="#4c595c"
+            android:textSize="20dp"></TextView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="30dp">
+
+            <ImageView
+                android:id="@+id/img_katanas_propias"
+                android:layout_width="30dp"
+                android:layout_height="match_parent"
+                android:src="@drawable/katanas"
+                android:layout_marginLeft="20dp">
+            </ImageView>
+
+            <TextView
+                android:id="@+id/txt_katanas_propias"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fontFamily="@font/quattrocento_bold"
+                android:text="123"
+                android:textSize="25dp">
+
+            </TextView>
+
+        </LinearLayout>
+    </LinearLayout>
+
+</FrameLayout>
