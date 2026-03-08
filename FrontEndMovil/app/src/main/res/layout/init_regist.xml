@@ -1,15 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/azulFondo">
+    >
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/main_background" />
+
+    <View
+        android:id="@+id/v_gradient_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/fading_blue"/>
 
     <ImageView
         android:layout_width="346dp"
         android:layout_height="79dp"
         android:layout_marginLeft="20dp"
-        android:layout_marginTop="150dp"
+        android:layout_marginTop="100dp"
         android:scaleType="fitCenter"
         android:src="@drawable/onitamaText" />
 
@@ -17,7 +28,7 @@
         android:layout_width="200dp"
         android:layout_height="60dp"
         android:layout_marginLeft="100dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="280dp"
         android:background="@drawable/boton_redondeado"
         android:text="INICIAR SESIÓN"
         android:textSize="20dp"
@@ -26,11 +37,11 @@
         android:layout_width="200dp"
         android:layout_height="60dp"
         android:layout_marginLeft="100dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="350dp"
         android:background="@drawable/boton_redondeado"
         android:text="CREAR CUENTA"
         android:textSize="20dp"
         android:fontFamily="@font/quattrocento_bold"></Button>
 
 
-</LinearLayout>
+</FrameLayout>

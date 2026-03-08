@@ -8,4 +8,5 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="azulFondo">#22324E</color>
+    <color name="azulBarraTareas">#6f87a0</color>
 </resources>
