@@ -1,130 +1,135 @@
 /**
- * Cliente API – Buscar Partida.
- * Envía una solicitud al servidor Java a través de WebSocket.
+ * Cliente API – Buscar Partida Pública.
+ * Envía BUSCAR_PARTIDA al servidor vía WebSocket y espera PARTIDA_ENCONTRADA.
  *
- * Cuando NEXT_PUBLIC_WS_URL no está configurada, se usa lógica mock para desarrollo.
- * Cuando el servidor esté listo: crear/actualizar .env.local con:
- *   NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws   (ajustar host/puerto/path)
- * y revisar el contrato de mensajes con el equipo de backend.
+ * Cambios respecto a la versión inicial:
+ *  - Ahora envía `nombre` y `puntos` para el sistema de matchmaking por puntuación.
+ *  - NO cierra el WebSocket al recibir PARTIDA_ENCONTRADA: lo traspasa a
+ *    api/partida.ts (setWsActivo) para que la pantalla de partida lo reutilice.
+ *  - Guarda los datos completos de la partida en sessionStorage para que
+ *    /partida/page.tsx los lea al inicializarse.
+ *
+ * Si el servidor no está disponible, el fallback mock sigue funcionando igual.
  */
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "";
+import { setWsActivo } from "./partida";
 
-/** Indica si hay un servidor WebSocket configurado */
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "";
 const usarServidor = !!WS_URL;
 
-// =============================================================================
-// Tipos de mensajes (ajustar según el contrato del servidor Java)
-// =============================================================================
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 export interface MensajeBuscarPartida {
   tipo: "BUSCAR_PARTIDA";
-  /** Opcional: datos extra que pida el servidor (token, usuario, etc.) */
-  payload?: Record<string, unknown>;
+  nombre: string;
+  puntos: number;
 }
 
-export type EstadoPartida =
-  | "BUSCANDO"       // Buscando oponente
-  | "ENCONTRADA"     // Partida encontrada
-  | "ERROR"          // Error del servidor
-  | "TIMEOUT";       // Sin respuesta a tiempo
+export type EstadoPartida = "BUSCANDO" | "ENCONTRADA" | "ERROR" | "TIMEOUT";
 
 export interface RespuestaBuscarPartida {
   estado: EstadoPartida;
   mensaje: string;
-  /** ID de la partida asignada por el servidor (solo cuando estado = ENCONTRADA) */
   partida_id?: string;
+  oponente?: string;
+  oponentePt?: number;
 }
 
-// =============================================================================
-// MOCK – Solo para desarrollo sin servidor. Eliminar o ignorar cuando esté listo.
-// =============================================================================
+// ─── Mock ─────────────────────────────────────────────────────────────────────
 
 function mockBuscarPartida(): Promise<RespuestaBuscarPartida> {
   return new Promise((resolve) => {
-    // Simula ~1.5 s de búsqueda antes de responder
     setTimeout(() => {
       resolve({
         estado: "ENCONTRADA",
-        mensaje: "¡Partida encontrada! (respuesta mock – servidor aún no conectado)",
+        mensaje: "¡Partida encontrada! (modo local sin servidor)",
         partida_id: "mock-partida-001",
+        oponente: "granluchador",
+        oponentePt: 1200,
       });
     }, 1500);
   });
 }
 
-// =============================================================================
-// BUSCAR PARTIDA VÍA WEBSOCKET
-// =============================================================================
+// ─── Función principal ────────────────────────────────────────────────────────
 
 /**
- * Abre una conexión WebSocket con el servidor Java, envía la solicitud de
- * búsqueda de partida y devuelve la primera respuesta recibida.
+ * Busca una partida pública enviando BUSCAR_PARTIDA al servidor.
  *
- * TODO: Ajustar `WS_URL`, el formato de `MensajeBuscarPartida` y el parseo de
- *       la respuesta cuando el servidor esté implementado.
- *
- * @param timeoutMs  Milisegundos antes de considerar la solicitud como TIMEOUT (default: 30 000)
+ * @param nombre    Nombre de usuario del jugador (para el matchmaking)
+ * @param puntos    Puntuación del jugador (matchmaking ±100 puntos)
+ * @param timeoutMs Tiempo máximo de espera en ms (default: 30 s)
  */
 export function buscarPartida(
+  nombre = "Jugador",
+  puntos = 0,
   timeoutMs = 30_000
 ): Promise<RespuestaBuscarPartida> {
-  // Sin servidor configurado → usar mock
-  if (!usarServidor) {
-    return mockBuscarPartida();
-  }
+  if (!usarServidor) return mockBuscarPartida();
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     let ws: WebSocket;
 
     try {
       ws = new WebSocket(WS_URL);
     } catch {
-      reject(new Error("No se pudo abrir la conexión WebSocket."));
+      console.warn("[buscar] No se pudo abrir WebSocket. Usando mock.");
+      mockBuscarPartida().then(resolve);
       return;
     }
 
-    // Temporizador de seguridad
     const timer = setTimeout(() => {
+      ws.onmessage = null;
       ws.close();
-      resolve({
-        estado: "TIMEOUT",
-        mensaje: "Sin respuesta del servidor. Inténtalo de nuevo.",
-      });
+      resolve({ estado: "TIMEOUT", mensaje: "Sin respuesta del servidor. Inténtalo de nuevo." });
     }, timeoutMs);
 
     ws.onopen = () => {
-      // Enviar solicitud al servidor en cuanto se abre la conexión
-      const mensaje: MensajeBuscarPartida = { tipo: "BUSCAR_PARTIDA" };
+      const mensaje: MensajeBuscarPartida = {
+        tipo: "BUSCAR_PARTIDA",
+        nombre,
+        puntos,
+      };
       ws.send(JSON.stringify(mensaje));
     };
 
     ws.onmessage = (event) => {
-      clearTimeout(timer);
-      ws.close();
-
       try {
-        const datos: RespuestaBuscarPartida = JSON.parse(event.data as string);
-        resolve(datos);
+        const datos = JSON.parse(event.data as string);
+
+        if (datos.tipo === "PARTIDA_ENCONTRADA") {
+          clearTimeout(timer);
+
+          // Guardar todos los datos de la partida para que /partida/page.tsx los lea
+          sessionStorage.setItem("datosPartida", JSON.stringify(datos));
+
+          // Traspasar el WS a partida.ts (sin cerrarlo) para reutilizarlo en el juego
+          ws.onmessage = null; // Limpiar este handler antes de traspasar
+          setWsActivo(ws);
+
+          resolve({
+            estado: "ENCONTRADA",
+            mensaje: `¡Partida encontrada! Rivalizarás contra @${datos.oponente as string}`,
+            partida_id: datos.partida_id as string,
+            oponente: datos.oponente as string,
+            oponentePt: datos.oponentePt as number,
+          });
+        }
       } catch {
-        resolve({
-          estado: "ERROR",
-          mensaje: "Respuesta del servidor inválida.",
-        });
+        clearTimeout(timer);
+        console.warn("[buscar] Respuesta inválida del servidor. Usando mock.");
+        mockBuscarPartida().then(resolve);
       }
     };
 
     ws.onerror = () => {
       clearTimeout(timer);
-      // Servidor no disponible → caemos al mock para no bloquear el desarrollo.
-      // Así se puede probar el flujo completo aunque el servidor esté apagado.
-      // TODO: cuando el servidor esté estable, sustituir por un mensaje de error real.
+      // Servidor no disponible → fallback al mock para no bloquear el desarrollo
       console.warn("[buscar] Servidor no disponible. Usando mock de partida.");
       mockBuscarPartida().then(resolve);
     };
 
     ws.onclose = (event) => {
-      // Si se cerró sin que onmessage ni onerror resolvieran la promesa
       if (!event.wasClean) {
         clearTimeout(timer);
         console.warn("[buscar] Conexión cerrada inesperadamente. Usando mock.");
@@ -133,4 +138,3 @@ export function buscarPartida(
     };
   });
 }
-
