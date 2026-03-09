@@ -133,9 +133,26 @@ Responde al `BUSCAR_PARTIDA` cuando se ha emparejado a dos jugadores. MODIFICACI
   "equipo": 2,
   "oponente": "granluchador",
   "oponentePt": 1000,
-  "cartas_jugador": ["Tigre", "Dragon"],
-  "cartas_oponente": ["Rana", "Conejo"],
-  "carta_siguiente": ["Oso", "Elefante", "Cobra"]
+  "cartas_jugador": [{
+      "nombre": "Tigre",
+      "movimientos": [{ "x": 0, "y": 1 },{ "x": 1, "y": 0 }]
+    },
+    {
+      "nombre": "Dragon",
+      "movimientos": [{ "x": -1, "y": 1 },{ "x": 1, "y": 1 }]
+    }],
+  "cartas_oponente": [{
+      "nombre": "Rana",
+      "movimientos": [ { "x": 0, "y": 2 } ]
+    },
+    {
+      "nombre": "Conejo",
+      "movimientos": [ { "x": -1, "y": -1 } ]
+    }],
+  "carta_siguiente": [{
+      "nombre": "Oso",
+      "movimientos": [ { "x": 1, "y": 1 }, { "x": 1, "y": -1 } ]
+    }]
 }
 ```
 

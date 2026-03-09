@@ -323,7 +323,8 @@ public class Partida{
         CartaMov carta = null;
 
         for (CartaMov c : cartasM){
-            if(c.getNombre()==cartaNom){
+            if(c.getNombre().trim().equalsIgnoreCase(cartaNom)){
+                System.out.println(c.getNombre() + " - " + cartaNom);
                 carta = c;
             }
         }
@@ -331,12 +332,24 @@ public class Partida{
         if(carta != null){
             List<Posicion> movimientosValidos = carta.getListaMovimientos();
             Posicion movimientoARealizar = new Posicion(destino.getX() - origen.getX(), destino.getY() - origen.getY(), null);
+            boolean movExiste = false;
+            for(Posicion mov : movimientosValidos){
+                movExiste = movimientoARealizar.getX() == mov.getX() && movimientoARealizar.getY() == mov.getY();
+                if (movExiste){
+                    break;
+                }
+            }
+            if(!movExiste){
+                System.out.println(1);
+            }if(fOrigen == null){
+                System.out.println(2);
+            }
             //Por si acaso comprobamos que el movimiento existe
-            if (fOrigen == null || fOrigen.getEquipo() != equipo || !movimientosValidos.contains(movimientoARealizar) || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
+            if (fOrigen == null || fOrigen.getEquipo() != equipo || !movExiste || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
                 return -2; //Movimiento no valido segun la carta
             }
             //Posibilidad de que se requiera modificaciones
-            if (fDestino != null || fDestino.getEquipo() != equipo) {
+            if (fDestino != null && fDestino.getEquipo() != equipo) {
                 if (fDestino.matar()) { //Si se mata al rey, se acaba la partida
                     //Posible implementacion de patron observer para notificar victoria al matar al rey
                     if (equipo == 1) {

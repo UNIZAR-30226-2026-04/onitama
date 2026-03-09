@@ -33,7 +33,7 @@ public final class PartidaJDBC {
     }
 
     public int registrarPartida(Partida partida) throws SQLException {
-        final String sql = "INSERT INTO Partida (Estado, Tiempo, Tipo, Pos_Fichas_Eq1, Pos_Fichas_Eq2, FichasMuertas1, FichasMuertas2, J1, J2, Es_Ganador_J1, Es_Ganador_J2, Turno) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO Partida (Estado, Tiempo, Tipo, Pos_Fichas_Eq1, Pos_Fichas_Eq2, FichasMuertas1, FichasMuertas2, J1, J2, Es_Ganador_J1, Es_Ganador_J2, Turno) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         //Añadimos Statement.RETURN_GENERATED_KEYS al preparar la sentencia para que nos devuelva el id generado
         try (Connection conn = dataSource.getConnection();

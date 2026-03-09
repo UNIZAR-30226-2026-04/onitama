@@ -36,6 +36,7 @@ class Pareja{
         partida = new Partida(0, "JUGANDOSE", 0, "PUBLICA", null, null, 0, 0, _p1.nombre, _p2.nombre, false, false, 0);
         partida.registrarPartida();
         partida.asignarCartas(); //Genera las cartas aleatorias
+        partida.repartirCartas(); //Repartimos a los equipos sus cartas
     }
 
     public boolean buscar(WebSocket _p1){
@@ -62,16 +63,30 @@ public class Servidor extends WebSocketServer {
     List<Pareja> parejas;
 
     
-    private void cartasPartida(Pareja pj, JSONArray mazoJ1, JSONArray mazoJ2, JSONArray cola){
+    private void cartasPartida(Pareja pj, JSONArray mazoJ1, JSONArray mazoJ2, JSONArray cola) {
         List<CartaMov> cartas = pj.partida.getCartasMovimiento();
 
-        for (CartaMov carta : cartas){
-            if(carta.getEstado() == "EQ1"){
-                mazoJ1.put(carta.getNombre());
-            }else if(carta.getEstado() == "EQ2"){
-                mazoJ2.put(carta.getNombre());
-            }else{
-                cola.put(carta.getNombre());
+        for (CartaMov carta : cartas) {
+            JSONArray arrayMovimientos = new JSONArray();
+            List<Posicion> movs = carta.getListaMovimientos();
+
+            for (Posicion p : movs) {
+                JSONObject punto = new JSONObject();
+                punto.put("x", p.getX());
+                punto.put("y", p.getY());
+                arrayMovimientos.put(punto);
+            }
+
+            JSONObject JSONCarta = new JSONObject();
+            JSONCarta.put("nombre", carta.getNombre());
+            JSONCarta.put("movimientos", arrayMovimientos);
+
+            if ("EQ1".equals(carta.getEstado())) {
+                mazoJ1.put(JSONCarta);
+            } else if ("EQ2".equals(carta.getEstado())) {
+                mazoJ2.put(JSONCarta);
+            } else {
+                cola.put(JSONCarta);
             }
         }
     }

@@ -153,7 +153,7 @@ public class GestorNotificaciones {
 
     private Partida crearPartidaPrivada(String j1, String j2) {
         return new Partida(-1, "Esperando", 0, "Privado",
-                "", "", 0, 0, j1, j2, false, false);
+                "", "", 0, 0, j1, j2, false, false, 0);
     }
 
     private boolean existeNotificacionPendiente(String tipo, String remitente, String destinatario) throws SQLException {
