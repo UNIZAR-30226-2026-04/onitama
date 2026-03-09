@@ -7,7 +7,9 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
-import vo.Partida;
+import VO.Partida;
+import VO.CartaMov;
+import VO.Posicion;
 
 //Hay que añadir el .jar de json
 
@@ -33,7 +35,7 @@ class Pareja{
         //De momento solo existe partidas Publicas
         partida = new Partida(0, "JUGANDOSE", 0, "PUBLICA", null, null, 0, 0, _p1.nombre, _p2.nombre, false, false, 0);
         partida.registrarPartida();
-        partida.asignarCarta(); //Genera las cartas aleatorias
+        partida.asignarCartas(); //Genera las cartas aleatorias
     }
 
     public boolean buscar(WebSocket _p1){
@@ -42,7 +44,7 @@ class Pareja{
 
     // PREVIAMENTE if p1.ws return p1, pero eso devolvía el mismo jugador,
     // entonces lo he cambiado para que devuelva el oponente.
-    public InfoJugador getPareja(WebSocket _p1){
+    public InfoJugador getOponente(WebSocket _p1){
         if(p1.ws == _p1){
             return p2;
         }else if(p2.ws == _p1){
@@ -64,9 +66,9 @@ public class Servidor extends WebSocketServer {
         List<CartaMov> cartas = pj.partida.getCartasMovimiento();
 
         for (CartaMov carta : cartas){
-            if(carta.getEstado == "EQ1"){
+            if(carta.getEstado() == "EQ1"){
                 mazoJ1.put(carta.getNombre());
-            }else if(carta.getEstado == "EQ2"){
+            }else if(carta.getEstado() == "EQ2"){
                 mazoJ2.put(carta.getNombre());
             }else{
                 cola.put(carta.getNombre());
@@ -104,7 +106,7 @@ public class Servidor extends WebSocketServer {
 
         pj.p1.ws.send(msg1.toString());
         pj.p2.ws.send(msg2.toString());
-        System.out.println("Partida "+ id +" iniciada.");
+        System.out.println("Partida "+ pj.partida.getIDPartida() +" iniciada.");
 
         // Envío las 3 cartas de la cola para que el frontend gestione la rotación por su cuenta,
         // porque si solo enviáramos la carta visible, el servidor tendría que guardar las demás 
@@ -136,6 +138,7 @@ public class Servidor extends WebSocketServer {
             Pareja pj = new Pareja(oponente, nuevoJugador);
 
             parejas.add(pj);
+            iniciar(pj);
 
             System.out.println("Partida creada: " + nombre + " VS " + oponente.nombre);
         } else {
@@ -196,24 +199,26 @@ public class Servidor extends WebSocketServer {
                         }else{
                             msg.put("tipo", "VICTORIA");
                         }
+                        pj.partida.actualizarBD(); //Si se termina la partida -> actualizo la base de datos
                     }else if(estado == 2){
                         if(equipo == 2){
                             msg.put("tipo", "DERROTA");
                         }else{
                             msg.put("tipo", "VICTORIA");
                         }
+                        pj.partida.actualizarBD();
                     }
                     
                     // Enviamos el mensaje AL OPOONENTE
                     oponente.ws.send(msg.toString());
-                    System.out.println("Movimiento reenviado en la partida " + p.id);
+                    System.out.println("Movimiento reenviado en la partida " + pj.partida.getIDPartida());
                 }else{
                     if(estado == -1){
                         msg.put("tipo", "MOVIMIENTO_INVALIDO");
-                        System.out.println("Movimiento invalido en la partida " + p.id);
+                        System.out.println("Movimiento invalido en la partida " + pj.partida.getIDPartida());
                     }else{
                         msg.put("tipo", "CARTA_INVALIDA");
-                        System.out.println("Carta no presente en la partida en la partida " + p.id);
+                        System.out.println("Carta no presente en la partida en la partida " + pj.partida.getIDPartida());
                     }
                     conn.send(msg.toString());
                 }
@@ -231,7 +236,7 @@ public class Servidor extends WebSocketServer {
         // otro sitio de 'Servidor.java', luego he continuado con la inicialización 
         // de las dos listas previamente declaradas.
         buscando_partida = new ArrayList<>();
-        partidas = new ArrayList<>();
+        parejas = new ArrayList<>();
     }
 
     @Override
@@ -250,10 +255,6 @@ public class Servidor extends WebSocketServer {
         // He buscado en google 'java remove element from list with condition' y me ha salido el removeIf, de la interfaz Collection
         // pero que lo implementa ArrayList entonces no nos hacen falta imports.
         buscando_partida.removeIf(jugador->jugador.ws == conn); // eliminamos de la lista de jugadres que buscan partida al que haya enviado onClose al server y cuya conxión sea conn
-
-        // hago lo mismo con parejas, porque puede salirse del juego
-        partidas.removeIf(jugador -> jugador.buscar(conn)); // si recorremos la lista y uno de los jugadores cuya conexión que se acaba de cerrar ya tiene asignada una pareja para el jueg, se quita
-        // pero, gestion del otro jugador?
     }
 
     @Override
