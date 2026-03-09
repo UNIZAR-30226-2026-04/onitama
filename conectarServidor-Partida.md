@@ -61,7 +61,8 @@ Se envía cuando el jugador ejecuta un movimiento. Solo se incluyen los datos m�
   "fila_origen": 6,
   "col_destino": 3,
   "fila_destino": 4,
-  "carta": "Tigre"
+  "carta": "Tigre",
+  "equipo": 2
 }
 ```
 
@@ -74,6 +75,53 @@ Se envía cuando el jugador ejecuta un movimiento. Solo se incluyen los datos m�
 ---
 
 ### 2.3 Mensajes que envía el SERVIDOR al cliente
+
+#### `VICTORIA`
+Responde al `VICTORIA` al jugador que ha ganado la partida.
+
+```json
+{
+  "tipo": "VICTORIA"
+}
+```
+
+> **Importante:**
+> Solo lo pasa si el jugador a ganado por causa externa, es decir si el realiza un movimiento que le da la partida NO SE LE AVISA
+
+---
+
+#### `DERROTA`
+Responde al `DERROTA` al jugador que ha perdido la partida.
+
+```json
+{
+  "tipo": "DERROTA"
+}
+```
+
+---
+
+#### `MOVIMIENTO_INVALIDO`
+Responde al `MOVIMIENTO_INVALIDO` si detecta que el movimiento no es valido.
+
+```json
+{
+  "tipo": "MOVIMIENTO_INVALIDO"
+}
+```
+
+---
+
+#### `CARTA_INVALIDA`
+Responde al `CARTA_INVALIDA` si detecta que la carta jugada no está en la partida.
+
+```json
+{
+  "tipo": "CARTA_INVALIDA"
+}
+```
+
+---
 
 #### `PARTIDA_ENCONTRADA`
 Responde al `BUSCAR_PARTIDA` cuando se ha emparejado a dos jugadores. MODIFICACION DEL BACKEND -> El server te dira tambien que puntos tiene tu oponenete

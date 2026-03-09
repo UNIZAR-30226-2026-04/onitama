@@ -7,7 +7,7 @@ import JDBC.PartidaJDBC;
 import java.sql.SQLException;
 import java.util.List;
 
-public class Partida extends Subject {
+public class Partida{
     private int IDPartida, tiempo, muertesJ1, muertesJ2, turno;
     private String estado, tipo; //Cambiar fichas por su correspondiente clase
     private boolean j1Ganador, j2Ganador;
@@ -312,39 +312,57 @@ public class Partida extends Subject {
     }
     */
 
-   //FALTA EL TEMA DE LOS TURNOS REVISAR
-    public boolean moverFicha(int equipo, Posicion origen, Posicion destino, CartaMov carta) {
+   // 0 -> Movimiento realizado con exito
+   // 1 -> equipo 1 gana
+   // 2 -> equipo 2 gana
+   // -1 -> carta no existente en la partida
+   // -2 -> movimiento no valido
+    public int moverFicha(int equipo, Posicion origen, Posicion destino, String cartaNom) {
         Ficha fOrigen = origen.getFicha();
         Ficha fDestino = destino.getFicha();
-        List<Posicion> movimientosValidos = carta.getListaMovimientos();
-        Posicion movimientoARealizar = new Posicion(destino.getX() - origen.getX(), destino.getY() - origen.getY(), null);
-        //Por si acaso comprobamos que el movimiento existe
-        if (fOrigen == null || fOrigen.getEquipo() != equipo || !movimientosValidos.contains(movimientoARealizar) || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
-            return false; //Movimiento no valido segun la carta
+        CartaMov carta = null;
+
+        for (CartaMov c : cartasM){
+            if(c.getNombre()==cartaNom){
+                carta = c;
+            }
         }
-        //Posibilidad de que se requiera modificaciones
-        if (fDestino != null || fDestino.getEquipo() != equipo) {
-            if (fDestino.matar()) { //Si se mata al rey, se acaba la partida
-                //Posible implementacion de patron observer para notificar victoria al matar al rey
+
+        if(carta != null){
+            List<Posicion> movimientosValidos = carta.getListaMovimientos();
+            Posicion movimientoARealizar = new Posicion(destino.getX() - origen.getX(), destino.getY() - origen.getY(), null);
+            //Por si acaso comprobamos que el movimiento existe
+            if (fOrigen == null || fOrigen.getEquipo() != equipo || !movimientosValidos.contains(movimientoARealizar) || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
+                return -2; //Movimiento no valido segun la carta
+            }
+            //Posibilidad de que se requiera modificaciones
+            if (fDestino != null || fDestino.getEquipo() != equipo) {
+                if (fDestino.matar()) { //Si se mata al rey, se acaba la partida
+                    //Posible implementacion de patron observer para notificar victoria al matar al rey
+                    if (equipo == 1) {
+                        j1Ganador = true;
+                        muertesJ2++;
+                        return 1;
+                    } else {
+                        j2Ganador = true;
+                        muertesJ1++;
+                        return 2;
+                    }
+                }
                 if (equipo == 1) {
-                    j1Ganador = true;
-                    nootify(); //Notificar a los observers que el equipo 1 ha ganado (Esta implementado en la clase Subject)
+                    muertesJ2++;
                 } else {
-                    j2Ganador = true;
-                    nootify(); //Notificar a los observers que el equipo 2 ha ganado
+                    muertesJ1++;
                 }
             }
-            if (equipo == 1) {
-                muertesJ2++;
-            } else {
-                muertesJ1++;
-            }
+            destino.setFicha(fOrigen);
+            origen.setFicha(null);
+            rotarCartas(carta.getNombre(), equipo);
+            turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado)
+            return 0; //Movimiento realizado con exito
+        }else{
+            return -1;
         }
-        destino.setFicha(fOrigen);
-        origen.setFicha(null);
-        rotarCartas(carta.getNombre(), equipo);
-        turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado)
-        return true; //Movimiento realizado con exito
     }
 
     //REVISAR (Ciro): Creo que igual seria mejor actualizar la base al abandonar, parar, o terminar la partida

@@ -144,7 +144,7 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    private void gestionarMovimiento(WebSocket conn, JSONObject obj) {
+    private void gestionarPartida(WebSocket conn, JSONObject obj) {
         // buscamos partida en la que esta el jugador
         Pareja pj = null;
         for (Pareja pareja : parejas) {
@@ -172,20 +172,51 @@ public class Servidor extends WebSocketServer {
                 int equipo = obj.getInt("equipo");
                 
                 //El que te pase el mensaje te dira su equipo
-                pj.partida.moverFicha(equipo, new Posicion(XO,YO,null), new Posicion(XD,YD, null), carta);
-                //FALTARIA COMPROBAR SI SE HA GANADO
-
-                JSONObject msg = new JSONObject();
-                msg.put("tipo", "MOVER");
-                msg.put("col_origen", YO);
-                msg.put("fila_origen", XO);
-                msg.put("col_destino", YD);
-                msg.put("fila_destino", XD);
-                msg.put("carta", carta);
+                // 0 -> Movimiento realizado con exito
+                // 1 -> equipo 1 gana
+                // 2 -> equipo 2 gana
+                // -1 -> carta no existente en la partida
+                // -2 -> movimiento no valido
+                int estado = pj.partida.moverFicha(equipo, new Posicion(XO,YO,null), new Posicion(XD,YD, null), carta);
+                pj.partida.rotarCartas(carta, equipo);
                 
-                // Enviamos el mensaje AL OPOONENTE
-                oponente.ws.send(msg.toString());
-                System.out.println("Movimiento reenviado en la partida " + p.id);
+                JSONObject msg = new JSONObject();
+
+                if(estado >= 0){    
+                    if(estado == 0){
+                        msg.put("tipo", "MOVER");
+                        msg.put("col_origen", YO);
+                        msg.put("fila_origen", XO);
+                        msg.put("col_destino", YD);
+                        msg.put("fila_destino", XD);
+                        msg.put("carta", carta);
+                    }else if(estado == 1){
+                        if(equipo == 1){
+                            msg.put("tipo", "DERROTA");
+                        }else{
+                            msg.put("tipo", "VICTORIA");
+                        }
+                    }else if(estado == 2){
+                        if(equipo == 2){
+                            msg.put("tipo", "DERROTA");
+                        }else{
+                            msg.put("tipo", "VICTORIA");
+                        }
+                    }
+                    
+                    // Enviamos el mensaje AL OPOONENTE
+                    oponente.ws.send(msg.toString());
+                    System.out.println("Movimiento reenviado en la partida " + p.id);
+                }else{
+                    if(estado == -1){
+                        msg.put("tipo", "MOVIMIENTO_INVALIDO");
+                        System.out.println("Movimiento invalido en la partida " + p.id);
+                    }else{
+                        msg.put("tipo", "CARTA_INVALIDA");
+                        System.out.println("Carta no presente en la partida en la partida " + p.id);
+                    }
+                    conn.send(msg.toString());
+                }
             }
         } else {
             // Si no encontramos partida, es un error (el jugador intentó mover sin estar emparejado)
@@ -238,7 +269,7 @@ public class Servidor extends WebSocketServer {
             gestionarBusquedaPartida(conn, obj);
             
         } else if (tipoMSG.equals("MOVER")) {
-            gestionarMovimiento(conn, obj);
+            gestionarPartida(conn, obj);
         }
 
     }
