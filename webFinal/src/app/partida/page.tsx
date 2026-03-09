@@ -2,25 +2,28 @@
 
 /**
  * Pantalla de Partida – Onitama 7×7 (versión básica sin cartas de acción).
- * Accesible desde /buscar (Partida Pública) y desde /partidas (Entrenamiento).
  *
- * ─── Diseño sin scroll ────────────────────────────────────────────────────────
- * El layout ocupa exactamente h-screen y todo el contenido cabe en una sola vista.
- * El tablero se escala mediante CSS min() para adaptarse a cualquier pantalla.
+ * ─── Modos de funcionamiento ─────────────────────────────────────────────────
+ *  Mock (sin servidor):
+ *    - Las cartas se generan aleatoriamente en el cliente.
+ *    - El oponente lo controla una IA local que mueve tras 900 ms.
+ *    - El timer al llegar a 0 pasa el turno sin penalizar.
  *
- * ─── 7 cartas (2+2+3) ────────────────────────────────────────────────────────
- * Cada jugador tiene 2 cartas en mano. La cola tiene 3 cartas.
- * Al jugar una carta: el jugador recibe la primera de la cola (índice 0)
- * y la carta usada pasa al final de la cola (índice 2).
+ *  Con servidor (NEXT_PUBLIC_WS_URL configurado):
+ *    - Las cartas vienen en sessionStorage (guardadas por buscarpartida.ts).
+ *    - Al montar se envía ESTOY_LISTO; el servidor responderá con TU_TURNO.
+ *    - Los movimientos del oponente llegan como mensajes MOVER.
+ *    - El servidor gestiona el timer autoritativamente y envía TERMINAR_PARTIDA.
+ *    - El timer visual sirve solo de referencia; al llegar a 0 espera al servidor.
+ *
+ * ─── Protocolo de mensajes (diagrama de secuencia del backend) ────────────────
+ *  Cliente → Servidor: ESTOY_LISTO, MOVER, ABANDONAR
+ *  Servidor → Cliente: TU_TURNO, MOVER, TERMINAR_PARTIDA
  *
  * ─── Flujo de interacción (turno del jugador) ─────────────────────────────────
- *  1. Clic en una ficha propia  → highlight amarillo (fichaSeleccionada)
+ *  1. Clic en una ficha propia  → highlight amarillo
  *  2. Clic en una carta         → highlight azul en destinos válidos
- *  3. Clic en casilla azul      → ejecutar movimiento, cambiar turno
- *
- * ─── IA local (equipo 1, oponente) ────────────────────────────────────────────
- * Tras 900 ms ejecuta un movimiento aleatorio válido.
- * TODO: reemplazar por recepción de mensaje WS tipo MOVER (ver api/partida.ts).
+ *  3. Clic en casilla azul      → ejecutar movimiento y enviar MOVER al servidor
  */
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
@@ -29,19 +32,30 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   crearEstadoInicial,
+  crearEstadoDesdeServidor,
   calcularMovimientosValidos,
   ejecutarMovimiento,
   type EstadoJuego,
   type EquipoID,
   DIM,
 } from "@/lib/juego";
-import { type CartaMovDef } from "@/lib/cartas";
+import { TODAS_LAS_CARTAS, type CartaMovDef } from "@/lib/cartas";
 import { mockJugador } from "@/lib/mockJugador";
+import {
+  getWsActivo,
+  conectarPartida,
+  enviarEstoyListo,
+  enviarMovimiento,
+  enviarAbandonar,
+  type RespuestaMover,
+  type RespuestaTerminarPartida,
+  type RespuestaPartidaEncontrada,
+} from "@/api/partida";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const TIEMPO_TURNO = 120;
-const MOCK_OPONENTE = { nombre: "granluchador" };
+const MOCK_OPONENTE = { nombre: "granluchador", puntos: 1200 };
 
 // ─── Mini cuadrícula de la carta ─────────────────────────────────────────────
 
@@ -81,17 +95,10 @@ function MiniGrid({ carta, equipo }: { carta: CartaMovDef; equipo: EquipoID }) {
 // ─── Tarjeta de movimiento ────────────────────────────────────────────────────
 
 function CartaBtn({
-  carta,
-  equipo,
-  seleccionada = false,
-  onClick,
-  desactivada = false,
+  carta, equipo, seleccionada = false, onClick, desactivada = false,
 }: {
-  carta: CartaMovDef;
-  equipo: EquipoID;
-  seleccionada?: boolean;
-  onClick?: () => void;
-  desactivada?: boolean;
+  carta: CartaMovDef; equipo: EquipoID; seleccionada?: boolean;
+  onClick?: () => void; desactivada?: boolean;
 }) {
   return (
     <button
@@ -109,25 +116,17 @@ function CartaBtn({
     >
       <span className="text-lg shrink-0">{carta.emoji}</span>
       <div className="flex flex-col gap-0.5 min-w-0">
-        <span className="font-bold uppercase tracking-wide leading-none text-[10px] truncate">
-          {carta.nombre}
-        </span>
+        <span className="font-bold uppercase tracking-wide leading-none text-[10px] truncate">{carta.nombre}</span>
         <MiniGrid carta={carta} equipo={equipo} />
       </div>
     </button>
   );
 }
 
-// ─── Carta pequeña (para la cola) ────────────────────────────────────────────
+// ─── Carta pequeña (cola) ────────────────────────────────────────────────────
 
-function CartaCola({
-  carta,
-  equipo,
-  esLaSiguiente,
-}: {
-  carta: CartaMovDef;
-  equipo: EquipoID;
-  esLaSiguiente: boolean;
+function CartaCola({ carta, equipo, esLaSiguiente }: {
+  carta: CartaMovDef; equipo: EquipoID; esLaSiguiente: boolean;
 }) {
   return (
     <div
@@ -150,19 +149,11 @@ function CartaCola({
 // ─── Celda del tablero ────────────────────────────────────────────────────────
 
 function Celda({
-  ficha,
-  esTrono,
-  esSeleccionada,
-  esMovimientoValido,
-  esUltimoMov,
-  onClick,
+  ficha, esTrono, esSeleccionada, esMovimientoValido, esUltimoMov, onClick,
 }: {
   ficha: { equipo: EquipoID; esRey: boolean } | null;
-  esTrono: boolean;
-  esSeleccionada: boolean;
-  esMovimientoValido: boolean;
-  esUltimoMov: boolean;
-  onClick: () => void;
+  esTrono: boolean; esSeleccionada: boolean;
+  esMovimientoValido: boolean; esUltimoMov: boolean; onClick: () => void;
 }) {
   let bg = "bg-[#2c3a4a] hover:bg-[#354657]";
   if (esSeleccionada) bg = "bg-yellow-500";
@@ -175,23 +166,13 @@ function Celda({
       onClick={onClick}
       className={`aspect-square flex items-center justify-center relative border border-[#1a2a3a] transition-colors duration-100 ${bg}`}
     >
-      {/* Trono vacío */}
-      {esTrono && !ficha && (
-        <span className="text-white/20 text-[10px] select-none">🏯</span>
-      )}
-      {/* Pieza */}
+      {esTrono && !ficha && <span className="text-white/20 text-[10px] select-none">🏯</span>}
       {ficha && (
-        <div
-          className={`w-[70%] h-[70%] rounded-full flex items-center justify-center shadow-md ${
-            ficha.equipo === 1
-              ? "bg-red-700 border-2 border-red-400"
-              : "bg-blue-700 border-2 border-blue-400"
-          }`}
-        >
+        <div className={`w-[70%] h-[70%] rounded-full flex items-center justify-center shadow-md ${
+          ficha.equipo === 1 ? "bg-red-700 border-2 border-red-400" : "bg-blue-700 border-2 border-blue-400"
+        }`}>
           {ficha.esRey && (
-            <span className="text-white leading-none select-none" style={{ fontSize: "40%" }}>
-              🏯
-            </span>
+            <span className="text-white leading-none select-none" style={{ fontSize: "40%" }}>🏯</span>
           )}
         </div>
       )}
@@ -203,47 +184,146 @@ function Celda({
 
 function PartidaInterna({ partidaId }: { partidaId: string }) {
   const router = useRouter();
-  const [estado, setEstado] = useState<EstadoJuego>(() => crearEstadoInicial());
+
+  // ── Detectar modo servidor (se comprueba una vez al montar) ─────────────────
+  const enServidor = useRef(!!getWsActivo());
+  /** Equipo del jugador local: 1 = arriba, 2 = abajo (por defecto 2 en mock) */
+  const equipoJugadorRef = useRef<1 | 2>(2);
+
+  // ── Estado inicial: desde servidor (sessionStorage) o mock ──────────────────
+  const [estado, setEstado] = useState<EstadoJuego>(() => {
+    if (typeof window !== "undefined") {
+      const raw = sessionStorage.getItem("datosPartida");
+      if (raw) {
+        try {
+          const datos = JSON.parse(raw) as RespuestaPartidaEncontrada;
+          return crearEstadoDesdeServidor(datos);
+        } catch {
+          console.warn("[partida] Datos de sessionStorage inválidos. Usando mock.");
+        }
+      }
+    }
+    return crearEstadoInicial();
+  });
+
+  // ── Datos del oponente (del servidor o mock) ────────────────────────────────
+  const infoOponente = useRef<{ nombre: string; puntos: number }>(MOCK_OPONENTE);
+  useEffect(() => {
+    const raw = sessionStorage.getItem("datosPartida");
+    if (raw) {
+      try {
+        const datos = JSON.parse(raw) as RespuestaPartidaEncontrada;
+        equipoJugadorRef.current = datos.equipo;
+        infoOponente.current = { nombre: datos.oponente, puntos: datos.oponentePt };
+      } catch { /* mantener mock */ }
+    }
+  }, []);
+
+  // ── Estados adicionales ─────────────────────────────────────────────────────
   const [tiempoRestante, setTiempoRestante] = useState(TIEMPO_TURNO);
+
+  /**
+   * Mientras aguardandoInicio = true (solo en modo servidor), el jugador
+   * no puede interactuar. Se desactiva al recibir TU_TURNO o el primer MOVER.
+   */
+  const [aguardandoInicio, setAguardandoInicio] = useState(() => enServidor.current);
+
+  /**
+   * Resultado declarado por el servidor (TERMINAR_PARTIDA).
+   * En mock, el ganador se lee de estado.ganador.
+   */
+  const [resultadoFinal, setResultadoFinal] = useState<{
+    ganador: string; razon: string;
+  } | null>(null);
+
+  /** Controla la visibilidad del modal de confirmación de abandono */
+  const [mostrarModalAbandono, setMostrarModalAbandono] = useState(false);
+
   const iaOcupada = useRef(false);
 
-  // ─── Timer ──────────────────────────────────────────────────────────────
+  // ─── Conexión WS y mensajes del servidor ─────────────────────────────────
   useEffect(() => {
-    if (estado.ganador) return;
+    if (!enServidor.current) return; // Modo mock: no hay WS
+
+    // Avisar al servidor que la pantalla está lista (espera ambos ESTOY_LISTO)
+    enviarEstoyListo();
+
+    // Escuchar mensajes del servidor durante la partida
+    const desconectar = conectarPartida((msg) => {
+      switch (msg.tipo) {
+        case "TU_TURNO":
+          // El servidor nos autoriza a mover primero
+          setAguardandoInicio(false);
+          break;
+
+        case "MOVER": {
+          // El oponente ha movido; actualizamos el tablero
+          const m = msg as RespuestaMover;
+          const carta = TODAS_LAS_CARTAS.find((c) => c.nombre === m.carta);
+          if (!carta) return;
+          setAguardandoInicio(false); // Si el oponente movió primero, ahora nos toca
+          setEstado((prev) => {
+            const { nuevoEstado } = ejecutarMovimiento(
+              prev, m.fila_origen, m.col_origen, m.fila_destino, m.col_destino, carta
+            );
+            return nuevoEstado;
+          });
+          break;
+        }
+
+        case "TERMINAR_PARTIDA": {
+          // El servidor declara el resultado (tiempo, victoria, abandono)
+          const t = msg as RespuestaTerminarPartida;
+          setResultadoFinal({ ganador: t.ganador, razon: t.razon });
+          break;
+        }
+      }
+    });
+
+    return desconectar;
+  }, []); // Solo al montar
+
+  // ─── Timer visual ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    // No correr el timer si la partida terminó
+    if (estado.ganador || resultadoFinal) return;
+
     setTiempoRestante(TIEMPO_TURNO);
     const intervalo = setInterval(() => {
       setTiempoRestante((t) => {
         if (t <= 1) {
           clearInterval(intervalo);
-          // Tiempo agotado → pasar turno sin mover
-          setEstado((prev) => ({
-            ...prev,
-            turnoActual: prev.turnoActual === 2 ? 1 : 2,
-            fichaSeleccionada: null,
-            cartaSeleccionada: null,
-            movimientosValidos: [],
-          }));
-          return TIEMPO_TURNO;
+          if (enServidor.current) {
+            // En modo servidor: el timer es solo visual. El servidor gestiona
+            // la derrota por tiempo y enviará TERMINAR_PARTIDA cuando corresponda.
+            return 0;
+          } else {
+            // En mock: pasar turno sin penalizar (comportamiento de desarrollo)
+            setEstado((prev) => ({
+              ...prev,
+              turnoActual: prev.turnoActual === 2 ? 1 : 2,
+              fichaSeleccionada: null,
+              cartaSeleccionada: null,
+              movimientosValidos: [],
+            }));
+            return TIEMPO_TURNO;
+          }
         }
         return t - 1;
       });
     }, 1000);
     return () => clearInterval(intervalo);
-  }, [estado.turnoActual, estado.ganador]);
+  }, [estado.turnoActual, estado.ganador, resultadoFinal]);
 
-  // ─── IA del oponente (equipo 1) ──────────────────────────────────────────
-  // TODO: eliminar y sustituir por recepción de WS mensaje MOVER (api/partida.ts)
+  // ─── IA del oponente (solo en modo mock) ──────────────────────────────────
   const ejecutarIa = useCallback((est: EstadoJuego) => {
     if (iaOcupada.current) return;
     iaOcupada.current = true;
     setTimeout(() => {
       const jugadas: {
-        fila: number;
-        col: number;
-        carta: CartaMovDef;
+        fila: number; col: number; carta: CartaMovDef;
         destinos: { fila: number; col: number }[];
       }[] = [];
-
       for (let f = 0; f < DIM; f++) {
         for (let c = 0; c < DIM; c++) {
           if (est.tablero[f][c].ficha?.equipo !== 1) continue;
@@ -254,7 +334,6 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
         }
       }
       if (jugadas.length === 0) { iaOcupada.current = false; return; }
-
       const j = jugadas[Math.floor(Math.random() * jugadas.length)];
       const d = j.destinos[Math.floor(Math.random() * j.destinos.length)];
       const { nuevoEstado } = ejecutarMovimiento(est, j.fila, j.col, d.fila, d.col, j.carta);
@@ -264,16 +343,18 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
   }, []);
 
   useEffect(() => {
-    if (estado.turnoActual === 1 && !estado.ganador) ejecutarIa(estado);
+    if (!enServidor.current && estado.turnoActual === 1 && !estado.ganador) {
+      ejecutarIa(estado);
+    }
   }, [estado, ejecutarIa]);
 
-  // ─── Interacciones del jugador ───────────────────────────────────────────
+  // ─── Interacciones del jugador ─────────────────────────────────────────────
 
   const handleCelda = (fila: number, col: number) => {
-    if (estado.turnoActual !== 2 || estado.ganador) return;
+    if (aguardandoInicio || estado.turnoActual !== 2 || estado.ganador || resultadoFinal) return;
     const celda = estado.tablero[fila][col];
 
-    // Destino válido → ejecutar movimiento
+    // Destino válido → ejecutar y enviar al servidor
     if (
       estado.movimientosValidos.some((m) => m.fila === fila && m.col === col) &&
       estado.fichaSeleccionada &&
@@ -283,11 +364,20 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
         estado,
         estado.fichaSeleccionada.fila,
         estado.fichaSeleccionada.col,
-        fila,
-        col,
+        fila, col,
         estado.cartaSeleccionada
       );
       setEstado(nuevoEstado);
+
+      // Enviar al servidor (solo si está conectado)
+      enviarMovimiento({
+        equipo: equipoJugadorRef.current,
+        col_origen: estado.fichaSeleccionada.col,
+        fila_origen: estado.fichaSeleccionada.fila,
+        col_destino: col,
+        fila_destino: fila,
+        carta: estado.cartaSeleccionada.nombre,
+      });
       return;
     }
 
@@ -302,49 +392,61 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
 
     // Otro → deseleccionar
     setEstado((prev) => ({
-      ...prev,
-      fichaSeleccionada: null,
-      cartaSeleccionada: null,
-      movimientosValidos: [],
+      ...prev, fichaSeleccionada: null, cartaSeleccionada: null, movimientosValidos: [],
     }));
   };
 
   const handleCarta = (carta: CartaMovDef) => {
-    if (estado.turnoActual !== 2 || estado.ganador) return;
-
+    if (aguardandoInicio || estado.turnoActual !== 2 || estado.ganador || resultadoFinal) return;
     if (estado.cartaSeleccionada?.nombre === carta.nombre) {
       setEstado((prev) => ({ ...prev, cartaSeleccionada: null, movimientosValidos: [] }));
       return;
     }
     const movimientosValidos = estado.fichaSeleccionada
       ? calcularMovimientosValidos(
-          estado.tablero,
-          estado.fichaSeleccionada.fila,
-          estado.fichaSeleccionada.col,
-          carta,
-          2
+          estado.tablero, estado.fichaSeleccionada.fila, estado.fichaSeleccionada.col, carta, 2
         )
       : [];
     setEstado((prev) => ({ ...prev, cartaSeleccionada: carta, movimientosValidos }));
   };
 
+  /** El jugador confirma que quiere abandonar: notifica al servidor y vuelve */
+  const handleConfirmarAbandonar = () => {
+    setMostrarModalAbandono(false);
+    enviarAbandonar(); // No hace nada si no hay servidor conectado
+    router.push("/partidas");
+  };
+
+  // ─── Derivados para el render ──────────────────────────────────────────────
+
   const min = String(Math.floor(tiempoRestante / 60)).padStart(2, "0");
   const seg = String(tiempoRestante % 60).padStart(2, "0");
-  const esTurnoJugador = estado.turnoActual === 2 && !estado.ganador;
+  const esTurnoJugador = !aguardandoInicio && estado.turnoActual === 2 && !estado.ganador && !resultadoFinal;
 
-  // ─── Mensaje de ayuda (parte inferior) ───────────────────────────────────
+  // Ganador: en mock viene de estado.ganador; en servidor de resultadoFinal
+  const hayFinPartida = enServidor.current
+    ? resultadoFinal !== null
+    : estado.ganador !== null;
+
+  const esVictoria = enServidor.current
+    ? resultadoFinal?.ganador === mockJugador.nombre
+    : estado.ganador === 2;
+
+  const razonFin = resultadoFinal?.razon ?? (estado.ganador === 2 ? "Victoria" : "Derrota");
+
+  const nombreOponente = infoOponente.current.nombre;
+
   let ayuda = "";
-  if (esTurnoJugador) {
-    if (!estado.fichaSeleccionada && !estado.cartaSeleccionada)
-      ayuda = "Selecciona una de tus piezas (azules)";
-    else if (estado.fichaSeleccionada && !estado.cartaSeleccionada)
-      ayuda = "Ahora elige una carta del panel derecho";
-    else if (estado.fichaSeleccionada && estado.cartaSeleccionada && estado.movimientosValidos.length === 0)
-      ayuda = "Sin movimientos válidos con esta combinación. Prueba otra carta o pieza.";
-    else if (estado.movimientosValidos.length > 0)
-      ayuda = "Haz clic en una casilla blanca para mover";
-  } else if (estado.turnoActual === 1 && !estado.ganador) {
-    ayuda = `Turno de @${MOCK_OPONENTE.nombre}…`;
+  if (aguardandoInicio) ayuda = "Esperando al servidor para comenzar…";
+  else if (esTurnoJugador) {
+    if (!estado.fichaSeleccionada && !estado.cartaSeleccionada) ayuda = "Selecciona una de tus piezas (azules)";
+    else if (estado.fichaSeleccionada && !estado.cartaSeleccionada) ayuda = "Ahora elige una carta del panel derecho";
+    else if (estado.movimientosValidos.length === 0) ayuda = "Sin movimientos válidos. Prueba otra carta o pieza.";
+    else ayuda = "Haz clic en una casilla blanca para mover";
+  } else if (!hayFinPartida) {
+    ayuda = enServidor.current
+      ? `Turno de @${nombreOponente}…`
+      : `Turno de @${nombreOponente}…`;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -371,18 +473,19 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
         </div>
       </header>
 
-      {/* ═══ PANTALLA DE VICTORIA / DERROTA ════════════════════════════════ */}
-      {estado.ganador && (
+      {/* ═══ MODAL: FIN DE PARTIDA ══════════════════════════════════════════ */}
+      {hayFinPartida && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-10 flex flex-col items-center gap-5 shadow-2xl max-w-xs w-full mx-4">
-            <span className="text-5xl">{estado.ganador === 2 ? "🏆" : "💀"}</span>
+            <span className="text-5xl">{esVictoria ? "🏆" : "💀"}</span>
             <h2 className="text-2xl font-bold text-white uppercase tracking-widest text-center">
-              {estado.ganador === 2 ? "¡Victoria!" : "Derrota"}
+              {esVictoria ? "¡Victoria!" : "Derrota"}
             </h2>
+            <p className="text-white/50 text-xs uppercase tracking-widest">{razonFin.replace(/_/g, " ")}</p>
             <p className="text-white/60 text-sm text-center">
-              {estado.ganador === 2
+              {esVictoria
                 ? "¡Excelente partida! Has dominado el tablero."
-                : `@${MOCK_OPONENTE.nombre} ha ganado esta vez.`}
+                : `@${nombreOponente} ha ganado esta vez.`}
             </p>
             <button
               type="button"
@@ -391,13 +494,46 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
             >
               Volver a partidas
             </button>
-            <button
-              type="button"
-              onClick={() => { setEstado(crearEstadoInicial()); setTiempoRestante(TIEMPO_TURNO); }}
-              className="text-white/40 text-xs hover:text-white/70 transition-colors"
-            >
-              Jugar de nuevo (local)
-            </button>
+            {!enServidor.current && (
+              <button
+                type="button"
+                onClick={() => { setEstado(crearEstadoInicial()); setResultadoFinal(null); setTiempoRestante(TIEMPO_TURNO); }}
+                className="text-white/40 text-xs hover:text-white/70 transition-colors"
+              >
+                Jugar de nuevo (local)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL: CONFIRMAR ABANDONO ══════════════════════════════════════ */}
+      {mostrarModalAbandono && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
+            <span className="text-4xl">⚠️</span>
+            <h2 className="text-xl font-bold text-white uppercase tracking-widest text-center">
+              ¿Abandonar partida?
+            </h2>
+            <p className="text-white/60 text-sm text-center">
+              Si abandonas, perderás la partida y tu oponente será declarado ganador.
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setMostrarModalAbandono(false)}
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarAbandonar}
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-red-700 text-white hover:bg-red-600 transition-colors"
+              >
+                Abandonar
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -407,15 +543,14 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
 
         {/* ─── PANEL IZQUIERDO: oponente ──────────────────────────────────── */}
         <aside className="w-48 shrink-0 flex flex-col gap-3 px-2 pt-3 pb-2 bg-[#162235] border-r border-white/10 overflow-y-auto">
-          {/* Avatar y nombre */}
           <div className="flex flex-col items-center gap-1">
             <div className="w-11 h-11 rounded-full bg-red-900/60 border-2 border-red-400/40 flex items-center justify-center shrink-0">
-              <span className="text-white/60 text-base">{MOCK_OPONENTE.nombre.charAt(0).toUpperCase()}</span>
+              <span className="text-white/60 text-base">{nombreOponente.charAt(0).toUpperCase()}</span>
             </div>
-            <span className="text-white/80 text-[11px] font-semibold">@{MOCK_OPONENTE.nombre}</span>
+            <span className="text-white/80 text-[11px] font-semibold">@{nombreOponente}</span>
+            <span className="text-white/30 text-[9px]">{infoOponente.current.puntos} pts</span>
           </div>
 
-          {/* Cartas del oponente */}
           <div className="flex flex-col gap-1.5">
             <p className="text-white/40 text-[9px] uppercase tracking-widest text-center">Cartas del oponente</p>
             {estado.cartasOponente.map((c) => (
@@ -425,20 +560,20 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
 
           <div className="flex-1" />
 
-          {/* Indicador de turno */}
           <div className="flex flex-col items-center gap-1">
             <p className={`text-center text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md ${
-              estado.turnoActual === 1 && !estado.ganador
+              !aguardandoInicio && estado.turnoActual === 1 && !hayFinPartida
                 ? "text-red-300 bg-red-900/30 animate-pulse"
                 : "text-white/30"
             }`}>
-              {estado.turnoActual === 1 && !estado.ganador
-                ? `Turno de @${MOCK_OPONENTE.nombre}`
+              {aguardandoInicio
+                ? "Preparando…"
+                : !aguardandoInicio && estado.turnoActual === 1 && !hayFinPartida
+                ? `Turno de @${nombreOponente}`
                 : "Esperando…"}
             </p>
-            {/* Timer */}
             <p className={`font-mono text-2xl font-bold tabular-nums ${
-              tiempoRestante <= 15 ? "text-red-400 animate-pulse" : "text-white/70"
+              tiempoRestante <= 15 && tiempoRestante > 0 ? "text-red-400 animate-pulse" : "text-white/70"
             }`}>
               {min}:{seg}
             </p>
@@ -447,7 +582,6 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
 
         {/* ─── CENTRO: tablero + cola de cartas ───────────────────────────── */}
         <main className="flex-1 flex flex-col items-center justify-center gap-3 px-4 min-h-0 min-w-0">
-          {/* Tablero 7×7 – tamaño calculado para encajar en pantalla sin scroll */}
           <div
             className="grid border-2 border-[#1a2a3a] shadow-2xl shrink-0"
             style={{
@@ -459,16 +593,12 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
             {Array.from({ length: DIM }, (_, fila) =>
               Array.from({ length: DIM }, (_, col) => {
                 const celda = estado.tablero[fila][col];
-                const esSel =
-                  estado.fichaSeleccionada?.fila === fila && estado.fichaSeleccionada?.col === col;
-                const esValido = estado.movimientosValidos.some(
-                  (m) => m.fila === fila && m.col === col
-                );
+                const esSel = estado.fichaSeleccionada?.fila === fila && estado.fichaSeleccionada?.col === col;
+                const esValido = estado.movimientosValidos.some((m) => m.fila === fila && m.col === col);
                 const esUlt =
                   !!estado.ultimoMovimiento &&
                   ((estado.ultimoMovimiento.origen.fila === fila && estado.ultimoMovimiento.origen.col === col) ||
                     (estado.ultimoMovimiento.destino.fila === fila && estado.ultimoMovimiento.destino.col === col));
-
                 return (
                   <Celda
                     key={`${fila}-${col}`}
@@ -484,32 +614,25 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
             )}
           </div>
 
-          {/* Cola de cartas: 3 cartas en fila (siguiente + 2 en espera) */}
           <div className="flex items-center gap-2 shrink-0">
             <p className="text-white/40 text-[9px] uppercase tracking-widest mr-1">Cola:</p>
             {estado.cartasSiguientes.map((carta, i) => (
-              <CartaCola
-                key={carta.nombre}
-                carta={carta}
-                equipo={2}
-                esLaSiguiente={i === 0}
-              />
+              <CartaCola key={carta.nombre} carta={carta} equipo={2} esLaSiguiente={i === 0} />
             ))}
           </div>
         </main>
 
         {/* ─── PANEL DERECHO: acciones del jugador ────────────────────────── */}
         <aside className="w-52 shrink-0 flex flex-col gap-3 px-2 pt-3 pb-2 bg-[#162235] border-l border-white/10 overflow-y-auto">
-          {/* Botón PAUSAR */}
+          {/* Botón ABANDONAR (reemplaza PAUSAR) */}
           <button
             type="button"
-            onClick={() => router.push("/partidas")}
-            className="w-full py-1.5 rounded-lg border border-white/20 text-white/60 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-colors shrink-0"
+            onClick={() => setMostrarModalAbandono(true)}
+            className="w-full py-1.5 rounded-lg border border-red-800/60 text-red-400/70 text-xs font-bold uppercase tracking-widest hover:bg-red-900/20 hover:text-red-300 transition-colors shrink-0"
           >
-            ⏸ Pausar
+            🚩 Abandonar
           </button>
 
-          {/* Cartas del jugador */}
           <div className="flex flex-col gap-1.5">
             <p className="text-white/40 text-[9px] uppercase tracking-widest text-center">
               {esTurnoJugador ? "Elige una carta" : "Tus cartas"}
@@ -526,24 +649,25 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
             ))}
           </div>
 
-          {/* Área de cartas de acción (reservada) */}
           <div className="flex-1 min-h-0" />
           <div className="rounded-lg border border-white/10 bg-white/5 p-2 flex flex-col items-center gap-1 shrink-0">
             <p className="text-white/30 text-[9px] uppercase tracking-widest text-center">Cartas de acción</p>
             <p className="text-white/20 text-[8px] text-center italic">(Próximamente)</p>
           </div>
 
-          {/* Avatar del jugador */}
           <div className="flex flex-col items-center gap-1 shrink-0">
             <p className={`text-center text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md ${
-              esTurnoJugador ? "text-blue-300 bg-blue-900/30" : "text-white/30"
+              esTurnoJugador ? "text-blue-300 bg-blue-900/30"
+              : aguardandoInicio ? "text-yellow-300/70 bg-yellow-900/20"
+              : "text-white/30"
             }`}>
-              {esTurnoJugador ? "¡Es tu turno!" : "Esperando…"}
+              {aguardandoInicio ? "Esperando inicio…" : esTurnoJugador ? "¡Es tu turno!" : "Esperando…"}
             </p>
             <div className="w-9 h-9 rounded-full bg-[#2a4a6a] border-2 border-blue-400/40 flex items-center justify-center">
               <span className="text-white/60 text-xs">{mockJugador.nombre.charAt(0).toUpperCase()}</span>
             </div>
             <span className="text-white/60 text-[10px]">@{mockJugador.nombre}</span>
+            <span className="text-white/30 text-[9px]">{mockJugador.puntos} pts</span>
           </div>
         </aside>
       </div>
@@ -558,7 +682,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
   );
 }
 
-// ─── Wrapper con Suspense (requerido por useSearchParams) ────────────────────
+// ─── Wrapper con Suspense ─────────────────────────────────────────────────────
 
 function PartidaConParams() {
   const searchParams = useSearchParams();
@@ -568,13 +692,11 @@ function PartidaConParams() {
 
 export default function PartidaPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="h-screen flex items-center justify-center bg-[#111d2c]">
-          <p className="text-white/50 text-sm animate-pulse">Cargando partida…</p>
-        </div>
-      }
-    >
+    <Suspense fallback={
+      <div className="h-screen flex items-center justify-center bg-[#111d2c]">
+        <p className="text-white/50 text-sm animate-pulse">Cargando partida…</p>
+      </div>
+    }>
       <PartidaConParams />
     </Suspense>
   );

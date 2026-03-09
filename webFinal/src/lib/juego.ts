@@ -16,7 +16,7 @@
  * El servidor validará y ejecutará los movimientos reales.
  */
 
-import { CartaMovDef, seleccionarCartasAleatorias } from "./cartas";
+import { CartaMovDef, seleccionarCartasAleatorias, TODAS_LAS_CARTAS } from "./cartas";
 
 // ─── Constantes del tablero ───────────────────────────────────────────────────
 
@@ -136,6 +136,50 @@ export function calcularMovimientosValidos(
   }
 
   return validos;
+}
+
+// ─── Creación del estado a partir de datos del servidor ──────────────────────
+
+/**
+ * Construye el estado inicial de la partida usando los datos recibidos del servidor
+ * en el mensaje PARTIDA_ENCONTRADA.
+ *
+ * El servidor es el responsable de elegir las 7 cartas aleatorias y de decidir
+ * qué cartas corresponden a cada jugador. Esta función traduce esos nombres
+ * al objeto CartaMovDef completo (movimientos, emoji, etc.) consultando
+ * el catálogo local de cartas.
+ *
+ * @param datos  Datos del mensaje PARTIDA_ENCONTRADA (cartas como strings de nombre)
+ */
+export function crearEstadoDesdeServidor(datos: {
+  cartas_jugador: string[];
+  cartas_oponente: string[];
+  carta_siguiente: string[];
+  equipo?: 1 | 2;
+}): EstadoJuego {
+  const buscar = (nombre: string): CartaMovDef => {
+    const encontrada = TODAS_LAS_CARTAS.find((c) => c.nombre === nombre);
+    if (!encontrada) {
+      console.warn(`[juego] Carta "${nombre}" no encontrada en el catálogo. Usando primera disponible.`);
+      return TODAS_LAS_CARTAS[0];
+    }
+    return encontrada;
+  };
+
+  return {
+    tablero: crearTableroInicial(),
+    // El turno inicial lo determinará el mensaje TU_TURNO del servidor.
+    // Provisionalmente se pone 2 (jugador local); se sobreescribirá si llega TU_TURNO.
+    turnoActual: 2,
+    cartasJugador: datos.cartas_jugador.map(buscar),
+    cartasOponente: datos.cartas_oponente.map(buscar),
+    cartasSiguientes: datos.carta_siguiente.map(buscar),
+    fichaSeleccionada: null,
+    cartaSeleccionada: null,
+    movimientosValidos: [],
+    ganador: null,
+    ultimoMovimiento: null,
+  };
 }
 
 // ─── Ejecución de un movimiento ───────────────────────────────────────────────

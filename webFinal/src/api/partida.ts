@@ -1,41 +1,77 @@
 /**
  * Cliente WebSocket para la partida en curso.
- * Gestiona todos los mensajes de juego según el contrato acordado
- * con el servidor Java (ver LEEME.md y mensaje del backend dev).
  *
- * Tipos de mensaje cliente → servidor: BUSCAR_PARTIDA, MOVER, ACCION
- * Tipos de mensaje servidor → cliente: PARTIDA_ENCONTRADA, MOVER, SOLICITUD_AMISTAD, etc.
+ * Mensajes cliente → servidor:
+ *   ESTOY_LISTO  – la pantalla de partida está cargada y lista
+ *   MOVER        – el jugador mueve una ficha
+ *   ABANDONAR    – el jugador abandona voluntariamente la partida
  *
- * Estado actual: el servidor (Servidor.java) aún está en desarrollo.
- * Se incluyen mocks para poder avanzar sin él.
+ * Mensajes servidor → cliente:
+ *   TU_TURNO         – el servidor autoriza al cliente a mover (primer turno)
+ *   MOVER            – el oponente ha movido; se retransmite al otro cliente
+ *   TERMINAR_PARTIDA – la partida ha terminado (tiempo, victoria, abandono)
  *
- * TODO (servidor): cuando el servidor gestione MOVER, eliminar el mock
- * y descomentar la lógica real de envío/recepción.
+ * NOTA sobre nomenclatura: el diagrama de secuencia del backend usa
+ * QUIERO_JUGAR / EMPIEZA_PARTIDA, pero el servidor (Servidor.java) implementa
+ * BUSCAR_PARTIDA / PARTIDA_ENCONTRADA. Se usan estos últimos para coherencia
+ * con el código del servidor existente.
  */
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "";
-const usarServidor = !!WS_URL;
+
+/** true cuando hay una URL de servidor configurada en .env.local */
+export const usarServidor = !!WS_URL;
 
 // ─── Tipos de mensajes ────────────────────────────────────────────────────────
 
-/** Mensaje que envía el cliente al servidor para registrar un movimiento */
+/** El cliente indica al servidor que la pantalla de partida está lista */
+export interface MensajeEstoyListo {
+  tipo: "ESTOY_LISTO";
+}
+
+/**
+ * Movimiento enviado al servidor.
+ * No incluye partida_id porque el servidor identifica la partida
+ * a partir de la conexión WebSocket (conn) de cada jugador.
+ */
 export interface MensajeMover {
   tipo: "MOVER";
-  /** ID de la partida (necesario para identificar la sesión si hay varias conexiones) */
-  partida_id: string;
-  /** Columna de origen (0-6) */
+  /** Equipo del jugador que mueve: 1 = arriba (rojo), 2 = abajo (azul) */
+  equipo: 1 | 2;
   col_origen: number;
-  /** Fila de origen (0-6) */
   fila_origen: number;
-  /** Columna de destino (0-6) */
   col_destino: number;
-  /** Fila de destino (0-6) */
   fila_destino: number;
-  /** Nombre de la carta de movimiento usada */
   carta: string;
 }
 
-/** Mensaje que recibe el cliente cuando el oponente mueve */
+/** El jugador abandona voluntariamente; el servidor declarará ganador al rival */
+export interface MensajeAbandonar {
+  tipo: "ABANDONAR";
+}
+
+// ── Respuestas del servidor ───────────────────────────────────────────────────
+
+/** Datos de la partida enviados por el servidor al emparejar dos jugadores */
+export interface RespuestaPartidaEncontrada {
+  tipo: "PARTIDA_ENCONTRADA";
+  partida_id: string;
+  /** Equipo asignado a este cliente: 1 = arriba (rojo), 2 = abajo (azul) */
+  equipo: 1 | 2;
+  oponente: string;
+  oponentePt: number;
+  cartas_jugador: string[];
+  cartas_oponente: string[];
+  /** Cola de 3 cartas en espera (índice 0 = la siguiente en ser usada) */
+  carta_siguiente: string[];
+}
+
+/** El servidor autoriza al cliente a mover (se envía al jugador que empieza) */
+export interface RespuestaTuTurno {
+  tipo: "TU_TURNO";
+}
+
+/** El servidor retransmite el movimiento del oponente */
 export interface RespuestaMover {
   tipo: "MOVER";
   col_origen: number;
@@ -45,36 +81,28 @@ export interface RespuestaMover {
   carta: string;
 }
 
-/** Mensaje que recibe el cliente cuando el servidor ha encontrado partida */
-export interface RespuestaPartidaEncontrada {
-  tipo: "PARTIDA_ENCONTRADA";
-  partida_id: string;
-  /** Número de equipo asignado al cliente: 1 (arriba) o 2 (abajo) */
-  equipo: 1 | 2;
-  /** Nombre de usuario del oponente */
-  oponente: string;
-  /** Cartas iniciales para el equipo local (2 cartas) */
-  cartas_jugador?: string[];
-  /** Cartas iniciales para el oponente (2 cartas) */
-  cartas_oponente?: string[];
-  /** Carta siguiente en la pila */
-  carta_siguiente?: string;
+/** El servidor declara el fin de la partida */
+export interface RespuestaTerminarPartida {
+  tipo: "TERMINAR_PARTIDA";
+  /** Nombre de usuario del ganador */
+  ganador: string;
+  /** Razón: TIEMPO_AGOTADO | REY_CAPTURADO | TRONO | ABANDONO */
+  razon: string;
 }
 
-/** Unión de todos los mensajes posibles del servidor */
 export type MensajeServidor =
+  | RespuestaTuTurno
   | RespuestaMover
   | RespuestaPartidaEncontrada
+  | RespuestaTerminarPartida
   | { tipo: string; [key: string]: unknown };
 
-// ─── Conexión compartida (singleton por sesión) ───────────────────────────────
+// ─── Conexión compartida (singleton por pestaña) ──────────────────────────────
 
 /**
- * Referencia a la conexión WebSocket activa.
- * El backend dev propone mantener una única conexión desde el inicio de sesión.
- * Por ahora la abrimos al entrar en la partida y la cerramos al salir.
- *
- * TODO: mover la apertura del WS al inicio de sesión según la propuesta del backend.
+ * WebSocket activo. Se comparte entre buscarpartida.ts (lo crea y alimenta
+ * con PARTIDA_ENCONTRADA) y partida/page.tsx (lo usa para MOVER / ESTOY_LISTO).
+ * Persiste durante toda la navegación dentro de la misma pestaña.
  */
 let wsActivo: WebSocket | null = null;
 
@@ -82,43 +110,32 @@ export function getWsActivo(): WebSocket | null {
   return wsActivo;
 }
 
-// ─── Funciones principales ────────────────────────────────────────────────────
+/**
+ * Permite a buscarpartida.ts inyectar el WebSocket ya abierto para que
+ * la pantalla de partida lo reutilice sin abrir una segunda conexión.
+ */
+export function setWsActivo(ws: WebSocket): void {
+  wsActivo = ws;
+  wsActivo.onclose = () => {
+    wsActivo = null;
+  };
+}
+
+// ─── Escucha de mensajes ──────────────────────────────────────────────────────
 
 /**
- * Abre una nueva conexión WebSocket para la partida indicada
- * y registra el callback para mensajes entrantes.
+ * Registra un listener de mensajes sobre el WebSocket activo.
+ * Devuelve una función de cleanup para eliminar el listener al desmontar.
  *
- * @param onMensaje  Función llamada cada vez que llega un mensaje del servidor
- * @returns  Función para cerrar la conexión (llamar al desmontar el componente)
+ * Si no hay WebSocket activo, abre uno nuevo como fallback.
+ * En modo mock (sin servidor configurado) no hace nada.
  */
 export function conectarPartida(
   onMensaje: (msg: MensajeServidor) => void
 ): () => void {
-  if (!usarServidor) {
-    // Sin servidor: la lógica de juego es totalmente local (ver page.tsx)
-    return () => {};
-  }
+  if (!usarServidor) return () => {};
 
-  if (wsActivo && wsActivo.readyState === WebSocket.OPEN) {
-    // Reusar conexión existente, simplemente actualizar el listener
-    wsActivo.onmessage = (ev) => {
-      try {
-        onMensaje(JSON.parse(ev.data as string) as MensajeServidor);
-      } catch {
-        console.error("[partida] Mensaje no válido:", ev.data);
-      }
-    };
-    return () => desconectarPartida();
-  }
-
-  try {
-    wsActivo = new WebSocket(WS_URL);
-  } catch {
-    console.error("[partida] No se pudo abrir WebSocket.");
-    return () => {};
-  }
-
-  wsActivo.onmessage = (ev) => {
+  const listener = (ev: MessageEvent) => {
     try {
       onMensaje(JSON.parse(ev.data as string) as MensajeServidor);
     } catch {
@@ -126,13 +143,27 @@ export function conectarPartida(
     }
   };
 
-  wsActivo.onerror = () => console.error("[partida] Error en el WebSocket.");
-  wsActivo.onclose = () => { wsActivo = null; };
+  // Reusar el WebSocket existente (inyectado desde buscarpartida.ts)
+  if (wsActivo && wsActivo.readyState === WebSocket.OPEN) {
+    wsActivo.addEventListener("message", listener);
+    return () => wsActivo?.removeEventListener("message", listener);
+  }
 
-  return () => desconectarPartida();
+  // Fallback: abrir conexión nueva (si por alguna razón no existe)
+  try {
+    wsActivo = new WebSocket(WS_URL);
+    wsActivo.addEventListener("message", listener);
+    wsActivo.onerror = () => console.error("[partida] Error en el WebSocket.");
+    wsActivo.onclose = () => {
+      wsActivo = null;
+    };
+    return () => wsActivo?.removeEventListener("message", listener);
+  } catch {
+    console.error("[partida] No se pudo abrir WebSocket.");
+    return () => {};
+  }
 }
 
-/** Cierra la conexión WebSocket activa */
 export function desconectarPartida(): void {
   if (wsActivo) {
     wsActivo.close();
@@ -140,21 +171,31 @@ export function desconectarPartida(): void {
   }
 }
 
-/**
- * Envía un movimiento al servidor.
- * Solo se usa cuando el servidor está configurado (NEXT_PUBLIC_WS_URL).
- *
- * Según el backend dev: solo pasar la carta jugada, posición origen y destino.
- * El servidor valida que el movimiento es legal y lo aplica en la base de datos.
- */
-export function enviarMovimiento(mensaje: MensajeMover): boolean {
-  if (!usarServidor || !wsActivo || wsActivo.readyState !== WebSocket.OPEN) {
-    return false;
-  }
+// ─── Helpers de envío ─────────────────────────────────────────────────────────
+
+function enviar(msg: object): boolean {
+  if (!wsActivo || wsActivo.readyState !== WebSocket.OPEN) return false;
   try {
-    wsActivo.send(JSON.stringify(mensaje));
+    wsActivo.send(JSON.stringify(msg));
     return true;
   } catch {
     return false;
   }
+}
+
+/** Avisa al servidor que el cliente tiene la pantalla de partida lista */
+export function enviarEstoyListo(): boolean {
+  return enviar({ tipo: "ESTOY_LISTO" } satisfies MensajeEstoyListo);
+}
+
+/** Envía un movimiento al servidor (sin partida_id, el servidor lo identifica por conexión) */
+export function enviarMovimiento(
+  datos: Omit<MensajeMover, "tipo">
+): boolean {
+  return enviar({ tipo: "MOVER", ...datos } as MensajeMover);
+}
+
+/** Notifica al servidor que el jugador abandona la partida voluntariamente */
+export function enviarAbandonar(): boolean {
+  return enviar({ tipo: "ABANDONAR" } satisfies MensajeAbandonar);
 }
