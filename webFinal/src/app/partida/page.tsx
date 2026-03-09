@@ -132,8 +132,8 @@ function CartaCola({ carta, equipo, esLaSiguiente }: {
     <div
       className={`flex flex-col items-center gap-1 rounded-lg px-2 py-1.5 border transition-all ${
         esLaSiguiente
-          ? "border-yellow-400/60 bg-yellow-900/20 text-yellow-200"
-          : "border-white/10 bg-white/5 text-white/40"
+          ? "border-yellow-600 bg-yellow-200 text-yellow-900 shadow-md scale-[1.02]"
+          : "border-[#1a2d4a]/20 bg-white/50 text-[#1a2d4a]/70"
       }`}
       title={carta.nombre}
     >
@@ -149,30 +149,52 @@ function CartaCola({ carta, equipo, esLaSiguiente }: {
 // ─── Celda del tablero ────────────────────────────────────────────────────────
 
 function Celda({
-  ficha, esTrono, esSeleccionada, esMovimientoValido, esUltimoMov, onClick,
+  ficha, esTrono, equipoTrono, esSeleccionada, esMovimientoValido, esUltimoMov, onClick,
 }: {
   ficha: { equipo: EquipoID; esRey: boolean } | null;
-  esTrono: boolean; esSeleccionada: boolean;
+  esTrono: boolean; equipoTrono: EquipoID | null; esSeleccionada: boolean;
   esMovimientoValido: boolean; esUltimoMov: boolean; onClick: () => void;
 }) {
-  let bg = "bg-[#2c3a4a] hover:bg-[#354657]";
-  if (esSeleccionada) bg = "bg-yellow-500";
-  else if (esMovimientoValido) bg = "bg-white cursor-pointer";
-  else if (esUltimoMov) bg = "bg-yellow-900/50";
+  let bg = "bg-gray-100 hover:bg-gray-200";
+  if (esSeleccionada) bg = "bg-yellow-300";
+  else if (esMovimientoValido) bg = "bg-[#93c5fd] cursor-pointer hover:bg-blue-300";
+  else if (esUltimoMov) bg = "bg-yellow-100";
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`aspect-square flex items-center justify-center relative border border-[#1a2a3a] transition-colors duration-100 ${bg}`}
+      className={`aspect-square flex items-center justify-center relative border border-gray-300 transition-colors duration-100 ${bg} overflow-hidden`}
     >
-      {esTrono && !ficha && <span className="text-white/20 text-[10px] select-none">🏯</span>}
+      {/* Fondo del Templo */}
+      {esTrono && equipoTrono && (
+        <div className="absolute inset-0 opacity-40">
+          <Image
+            src={equipoTrono === 1 ? "/temploRojo.png" : "/temploAzul.png"}
+            alt="Templo"
+            fill
+            className="object-cover"
+          />
+        </div>
+      )}
+
+      {/* Ficha (Peón o Rey) */}
       {ficha && (
-        <div className={`w-[70%] h-[70%] rounded-full flex items-center justify-center shadow-md ${
-          ficha.equipo === 1 ? "bg-red-700 border-2 border-red-400" : "bg-blue-700 border-2 border-blue-400"
-        }`}>
+        <div className="relative w-[85%] h-[85%] flex items-center justify-center z-10">
+          <Image
+            src={
+              ficha.esRey
+                ? (ficha.equipo === 1 ? "/reyRojo.png" : "/reyAzul.png")
+                : (ficha.equipo === 1 ? "/peonRojo.PNG" : "/peonAzul.png")
+            }
+            alt={ficha.esRey ? "Rey" : "Peón"}
+            fill
+            className="object-contain drop-shadow-md"
+          />
           {ficha.esRey && (
-            <span className="text-white leading-none select-none" style={{ fontSize: "40%" }}>🏯</span>
+            <div className="absolute -top-1 -right-1 z-20 drop-shadow-sm">
+              <span className="text-[14px] leading-none select-none">👑</span>
+            </div>
           )}
         </div>
       )}
@@ -581,9 +603,9 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
         </aside>
 
         {/* ─── CENTRO: tablero + cola de cartas ───────────────────────────── */}
-        <main className="flex-1 flex flex-col items-center justify-center gap-3 px-4 min-h-0 min-w-0">
+        <main className="flex-1 bg-[#dbeafe] flex flex-col items-center justify-center gap-3 px-4 min-h-0 min-w-0">
           <div
-            className="grid border-2 border-[#1a2a3a] shadow-2xl shrink-0"
+            className="grid border-2 border-[#1a2d4a]/30 shadow-2xl shrink-0 bg-white"
             style={{
               gridTemplateColumns: `repeat(${DIM}, 1fr)`,
               width: "min(min(55vh, 460px), calc(100vw - 460px))",
@@ -604,6 +626,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
                     key={`${fila}-${col}`}
                     ficha={celda.ficha}
                     esTrono={celda.esTrono}
+                    equipoTrono={celda.esTrono ? (fila === 0 ? 1 : 2) : null}
                     esSeleccionada={esSel}
                     esMovimientoValido={esValido}
                     esUltimoMov={esUlt && !esSel && !esValido}
@@ -615,7 +638,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <p className="text-white/40 text-[9px] uppercase tracking-widest mr-1">Cola:</p>
+            <p className="text-[#1a2d4a]/70 font-bold text-[9px] uppercase tracking-widest mr-1">Cola:</p>
             {estado.cartasSiguientes.map((carta, i) => (
               <CartaCola key={carta.nombre} carta={carta} equipo={2} esLaSiguiente={i === 0} />
             ))}
