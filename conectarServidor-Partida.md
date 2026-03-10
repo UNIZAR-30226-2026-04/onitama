@@ -35,6 +35,33 @@ Si esta variable no está definida (o el servidor no responde), el frontend usa 
 
 ### 2.2 Mensajes que envía el CLIENTE al servidor
 
+#### `REGISTRARSE`
+Se envía al abrir registrarse una nueva cuenta. Necesita nombre, contraseña sin hashear y correo del nuevo jugador
+
+```json
+{
+  "tipo": "REGISTRARSE",
+  "password": "1234",
+  "nombre": "Iron",
+  "correo": "taisen@irontaisen.com"
+}
+```
+
+---
+
+#### `INICIAR_SESION`
+Se envía al abrir iniciar sesion. Necesita nombre, contraseña sin hashear.
+
+```json
+{
+  "tipo": "INICIAR_SESION",
+  "password": "1234",
+  "nombre": "Iron"
+}
+```
+
+---
+
 #### `BUSCAR_PARTIDA`
 Se envía al abrir `/buscar`. No tiene parámetros adicionales por ahora. MODIFICACION DEL BACKEND -> Se debe pasar tus puntos y nombres para decirselos a tu adversario y para buscar un adversario que este parejo
 
@@ -75,6 +102,48 @@ Se envía cuando el jugador ejecuta un movimiento. Solo se incluyen los datos m�
 ---
 
 ### 2.3 Mensajes que envía el SERVIDOR al cliente
+
+#### `ERROR_SESION_PSSWD`
+Responde al `ERROR_SESION_PSSWD` si la contraseña es incorrecta.
+
+```json
+{
+  "tipo": "ERROR_SESION_PSSWD"
+}
+```
+
+---
+
+#### `ERROR_SESION_USS`
+Responde al `ERROR_SESION_USS` si no existe el usuario al que se intentan registrar.
+
+```json
+{
+  "tipo": "ERROR_SESION_USS"
+}
+```
+
+---
+
+#### `INICIO_SESION_EXITOSO`
+Responde al `INICIO_SESION_EXITOSO` al jugador que se ha registrado correctamente.
+
+```json
+{
+  "tipo": "INICIO_SESION_EXITOSO",
+  "nombre": "Iron",
+  "puntos": 1000,
+  "correo": "itor@as.com",
+  "partidas_ganadas": 2,
+  "partidas_jugadas": 2,
+  "cores": 221
+}
+```
+
+> **Importante:**
+> Puede que falten los amigos, notificaciones o skines, pero es una version basica
+
+---
 
 #### `VICTORIA`
 Responde al `VICTORIA` al jugador que ha ganado la partida.

@@ -11,10 +11,11 @@ import VO.Partida;
 import VO.CartaMov;
 import VO.Posicion;
 import VO.Tablero;
+import VO.Jugador;
+import VO.Autenticacion;
+import JDBC.JugadorJDBC;
 
 //POR HACER:
-// -> Registro de los jugadores, el frontend te pasara la contraseña, nombre, correo ... 
-// y tu lo registraras (ejemplo en clienteTestPartida en onOpen): PRIORIDAD MUY ALTA
 // -> Mejorar el servidor con semaforos e hilos/subrutinas: PRIORIDAD MUY ALTA
 // -> El xml que querias hacer: PRIORIDAD ALTA <-- Puedes empezar con esto si quieres 
 // -> Abandono: PRIORIDAD ALTA
@@ -260,6 +261,39 @@ public class Servidor extends WebSocketServer {
         }
     }
 
+    public void iniciarSesion(WebSocket conn, JSONObject obj){
+        JugadorJDBC jdbc = new JugadorJDBC();
+        Jugador j = jdbc.buscarJugador(obj.getString("nombre"));
+        if(j == null){
+            conn.send(new JSONObject().put("tipo", "ERROR_SESION_USS").toString());
+        }else if(!Autenticacion.verificarPassword(obj.getString("password"), j.getContrasena())){
+            conn.send(new JSONObject().put("tipo", "ERROR_SESION_PSSWD").toString());
+        }else{
+            JSONObject msg;
+            msg.put("tipo", "INICIO_SESION_EXITOSO");
+            msg.put("nombre", j.getNombre());
+            msg.put("correo", j.getCorreo());
+            msg.put("puntos", j.getPuntos());
+            msg.put("partidas_ganadas", j.getPartidasGanadas());
+            msg.put("partidas_jugadas", j.getPartidasJugadas());
+            msg.put("cores", j.getCores());
+            conn.send(msg.toString());
+        }
+
+    }
+
+    public void registrarJugador(WebSocket conn, JSONObject obj){
+        String correo = obj.getString("correo");
+        String nombre = obj.getString("nombre");
+        String contrasena = obj.getString("password");
+        Jugador prueba = new Jugador(correo, nombre, Autenticacion.hashearPassword(contrasena));
+        if(prueba.registrarse()){
+            conn.send(new JSONObject().put("tipo", "REGISTRO_EXITOSO").toString());
+        }else{
+            conn.send(new JSONObject().put("tipo", "REGISTRO_ERRONEO").toString());
+        }
+    }
+
     public Servidor(int puerto) {
         super(new InetSocketAddress(puerto));
         // conexiones = new ArrayList<>(); 
@@ -299,11 +333,13 @@ public class Servidor extends WebSocketServer {
         
         if(tipoMSG.equals("BUSCAR_PARTIDA")){
             gestionarBusquedaPartida(conn, obj);
-            
         } else if (tipoMSG.equals("MOVER")) {
             gestionarPartida(conn, obj);
+        } else if (tipoMSG.equals("INICIAR_SESION")){
+            iniciarSesion(conn, obj);
+        } else if (tipoMSG.equals("REGISTRARSE")){
+            registrarJugador(conn, obj);
         }
-
     }
 
     @Override

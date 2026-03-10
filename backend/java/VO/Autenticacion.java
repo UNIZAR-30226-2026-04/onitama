@@ -123,13 +123,6 @@ public class Autenticacion {
         return new ResultadoValidacion(true, "Contraseña válida");
     }
     
-    
-
-    
-    // ========================================
-    // CLASE INTERNA: RESULTADO DE VALIDACIÓN
-    // ========================================
-    
     // Clase que encapsula el resultado de una validación de contraseña.
     public static class ResultadoValidacion {
         public final boolean esValida;
