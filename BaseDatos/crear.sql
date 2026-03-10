@@ -40,7 +40,7 @@ CREATE TABLE Partida (
     FichasMuertas1 INTEGER,
     FichasMuertas2 INTEGER,
     J1 VARCHAR(255),
-    J2 VARCHAR(255),
+    J2 VARCHAR(255) CHECK (J2 <> J1),
     Es_Ganador_J1 BOOLEAN,
     Es_Ganador_J2 BOOLEAN,
     Turno INTEGER,

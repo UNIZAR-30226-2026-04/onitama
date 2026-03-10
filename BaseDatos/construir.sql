@@ -13,7 +13,7 @@ INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Buey', '(0,1),
 INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Grulla', '(1,-1),(-1,-1),(0,1)',0);
 INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Oso', '(1,0),(-1,0),(0,1)',0);
 INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Aguila', '(-1,0),(-1,1),(-1,-1)',0);
-INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Cobra', '(-1,0),(１,１),(１,-１)',0);
+INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Cobra', '(-1,0),(1,1),(1,-1)',0);
 
 
 INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES ('Pensatorium', 'ESPEJO', 0);
