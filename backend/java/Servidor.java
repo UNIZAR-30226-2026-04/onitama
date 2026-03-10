@@ -405,8 +405,10 @@ public class Servidor extends WebSocketServer {
         String contrasena = obj.getString("password");
         Jugador prueba = new Jugador(correo, nombre, contrasena); // El constructor ya hashea la contraseña internamente
         if(prueba.registrarse()){
+            System.out.println("Jugador registrado");
             conn.send(new JSONObject().put("tipo", "REGISTRO_EXITOSO").toString());
         }else{
+            System.out.println("Jugador NO registrado");
             conn.send(new JSONObject().put("tipo", "REGISTRO_ERRONEO").toString());
         }
     }
