@@ -280,7 +280,7 @@ public class Servidor extends WebSocketServer {
         }else if(!Autenticacion.verificarPassword(obj.getString("password"), j.getContrasena())){
             conn.send(new JSONObject().put("tipo", "ERROR_SESION_PSSWD").toString());
         }else{
-            JSONObject msg;
+            JSONObject msg = new JSONObject();
             msg.put("tipo", "INICIO_SESION_EXITOSO");
             msg.put("nombre", j.getNombre());
             msg.put("correo", j.getCorreo());
