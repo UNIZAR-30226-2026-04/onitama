@@ -1,128 +1,183 @@
 /**
- * Cliente API de autenticación.
- * Conecta el frontend con el servidor Java para login y registro.
+ * Cliente de autenticación – Onitama Web Frontend.
  *
- * Cuando NEXT_PUBLIC_API_URL no está configurada, se usa lógica mock para desarrollo.
- * Cuando el servidor esté listo: crear .env.local con NEXT_PUBLIC_API_URL y ajustar
- * las rutas/contratos según la API que exponga el servidor.
+ * Toda la comunicación con el servidor se hace por WebSocket (igual que la partida).
+ *
+ * Mensajes que envía el cliente:
+ *   INICIAR_SESION  { tipo, nombre, password }
+ *   REGISTRARSE     { tipo, correo, nombre, password }
+ *
+ * Respuestas del servidor:
+ *   INICIO_SESION_EXITOSO  { tipo, nombre, correo, puntos, partidas_ganadas, partidas_jugadas, cores }
+ *   ERROR_SESION_USS       { tipo }  ← usuario no encontrado
+ *   ERROR_SESION_PSSWD     { tipo }  ← contraseña incorrecta
+ *   REGISTRO_EXITOSO       { tipo }
+ *   REGISTRO_ERRONEO       { tipo }
+ *
+ * Si NEXT_PUBLIC_WS_URL no está configurado, se usa lógica mock para desarrollo.
+ *
+ * NOTA: cada llamada de auth abre una conexión WS temporal solo para ese mensaje.
+ * No se reutiliza con la conexión de partida (que se abre después en buscarpartida.ts).
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+import { DatosSesion } from "@/lib/sesion";
 
-/** Indica si hay un servidor configurado (usa API real en lugar de mock) */
-const usarServidor = !!API_BASE;
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "";
 
-// =============================================================================
-// MOCK - Solo para desarrollo sin servidor. Eliminar cuando el servidor esté listo.
-// =============================================================================
-const EMAIL_NO_EXISTE_MOCK = "noexiste@test.com";
-const CONTRASENA_CORRECTA_MOCK = "password123";
+/** true cuando hay URL de servidor configurada */
+export const usarServidor = !!WS_URL;
 
-// =============================================================================
-// VERIFICAR EMAIL (Paso 1 del login)
-// =============================================================================
+// ─── Datos mock para desarrollo sin servidor ──────────────────────────────────
 
-/**
- * Verifica si el correo existe en el servidor.
- * TODO: Reemplazar por el endpoint real cuando el servidor esté listo.
- * Ejemplo esperado: POST /api/auth/verificar-email con body { email: string }
- * Respuesta: { existe: boolean }
- */
-export async function verificarEmail(
-  identificador: string
-): Promise<{ existe: boolean }> {
-  if (!usarServidor) {
-    const esEmail = identificador.includes("@");
-    const existe = !(esEmail && identificador === EMAIL_NO_EXISTE_MOCK);
-    return { existe };
-  }
+const MOCK_USUARIOS: Record<string, DatosSesion & { password: string }> = {
+  IronMaster: {
+    password: "password123",
+    nombre: "IronMaster",
+    correo: "jugador@onitama.com",
+    puntos: 1372,
+    partidas_ganadas: 5,
+    partidas_jugadas: 10,
+    cores: 430,
+  },
+};
 
-  const res = await fetch(`${API_BASE}/api/auth/verificar-email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: identificador.includes("@") ? identificador : undefined,
-      usuario: !identificador.includes("@") ? identificador : undefined,
-    }),
-  });
+// ─── Helper: abrir WebSocket y esperar a que esté listo ───────────────────────
 
-  if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || "Error al verificar el correo");
-  }
-  return res.json();
-}
-
-// =============================================================================
-// LOGIN (Paso 2 del login)
-// =============================================================================
-
-/**
- * Inicia sesión con identificador (email o usuario) y contraseña.
- * TODO: Ajustar endpoint y body según la API del servidor.
- * Ejemplo esperado: POST /api/auth/login con body { identificador, password }
- * Respuesta: { token: string } o similar
- */
-export async function login(
-  identificador: string,
-  password: string
-): Promise<{ token?: string }> {
-  if (!usarServidor) {
-    if (password !== CONTRASENA_CORRECTA_MOCK) {
-      throw new Error("La contraseña que ha introducido es incorrecta.");
+function abrirWS(): Promise<WebSocket> {
+  return new Promise((resolve, reject) => {
+    try {
+      const ws = new WebSocket(WS_URL);
+      ws.onopen = () => resolve(ws);
+      ws.onerror = () => reject(new Error("No se pudo conectar al servidor."));
+      ws.onclose = (e) => {
+        if (!e.wasClean) reject(new Error("Conexión cerrada inesperadamente."));
+      };
+    } catch {
+      reject(new Error("URL del servidor no válida."));
     }
-    return { token: "mock-token" };
-  }
-
-  const res = await fetch(`${API_BASE}/api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      identificador,
-      password,
-    }),
   });
+}
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    const error =
-      data?.mensaje || data?.message || (await res.text()) || "Error al iniciar sesión";
-    throw new Error(error);
+// ─── Inicio de sesión ─────────────────────────────────────────────────────────
+
+/**
+ * Inicia sesión con nombre de usuario y contraseña.
+ * Devuelve los datos del jugador si tiene éxito; lanza Error en caso contrario.
+ *
+ * Mensaje enviado:
+ *   { tipo: "INICIAR_SESION", nombre: string, password: string }
+ *
+ * Respuestas esperadas:
+ *   INICIO_SESION_EXITOSO → OK
+ *   ERROR_SESION_USS      → usuario no encontrado
+ *   ERROR_SESION_PSSWD    → contraseña incorrecta
+ */
+export async function iniciarSesion(
+  nombre: string,
+  password: string
+): Promise<DatosSesion> {
+  // ── Mock ──────────────────────────────────────────────────────────────────
+  if (!usarServidor) {
+    const u = MOCK_USUARIOS[nombre];
+    if (!u) throw new Error("Usuario no encontrado.");
+    if (u.password !== password) throw new Error("Contraseña incorrecta.");
+    const { password: _pw, ...datos } = u;
+    void _pw;
+    return datos;
   }
-  return res.json();
+
+  // ── Servidor ──────────────────────────────────────────────────────────────
+  const ws = await abrirWS();
+
+  return new Promise<DatosSesion>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      ws.close();
+      reject(new Error("El servidor no respondió a tiempo."));
+    }, 10_000);
+
+    ws.onmessage = (ev) => {
+      clearTimeout(timeout);
+      ws.close();
+      try {
+        const resp = JSON.parse(ev.data as string) as { tipo: string } & Record<string, unknown>;
+        if (resp.tipo === "INICIO_SESION_EXITOSO") {
+          resolve(resp as unknown as DatosSesion);
+        } else if (resp.tipo === "ERROR_SESION_USS") {
+          reject(new Error("Usuario no encontrado."));
+        } else if (resp.tipo === "ERROR_SESION_PSSWD") {
+          reject(new Error("Contraseña incorrecta."));
+        } else {
+          reject(new Error("Respuesta inesperada del servidor."));
+        }
+      } catch {
+        reject(new Error("Respuesta inválida del servidor."));
+      }
+    };
+
+    ws.onerror = () => {
+      clearTimeout(timeout);
+      reject(new Error("Error de conexión con el servidor."));
+    };
+
+    ws.send(JSON.stringify({ tipo: "INICIAR_SESION", nombre, password }));
+  });
 }
 
-// =============================================================================
-// REGISTRO
-// =============================================================================
-
-export interface DatosRegistro {
-  email: string;
-  usuario: string;
-  password: string;
-}
+// ─── Registro ────────────────────────────────────────────────────────────────
 
 /**
  * Registra un nuevo usuario.
- * TODO: Ajustar endpoint y body según la API del servidor.
- * Ejemplo esperado: POST /api/auth/registro con body { email, usuario, password }
+ * Lanza Error si el registro falla (usuario o correo ya existe, etc.).
+ *
+ * Mensaje enviado:
+ *   { tipo: "REGISTRARSE", correo: string, nombre: string, password: string }
+ *
+ * Respuestas esperadas:
+ *   REGISTRO_EXITOSO  → OK
+ *   REGISTRO_ERRONEO  → error (usuario/correo ya existe)
  */
-export async function registrar(datos: DatosRegistro): Promise<void> {
+export async function registrarUsuario(
+  correo: string,
+  nombre: string,
+  password: string
+): Promise<void> {
+  // ── Mock ──────────────────────────────────────────────────────────────────
   if (!usarServidor) {
-    // Mock: no hace nada, solo simula éxito
+    // Simulamos éxito siempre en modo desarrollo
     return;
   }
 
-  const res = await fetch(`${API_BASE}/api/auth/registro`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(datos),
-  });
+  // ── Servidor ──────────────────────────────────────────────────────────────
+  const ws = await abrirWS();
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    const error =
-      data?.mensaje || data?.message || (await res.text()) || "Error al registrarse";
-    throw new Error(error);
-  }
+  return new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      ws.close();
+      reject(new Error("El servidor no respondió a tiempo."));
+    }, 10_000);
+
+    ws.onmessage = (ev) => {
+      clearTimeout(timeout);
+      ws.close();
+      try {
+        const resp = JSON.parse(ev.data as string) as { tipo: string };
+        if (resp.tipo === "REGISTRO_EXITOSO") {
+          resolve();
+        } else if (resp.tipo === "REGISTRO_ERRONEO") {
+          reject(new Error("No se pudo registrar. El usuario o correo ya podría existir."));
+        } else {
+          reject(new Error("Respuesta inesperada del servidor."));
+        }
+      } catch {
+        reject(new Error("Respuesta inválida del servidor."));
+      }
+    };
+
+    ws.onerror = () => {
+      clearTimeout(timeout);
+      reject(new Error("Error de conexión con el servidor."));
+    };
+
+    ws.send(JSON.stringify({ tipo: "REGISTRARSE", correo, nombre, password }));
+  });
 }

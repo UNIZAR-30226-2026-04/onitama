@@ -81,7 +81,7 @@ export interface RespuestaMover {
   carta: string;
 }
 
-/** El servidor declara el fin de la partida */
+/** El servidor declara el fin de la partida (versión futura con TERMINAR_PARTIDA) */
 export interface RespuestaTerminarPartida {
   tipo: "TERMINAR_PARTIDA";
   /** Nombre de usuario del ganador */
@@ -90,11 +90,27 @@ export interface RespuestaTerminarPartida {
   razon: string;
 }
 
+/**
+ * El servidor notifica al ganador de la partida.
+ * El servidor actual (Ciro) envía VICTORIA al ganador y DERROTA al perdedor
+ * en lugar de TERMINAR_PARTIDA. Ambos mensajes son manejados en partida/page.tsx.
+ */
+export interface RespuestaVictoria {
+  tipo: "VICTORIA";
+}
+
+/** El servidor notifica al perdedor de la partida. */
+export interface RespuestaDerrota {
+  tipo: "DERROTA";
+}
+
 export type MensajeServidor =
   | RespuestaTuTurno
   | RespuestaMover
   | RespuestaPartidaEncontrada
   | RespuestaTerminarPartida
+  | RespuestaVictoria
+  | RespuestaDerrota
   | { tipo: string; [key: string]: unknown };
 
 // ─── Conexión compartida (singleton por pestaña) ──────────────────────────────
