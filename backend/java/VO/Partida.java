@@ -334,6 +334,7 @@ public class Partida{
             Posicion movimientoARealizar = new Posicion(destino.getX() - origen.getX(), destino.getY() - origen.getY(), null);
             boolean movExiste = false;
             for(Posicion mov : movimientosValidos){
+                System.out.println(movimientoARealizar.getX() + " " +  mov.getX() + " " + movimientoARealizar.getY() + " " + mov.getY());
                 movExiste = movimientoARealizar.getX() == mov.getX() && movimientoARealizar.getY() == mov.getY();
                 if (movExiste){
                     break;
