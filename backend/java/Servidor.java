@@ -10,8 +10,18 @@ import java.util.Collections;
 import VO.Partida;
 import VO.CartaMov;
 import VO.Posicion;
+import VO.Tablero;
 
-//Hay que añadir el .jar de json
+//POR HACER:
+// -> Registro de los jugadores, el frontend te pasara la contraseña, nombre, correo ... 
+// y tu lo registraras (ejemplo en clienteTestPartida en onOpen): PRIORIDAD MUY ALTA
+// -> Mejorar el servidor con semaforos e hilos/subrutinas: PRIORIDAD MUY ALTA
+// -> El xml que querias hacer: PRIORIDAD ALTA <-- Puedes empezar con esto si quieres 
+// -> Abandono: PRIORIDAD ALTA
+// -> Solicitudes de amistad: PRIORIDAD ALTA
+// -> Solicitudes de partida privadas: PRIORIDAD MEDIA (Antes hay que hacer lo anterior)
+// -> Reanudar/Pausar una partida privada: PRIORIDAD MEDIA (Antes hay que hacer lo anterior)
+// -> Cartas de Accion: PRIORIDAD BAJA (No lo necesitamos para la primera entrega)
 
 class InfoJugador{
     WebSocket ws;
@@ -183,10 +193,10 @@ public class Servidor extends WebSocketServer {
             // Verificamos que el oponente exista y que su conexión esté abierta
             if (oponente != null && oponente.ws.isOpen()) {
                 String carta = obj.getString("carta");
-                int XO = obj.getInt("fila_origen");
-                int YO = obj.getInt("col_origen");
-                int XD = obj.getInt("fila_destino");
-                int YD = obj.getInt("col_destino");
+                int YO = obj.getInt("fila_origen");
+                int XO = obj.getInt("col_origen");
+                int YD = obj.getInt("fila_destino");
+                int XD = obj.getInt("col_destino");
                 int equipo = obj.getInt("equipo");
                 
                 //El que te pase el mensaje te dira su equipo
@@ -195,18 +205,23 @@ public class Servidor extends WebSocketServer {
                 // 2 -> equipo 2 gana
                 // -1 -> carta no existente en la partida
                 // -2 -> movimiento no valido
-                int estado = pj.partida.moverFicha(equipo, new Posicion(XO,YO,null), new Posicion(XD,YD, null), carta);
-                pj.partida.rotarCartas(carta, equipo);
+                int estado = -2;
+
+                if(XO > -1 && YO > -1 && XD > -1 && YO > -1){
+                    Tablero tb = pj.partida.getTablero();
+                    estado = pj.partida.moverFicha(equipo, tb.getPosicion(XO,YO), tb.getPosicion(XD,YD), carta);
+                    pj.partida.rotarCartas(carta, equipo);
+                }
                 
                 JSONObject msg = new JSONObject();
 
                 if(estado >= 0){    
                     if(estado == 0){
                         msg.put("tipo", "MOVER");
-                        msg.put("col_origen", YO);
-                        msg.put("fila_origen", XO);
-                        msg.put("col_destino", YD);
-                        msg.put("fila_destino", XD);
+                        msg.put("col_origen", XO);
+                        msg.put("fila_origen", YO);
+                        msg.put("col_destino", XD);
+                        msg.put("fila_destino", YD);
                         msg.put("carta", carta);
                     }else if(estado == 1){
                         if(equipo == 1){
@@ -228,13 +243,14 @@ public class Servidor extends WebSocketServer {
                     oponente.ws.send(msg.toString());
                     System.out.println("Movimiento reenviado en la partida " + pj.partida.getIDPartida());
                 }else{
-                    if(estado == -1){
+                    if(estado == -2){
                         msg.put("tipo", "MOVIMIENTO_INVALIDO");
                         System.out.println("Movimiento invalido en la partida " + pj.partida.getIDPartida());
                     }else{
                         msg.put("tipo", "CARTA_INVALIDA");
                         System.out.println("Carta no presente en la partida en la partida " + pj.partida.getIDPartida());
                     }
+
                     conn.send(msg.toString());
                 }
             }
