@@ -4,12 +4,11 @@ import org.java_websocket.handshake.ClientHandshake;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.*;
 import VO.Partida;
 import VO.CartaMov;
 import VO.Posicion;
@@ -77,6 +76,8 @@ public class Servidor extends WebSocketServer {
     List<Pareja> parejas;
     private ExecutorService hilos = Executors.newFixedThreadPool(50);
     private Semaphore mutex = new Semaphore(1);
+    private Semaphore mutexParejas = new Semaphore(1);
+    ScheduledExecutorService temporizador = Executors.newScheduledThreadPool(10);
     
     private void cartasPartida(Pareja pj, JSONArray mazoJ1, JSONArray mazoJ2, JSONArray cola) {
         List<CartaMov> cartas = pj.partida.getCartasMovimiento();
@@ -169,32 +170,126 @@ public class Servidor extends WebSocketServer {
                 InfoJugador nuevoJugador = new InfoJugador(conn, nombre, puntos);
                 Pareja pj = new Pareja(oponente, nuevoJugador);
 
-                parejas.add(pj);
-                iniciar(pj);
-
-                System.out.println("Partida creada: " + nombre + " VS " + oponente.nombre);
+                try{
+                    mutexParejas.acquire();//WAIT
+                    parejas.add(pj);
+                }catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    mutexParejas.release(); //SIGNAL
+                }
+                
             } else {
-                buscando_partida.add(new InfoJugador(conn, nombre, puntos));
+                InfoJugador jugador = new InfoJugador(conn, nombre, puntos);
+                buscando_partida.add(jugador);
                 System.out.println(nombre + " está esperando a unirse a una partida.");
+                hilos.submit(() -> {
+                    volverABuscar(conn, jugador);
+                });
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
             mutex.release(); //SIGNAL
         }
+
+        if(oponente != null){
+            iniciar(pj);
+            System.out.println("Partida creada: " + nombre + " VS " + oponente.nombre);
+        }
+    }
+
+    private void volverABuscar(WebSocket conn, InfoJugador jug) {
+        AtomicInteger segBuscando = new AtomicInteger(0);
+        ScheduledFuture<?>[] tareaLoop = new ScheduledFuture<?>[1];
+        
+        tareaLoop[0] = temporizador.scheduleAtFixedRate(() -> {
+            
+            InfoJugador oponenteEncontrado = null;
+            Pareja pj = null;
+            int tiempoActual = segBuscando.addAndGet(10); //Sumamos 10 segundos atomicamente debido a que dentro del temporizador no se puede modificar variables primitivas de java
+
+            try {
+                mutex.acquire(); // WAIT
+                
+                //Si no estamos en la lista, es que ya nos han cogido como pareja
+                if (!buscando_partida.contains(jug)) {
+                    tareaLoop[0].cancel(false);
+                    return; // Salimos de la ejecución
+                }
+
+                boolean hayGente = buscando_partida.size() > 1;
+                boolean prioridad = tiempoActual > 120 && hayGente;
+
+                if (prioridad) {
+                    // Sacamos al primero que no sea él mismo (el que ha estado más tiempo esperando)
+                    oponenteEncontrado = buscando_partida.get(0);
+                    if (jug.equals(oponenteEncontrado) && buscando_partida.size() > 1) {
+                        oponenteEncontrado = buscando_partida.get(1);
+                    }
+                } else {
+                    for (InfoJugador j : buscando_partida) {
+                        if (jug.equals(j)) continue; // No emparejarse consigo mismo
+                        
+                        int dif = j.puntos - jug.puntos;
+                        if (dif >= -100 && dif <= 100) { 
+                            oponenteEncontrado = j;
+                            break;
+                        }
+                    }
+                }
+
+                // Si encontramos a alguien, los sacamos de la lista
+                if (oponenteEncontrado != null) {
+                    buscando_partida.remove(jug);
+                    buscando_partida.remove(oponenteEncontrado);
+                    pj = new Pareja(oponenteEncontrado, jug);
+                    try{
+                        mutexParejas.acquire();//WAIT
+                        parejas.add(pj);
+                    }catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } finally {
+                        mutexParejas.release(); //SIGNAL
+                    }
+                }
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                mutex.release(); // SIGNAL 
+            }
+
+            if (oponenteEncontrado != null) {
+                System.out.println("Partida creada tardía: " + jug.nombre + " VS " + oponenteEncontrado.nombre);
+                iniciar(pj);
+                
+                tareaLoop[0].cancel(false); 
+            } else {
+                System.out.println(jug.nombre + " sigue buscando... (" + tiempoActual + "s)");
+            }
+
+        }, 10, 10, TimeUnit.SECONDS); //Se repite cada 10 segundos
     }
 
     private void gestionarPartida(WebSocket conn, JSONObject obj) {
         // buscamos partida en la que esta el jugador
         Pareja pj = null;
-        for (Pareja pareja : parejas) {
+        try{
+            mutexParejas.acquire();
+            for (Pareja pareja : parejas) {
                 // Usamos el método 'buscar' de la clase Pareja para ver si este jugador está aquí
-            if (pareja.buscar(conn)) {
-                // una vez encontremos el jugador, actualizamos el valor de p para trabajar con él y con el movimiento
-                // que tiene que hacer
-                pj = pareja;
-                break;
+                if (pareja.buscar(conn)) {
+                    // una vez encontremos el jugador, actualizamos el valor de p para trabajar con él y con el movimiento
+                    // que tiene que hacer
+                    pj = pareja;
+                    break;
+                }
             }
+        }catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            mutexParejas.release(); //SIGNAL
         }
         
         //LANZAR SUBRUTINA EN LA VERSION NO POCHA
@@ -322,15 +417,15 @@ public class Servidor extends WebSocketServer {
 
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-        System.out.println("Jugador desconectado del servidor -> " + conn.getRemoteSocketAddress());
-        // Si el jugador se desconecta del servidor, igual conviene quitarlo de la lista de jugadores
-        // que esperan jugar una partida porque puede ser que el server haya recibido BUSCAR_PARTIDA, lo
-        // haya metido a esperar y se haya salido de la página por quedarse esperando, por si acaso no vayamos
-        // a unir jugadores activos con otros que quedan fantasmas en la lista.
-
-        // He buscado en google 'java remove element from list with condition' y me ha salido el removeIf, de la interfaz Collection
-        // pero que lo implementa ArrayList entonces no nos hacen falta imports.
-        buscando_partida.removeIf(jugador->jugador.ws == conn); // eliminamos de la lista de jugadres que buscan partida al que haya enviado onClose al server y cuya conxión sea conn
+        System.out.println("Jugador desconectado -> " + conn.getRemoteSocketAddress());
+        try {
+            mutex.acquire(); //WAIT
+            buscando_partida.removeIf(jugador -> jugador.ws == conn);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            mutex.release(); //SIGNAL
+        }
     }
 
     @Override
