@@ -152,6 +152,7 @@ public class Servidor extends WebSocketServer {
         int puntos = obj.getInt("puntos");
 
         InfoJugador oponente = null;
+        Pareja pj = null;
 
         try{
             mutex.acquire(); //WAIT
@@ -168,7 +169,7 @@ public class Servidor extends WebSocketServer {
             if (oponente != null){
                 buscando_partida.remove(oponente);
                 InfoJugador nuevoJugador = new InfoJugador(conn, nombre, puntos);
-                Pareja pj = new Pareja(oponente, nuevoJugador);
+                pj = new Pareja(oponente, nuevoJugador);
 
                 try{
                     mutexParejas.acquire();//WAIT
@@ -369,23 +370,32 @@ public class Servidor extends WebSocketServer {
 
     public void iniciarSesion(WebSocket conn, JSONObject obj){
         JugadorJDBC jdbc = new JugadorJDBC();
-        Jugador j = jdbc.buscarJugador(obj.getString("nombre"));
-        if(j == null){
-            conn.send(new JSONObject().put("tipo", "ERROR_SESION_USS").toString());
-        }else if(!Autenticacion.verificarPassword(obj.getString("password"), j.getContrasena())){
-            conn.send(new JSONObject().put("tipo", "ERROR_SESION_PSSWD").toString());
-        }else{
-            JSONObject msg = new JSONObject();
-            msg.put("tipo", "INICIO_SESION_EXITOSO");
-            msg.put("nombre", j.getNombre());
-            msg.put("correo", j.getCorreo());
-            msg.put("puntos", j.getPuntos());
-            msg.put("partidas_ganadas", j.getPartidasGanadas());
-            msg.put("partidas_jugadas", j.getPartidasJugadas());
-            msg.put("cores", j.getCores());
-            conn.send(msg.toString());
+        
+        try {
+            Jugador j = jdbc.buscarJugador(obj.getString("nombre"));
+            
+            if(j == null){
+                conn.send(new JSONObject().put("tipo", "ERROR_SESION_USS").toString());
+            }else if(!Autenticacion.verificarPassword(obj.getString("password"), j.getContrasenya())){
+                conn.send(new JSONObject().put("tipo", "ERROR_SESION_PSSWD").toString());
+            }else{
+                JSONObject msg = new JSONObject();
+                msg.put("tipo", "INICIO_SESION_EXITOSO");
+                msg.put("nombre", j.getNombre());
+                msg.put("correo", j.getCorreo());
+                msg.put("puntos", j.getPuntos());
+                msg.put("partidas_ganadas", j.getPartidasGanadas());
+                msg.put("partidas_jugadas", j.getPartidasJugadas());
+                msg.put("cores", j.getCores());
+                conn.send(msg.toString());
+            }
+            
+        } catch (java.sql.SQLException e) {
+            System.err.println("Error de Base de Datos al iniciar sesión: " + e.getMessage());
+            JSONObject errorInfo = new JSONObject();
+            errorInfo.put("tipo", "ERROR_BD");
+            conn.send(errorInfo.toString());
         }
-
     }
 
     public void registrarJugador(WebSocket conn, JSONObject obj){
