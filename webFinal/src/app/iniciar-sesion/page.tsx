@@ -1,66 +1,74 @@
 "use client";
 
 /**
- * Pantalla de Inicio de Sesión (prototipos 10.x)
- * Flujo en 2 pasos: 1) correo/usuario, 2) contraseña.
- * Usa src/api/auth.ts para conectar con el servidor (o mock si no está configurado).
+ * Pantalla de Inicio de Sesión
+ *
+ * Formulario único con nombre de usuario y contraseña (en una sola pantalla).
+ * El servidor espera:  { tipo: "INICIAR_SESION", nombre, password }
+ * (Antes se pedía el correo; ahora el servidor identifica al usuario por nombre.)
+ *
+ * Tras el login exitoso, guarda los datos del jugador en sessionStorage (sesion.ts)
+ * y redirige a la pantalla principal.
  */
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import HeaderLogo from "@/components/HeaderLogo";
 import FondoPantalla from "@/components/FondoPantalla";
-import { verificarEmail, login } from "@/api/auth";
+import { iniciarSesion } from "@/api/auth";
+import { guardarSesion } from "@/lib/sesion";
+import { validarContrasena } from "@/lib/validacion";
 
 export default function IniciarSesionPage() {
-  const [paso, setPaso] = useState<1 | 2>(1);
-  const [email, setEmail] = useState("");
+  const router = useRouter();
+  const [nombre, setNombre] = useState("");
   const [contrasena, setContrasena] = useState("");
-  const [errorEmail, setErrorEmail] = useState("");
+  const [errorNombre, setErrorNombre] = useState("");
   const [errorContrasena, setErrorContrasena] = useState("");
+  const [errorGeneral, setErrorGeneral] = useState("");
   const [cargando, setCargando] = useState(false);
 
-  const handleContinuarPaso1 = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorEmail("");
-    const valor = email.trim();
-    if (!valor) {
-      setErrorEmail("Introduce tu correo electrónico o nombre de usuario.");
+    setErrorNombre("");
+    setErrorContrasena("");
+    setErrorGeneral("");
+
+    // Validación local antes de enviar al servidor
+    const nombreVal = nombre.trim();
+    if (!nombreVal) {
+      setErrorNombre("Introduce tu nombre de usuario.");
       return;
     }
+    if (!contrasena) {
+      setErrorContrasena("Introduce tu contraseña.");
+      return;
+    }
+    if (!validarContrasena(contrasena)) {
+      setErrorContrasena("La contraseña debe tener al menos 8 caracteres, una letra y un número.");
+      return;
+    }
+
     setCargando(true);
     try {
-      const { existe } = await verificarEmail(valor);
-      if (!existe) {
-        setErrorEmail("El correo electrónico que ha introducido no existe.");
-        return;
+      const datos = await iniciarSesion(nombreVal, contrasena);
+      // Guardar datos del jugador para toda la sesión
+      guardarSesion(datos);
+      router.push("/partidas");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al iniciar sesión.";
+      // Distribuir el error al campo correspondiente si es posible
+      if (msg.toLowerCase().includes("usuario")) {
+        setErrorNombre(msg);
+      } else if (msg.toLowerCase().includes("contraseña") || msg.toLowerCase().includes("password")) {
+        setErrorContrasena(msg);
+      } else {
+        setErrorGeneral(msg);
       }
-      setPaso(2);
-    } catch (err) {
-      setErrorEmail(
-        err instanceof Error ? err.message : "Error al verificar. ¿El servidor está en marcha?"
-      );
     } finally {
       setCargando(false);
     }
   };
-
-  const handleContinuarPaso2 = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorContrasena("");
-    setCargando(true);
-    try {
-      await login(email.trim(), contrasena);
-      window.location.href = "/";
-    } catch (err) {
-      setErrorContrasena(
-        err instanceof Error ? err.message : "Error al iniciar sesión."
-      );
-    } finally {
-      setCargando(false);
-    }
-  };
-
-  const hayError = !!errorEmail || !!errorContrasena;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -73,99 +81,85 @@ export default function IniciarSesionPage() {
             Inicio de sesión
           </h1>
 
-          {paso === 1 ? (
-            <form onSubmit={handleContinuarPaso1} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Introduce tu correo electrónico o nombre de usuario:
-                </label>
-                <input
-                  id="email"
-                  type="text"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setErrorEmail("");
-                  }}
-                  placeholder="ejemplo@correo.com / ejemplodeusuario"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a] focus:border-transparent"
-                  autoComplete="email username"
-                />
-                {errorEmail && (
-                  <p className="mt-2 text-sm text-red-600">{errorEmail}</p>
-                )}
-              </div>
-
-              <div className="flex justify-between text-sm">
-                <button type="button" className="text-blue-600 hover:underline">
-                  ¿Has olvidado tu contraseña?
-                </button>
-                <Link
-                  href="/registro"
-                  className="text-blue-600 hover:underline"
-                >
-                  ¿No tienes cuenta? Regístrate
-                </Link>
-              </div>
-
-              <button
-                type="submit"
-                disabled={hayError || cargando}
-                className={`w-full py-3 rounded-xl font-semibold uppercase ${
-                  hayError || cargando
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-gray-600 text-white hover:bg-gray-700"
-                }`}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Campo: Nombre de usuario */}
+            <div>
+              <label
+                htmlFor="nombre"
+                className="block text-sm font-medium text-gray-700 mb-1"
               >
-                {cargando ? "Comprobando…" : "Continuar"}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleContinuarPaso2} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="contrasena"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Introduce la contraseña:
-                </label>
-                <input
-                  id="contrasena"
-                  type="password"
-                  value={contrasena}
-                  onChange={(e) => {
-                    setContrasena(e.target.value);
-                    setErrorContrasena("");
-                  }}
-                  placeholder="Usa al menos 8 caracteres con letras y números"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a] focus:border-transparent"
-                  autoComplete="current-password"
-                />
-                {errorContrasena && (
-                  <p className="mt-2 text-sm text-red-600">{errorContrasena}</p>
-                )}
-              </div>
+                Nombre de usuario
+              </label>
+              <input
+                id="nombre"
+                type="text"
+                value={nombre}
+                onChange={(e) => {
+                  setNombre(e.target.value);
+                  setErrorNombre("");
+                  setErrorGeneral("");
+                }}
+                placeholder="Tu nombre de usuario"
+                autoComplete="username"
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a] focus:border-transparent"
+              />
+              {errorNombre && (
+                <p className="mt-1 text-sm text-red-600">{errorNombre}</p>
+              )}
+            </div>
 
-              <button
-                type="button"
-                onClick={() => setPaso(1)}
-                className="block w-full text-blue-600 text-sm hover:underline"
+            {/* Campo: Contraseña */}
+            <div>
+              <label
+                htmlFor="contrasena"
+                className="block text-sm font-medium text-gray-700 mb-1"
               >
-                ← Volver atrás
-              </button>
+                Contraseña
+              </label>
+              <input
+                id="contrasena"
+                type="password"
+                value={contrasena}
+                onChange={(e) => {
+                  setContrasena(e.target.value);
+                  setErrorContrasena("");
+                  setErrorGeneral("");
+                }}
+                placeholder="Al menos 8 caracteres con letras y números"
+                autoComplete="current-password"
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a] focus:border-transparent"
+              />
+              {errorContrasena && (
+                <p className="mt-1 text-sm text-red-600">{errorContrasena}</p>
+              )}
+            </div>
 
-              <button
-                type="submit"
-                disabled={cargando}
-                className="w-full py-3 rounded-xl font-semibold uppercase bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {cargando ? "Iniciando sesión…" : "Continuar"}
+            {/* Error general (de red, timeout, etc.) */}
+            {errorGeneral && (
+              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                {errorGeneral}
+              </p>
+            )}
+
+            {/* Links secundarios */}
+            <div className="flex justify-between text-sm pt-1">
+              <button type="button" className="text-blue-600 hover:underline">
+                ¿Olvidaste tu contraseña?
               </button>
-            </form>
-          )}
+              <Link href="/registro" className="text-blue-600 hover:underline">
+                ¿No tienes cuenta? Regístrate
+              </Link>
+            </div>
+
+            {/* Botón de envío */}
+            <button
+              type="submit"
+              disabled={cargando}
+              className="w-full py-3 rounded-xl font-semibold uppercase bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {cargando ? "Iniciando sesión…" : "Iniciar sesión"}
+            </button>
+          </form>
         </div>
       </main>
     </div>

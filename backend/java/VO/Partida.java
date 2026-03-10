@@ -331,10 +331,20 @@ public class Partida{
 
         if(carta != null){
             List<Posicion> movimientosValidos = carta.getListaMovimientos();
-            Posicion movimientoARealizar = new Posicion(destino.getX() - origen.getX(), destino.getY() - origen.getY(), null);
+
+            // La BD almacena movimientos como (dc, df) relativos al jugador,
+            // donde df+ = avanzar hacia el oponente.
+            // Los deltas brutos del tablero deben normalizarse según el equipo:
+            //   Equipo 1 (arriba, avanza hacia fila 6): delta_x_norm = -delta_x, delta_y_norm = delta_y
+            //   Equipo 2 (abajo, avanza hacia fila 0): delta_x_norm = delta_x,  delta_y_norm = -delta_y
+            int rawDx = destino.getX() - origen.getX();
+            int rawDy = destino.getY() - origen.getY();
+            int normDx = (equipo == 1) ? -rawDx : rawDx;
+            int normDy = (equipo == 1) ?  rawDy : -rawDy;
+
+            Posicion movimientoARealizar = new Posicion(normDx, normDy, null);
             boolean movExiste = false;
             for(Posicion mov : movimientosValidos){
-                System.out.println(movimientoARealizar.getX() + " " +  mov.getX() + " " + movimientoARealizar.getY() + " " + mov.getY());
                 movExiste = movimientoARealizar.getX() == mov.getX() && movimientoARealizar.getY() == mov.getY();
                 if (movExiste){
                     break;
@@ -371,6 +381,16 @@ public class Partida{
             }
             destino.setFicha(fOrigen);
             origen.setFicha(null);
+
+            // Verificar victoria por trono: el rey llega al trono enemigo
+            if (fOrigen.isRey()) {
+                Posicion tronoEnemigo = (equipo == 1) ? tablero.trono2 : tablero.trono1;
+                if (destino == tronoEnemigo) {
+                    if (equipo == 1) { j1Ganador = true; return 1; }
+                    else             { j2Ganador = true; return 2; }
+                }
+            }
+
             rotarCartas(carta.getNombre(), equipo);
             turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado)
             return 0; //Movimiento realizado con exito

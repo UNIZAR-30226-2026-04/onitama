@@ -1,80 +1,79 @@
 "use client";
 
 /**
- * Pantalla de Registro de nuevo usuario (prototipos 11.x)
- * Flujo en 3 pasos: 1) email + usuario, 2) contraseña, 3) confirmación.
- * Sin servidor: no se crea usuario real, solo se muestra el flujo completo.
+ * Pantalla de Registro de nuevo usuario.
+ *
+ * Flujo en 2 pasos:
+ *   Paso 1: Rellenar correo, nombre de usuario y contraseña.
+ *   Paso 2: Confirmación de datos antes de enviar.
+ *
+ * Mensaje enviado al servidor:
+ *   { tipo: "REGISTRARSE", correo: string, nombre: string, password: string }
+ *
+ * Respuestas:
+ *   REGISTRO_EXITOSO → redirigir a /iniciar-sesion
+ *   REGISTRO_ERRONEO → mostrar error
  */
 import { useState } from "react";
 import Link from "next/link";
 import HeaderLogo from "@/components/HeaderLogo";
 import FondoPantalla from "@/components/FondoPantalla";
 import { validarContrasena, HINT_CONTRASENA } from "@/lib/validacion";
-import { registrar } from "@/api/auth";
+import { registrarUsuario } from "@/api/auth";
 
-type Paso = 1 | 2 | 3;
+type Paso = 1 | 2;
 
 export default function RegistroPage() {
   const [paso, setPaso] = useState<Paso>(1);
-  const [email, setEmail] = useState("");
-  const [usuario, setUsuario] = useState("");
+  const [correo, setCorreo] = useState("");
+  const [nombre, setNombre] = useState("");
   const [contrasena, setContrasena] = useState("");
-  const [errorEmail, setErrorEmail] = useState("");
-  const [errorUsuario, setErrorUsuario] = useState("");
+  const [errorCorreo, setErrorCorreo] = useState("");
+  const [errorNombre, setErrorNombre] = useState("");
   const [errorContrasena, setErrorContrasena] = useState("");
   const [errorRegistro, setErrorRegistro] = useState("");
   const [cargando, setCargando] = useState(false);
 
-  const handleContinuarPaso1 = (e: React.FormEvent) => {
+  // ─── Paso 1: validar datos y pasar a confirmación ─────────────────────────
+  const handleContinuar = (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorEmail("");
-    setErrorUsuario("");
-
-    const emailVal = email.trim();
-    const usuarioVal = usuario.trim();
-
-    if (!emailVal) {
-      setErrorEmail("El correo electrónico es obligatorio.");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      setErrorEmail("Introduce un correo electrónico válido.");
-      return;
-    }
-    if (!usuarioVal) {
-      setErrorUsuario("El nombre de usuario es obligatorio.");
-      return;
-    }
-    setPaso(2);
-  };
-
-  const handleContinuarPaso2 = (e: React.FormEvent) => {
-    e.preventDefault();
+    setErrorCorreo("");
+    setErrorNombre("");
     setErrorContrasena("");
-    if (!validarContrasena(contrasena)) {
-      setErrorContrasena(
-        "La contraseña debe tener al menos 8 caracteres, una letra y un número."
-      );
+
+    const correoVal = correo.trim();
+    const nombreVal = nombre.trim().replace(/^@/, "");
+
+    if (!correoVal) {
+      setErrorCorreo("El correo electrónico es obligatorio.");
       return;
     }
-    setPaso(3);
-  };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoVal)) {
+      setErrorCorreo("Introduce un correo electrónico válido.");
+      return;
+    }
+    if (!nombreVal) {
+      setErrorNombre("El nombre de usuario es obligatorio.");
+      return;
+    }
+    if (!validarContrasena(contrasena)) {
+      setErrorContrasena("La contraseña debe tener al menos 8 caracteres, una letra y un número.");
+      return;
+    }
 
-  const handleVolverPaso2 = () => {
     setPaso(2);
-    setErrorRegistro("");
   };
-  const handleVolverPaso1 = () => setPaso(1);
 
-  const handleFinalizarContinuar = async () => {
+  // ─── Paso 2: enviar al servidor ───────────────────────────────────────────
+  const handleFinalizar = async () => {
     setErrorRegistro("");
     setCargando(true);
     try {
-      await registrar({
-        email: email.trim(),
-        usuario: usuario.trim().replace(/^@/, ""),
-        password: contrasena,
-      });
+      await registrarUsuario(
+        correo.trim(),
+        nombre.trim().replace(/^@/, ""),
+        contrasena
+      );
       window.location.href = "/iniciar-sesion";
     } catch (err) {
       setErrorRegistro(
@@ -96,54 +95,58 @@ export default function RegistroPage() {
             Regístrate
           </h1>
 
+          {/* ─── Paso 1: formulario ──────────────────────────────────────── */}
           {paso === 1 && (
-            <form onSubmit={handleContinuarPaso1} className="space-y-4">
+            <form onSubmit={handleContinuar} className="space-y-4">
+              {/* Correo */}
               <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Introduce tu correo electrónico *
+                <label htmlFor="correo" className="block text-sm font-medium text-gray-700 mb-1">
+                  Correo electrónico *
                 </label>
                 <input
-                  id="email"
+                  id="correo"
                   type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setErrorEmail("");
-                  }}
+                  value={correo}
+                  onChange={(e) => { setCorreo(e.target.value); setErrorCorreo(""); }}
                   placeholder="ejemplo@correo.com"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a] focus:border-transparent"
                   autoComplete="email"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a] focus:border-transparent"
                 />
-                {errorEmail && (
-                  <p className="mt-2 text-sm text-red-600">{errorEmail}</p>
-                )}
+                {errorCorreo && <p className="mt-1 text-sm text-red-600">{errorCorreo}</p>}
               </div>
 
+              {/* Nombre de usuario */}
               <div>
-                <label
-                  htmlFor="usuario"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Introduce tu nombre de usuario *
+                <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre de usuario *
                 </label>
                 <input
-                  id="usuario"
+                  id="nombre"
                   type="text"
-                  value={usuario}
-                  onChange={(e) => {
-                    setUsuario(e.target.value);
-                    setErrorUsuario("");
-                  }}
+                  value={nombre}
+                  onChange={(e) => { setNombre(e.target.value); setErrorNombre(""); }}
                   placeholder="@ejemplodeusuario"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a] focus:border-transparent"
                   autoComplete="username"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a] focus:border-transparent"
                 />
-                {errorUsuario && (
-                  <p className="mt-2 text-sm text-red-600">{errorUsuario}</p>
-                )}
+                {errorNombre && <p className="mt-1 text-sm text-red-600">{errorNombre}</p>}
+              </div>
+
+              {/* Contraseña */}
+              <div>
+                <label htmlFor="contrasena" className="block text-sm font-medium text-gray-700 mb-1">
+                  Contraseña *
+                </label>
+                <input
+                  id="contrasena"
+                  type="password"
+                  value={contrasena}
+                  onChange={(e) => { setContrasena(e.target.value); setErrorContrasena(""); }}
+                  placeholder={HINT_CONTRASENA}
+                  autoComplete="new-password"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a] focus:border-transparent"
+                />
+                {errorContrasena && <p className="mt-1 text-sm text-red-600">{errorContrasena}</p>}
               </div>
 
               <p className="text-center text-sm">
@@ -154,97 +157,57 @@ export default function RegistroPage() {
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl font-semibold uppercase bg-gray-600 text-white hover:bg-gray-700"
+                className="w-full py-3 rounded-xl font-semibold uppercase bg-gray-600 text-white hover:bg-gray-700 transition-colors"
               >
-                Continuar
+                Revisar datos
               </button>
             </form>
           )}
 
+          {/* ─── Paso 2: confirmación ─────────────────────────────────────── */}
           {paso === 2 && (
-            <form onSubmit={handleContinuarPaso2} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="contrasena"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Introduce una contraseña *
-                </label>
-                <input
-                  id="contrasena"
-                  type="password"
-                  value={contrasena}
-                  onChange={(e) => {
-                    setContrasena(e.target.value);
-                    setErrorContrasena("");
-                  }}
-                  placeholder={HINT_CONTRASENA}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a] focus:border-transparent"
-                  autoComplete="new-password"
-                />
-                {errorContrasena && (
-                  <p className="mt-2 text-sm text-red-600">{errorContrasena}</p>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleVolverPaso1}
-                  className="flex-1 py-3 rounded-xl font-semibold uppercase bg-red-600 text-white hover:bg-red-700"
-                >
-                  Volver
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 rounded-xl font-semibold uppercase bg-gray-400 text-gray-800 hover:bg-gray-500"
-                >
-                  Continuar
-                </button>
-              </div>
-            </form>
-          )}
-
-          {paso === 3 && (
             <div className="space-y-6">
-              <p className="text-gray-700">
-                ¡Todo listo! Confirma que tus datos son correctos.
-              </p>
               <p className="text-gray-600 text-sm">
-                Recuerda que puedes editar tu perfil en todo momento.
+                Revisa que tus datos sean correctos antes de registrarte.
               </p>
 
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                 <p className="text-sm">
                   <span className="font-medium">Correo electrónico:</span>{" "}
-                  {email || "ejemplo@gmail.com"}
+                  {correo}
                 </p>
                 <p className="text-sm">
                   <span className="font-medium">Nombre de usuario:</span>{" "}
-                  {usuario ? `@${usuario.replace(/^@/, "")}` : "@ejemplodeusuario"}
+                  @{nombre.replace(/^@/, "")}
+                </p>
+                <p className="text-sm">
+                  <span className="font-medium">Contraseña:</span>{" "}
+                  {"•".repeat(Math.min(contrasena.length, 12))}
                 </p>
               </div>
 
               {errorRegistro && (
-                <p className="text-sm text-red-600">{errorRegistro}</p>
+                <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                  {errorRegistro}
+                </p>
               )}
 
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={handleVolverPaso2}
+                  onClick={() => setPaso(1)}
                   disabled={cargando}
-                  className="flex-1 py-3 rounded-xl font-semibold uppercase bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl font-semibold uppercase bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
                 >
-                  Volver
+                  Corregir
                 </button>
                 <button
                   type="button"
-                  onClick={handleFinalizarContinuar}
+                  onClick={handleFinalizar}
                   disabled={cargando}
-                  className="flex-1 py-3 rounded-xl font-semibold uppercase bg-gray-400 text-gray-800 hover:bg-gray-500 disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl font-semibold uppercase bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-50 transition-colors"
                 >
-                  {cargando ? "Registrando…" : "Continuar"}
+                  {cargando ? "Registrando…" : "Confirmar"}
                 </button>
               </div>
             </div>

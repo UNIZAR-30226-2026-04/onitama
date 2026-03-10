@@ -420,3 +420,26 @@ Definidos en: `src/lib/cartas.ts` → array `TODAS_LAS_CARTAS`
 | `src/app/buscar/page.tsx` | Pantalla de búsqueda (navega a /partida al encontrar) |
 | `src/app/partida/page.tsx` | Pantalla de juego completa |
 | `.env.local` | `NEXT_PUBLIC_WS_URL=ws://<IP>:8080` para activar el servidor |
+
+
+
+
+
+## RECREAR PRUEBA :
+
+1.- Abrir 3 terminales:
+
+- Terminal 1: -> cd BaseDatos
+              -> seguir el readme de esta carpeta para levantar la base de datos + contruir.sql
+
+- Terminal 2: -> cd backend/java
+             -> $LIB = "lib\Java-WebSocket-1.5.4.jar;lib\slf4j-api-2.0.9.jar;lib\slf4j-simple-2.0.9.jar;lib\json-20231013.jar;lib\postgresql-42.2.5.jar;lib\jbcrypt-0.4.jar"
+             -> javac -cp $LIB -d out Servidor.java VO\*.java JDBC\*.java gestor\*.java 
+             (quiza necesites mkdir out)
+             ->java -cp "out;$LIB" Servidor
+- Terminal 3: -> cd webFinal
+             -> npm install
+             -> npm run dev  
+             (es necesario tener npm instalado)
+
+

@@ -40,7 +40,7 @@ import {
   DIM,
 } from "@/lib/juego";
 import { TODAS_LAS_CARTAS, type CartaMovDef } from "@/lib/cartas";
-import { mockJugador } from "@/lib/mockJugador";
+import { obtenerJugadorActivo } from "@/lib/sesion";
 import {
   getWsActivo,
   conectarPartida,
@@ -59,7 +59,18 @@ const MOCK_OPONENTE = { nombre: "granluchador", puntos: 1200 };
 
 // ─── Mini cuadrícula de la carta ─────────────────────────────────────────────
 
-function MiniGrid({ carta, equipo }: { carta: CartaMovDef; equipo: EquipoID }) {
+/**
+ * equipo:     determina la orientación (signo) de los movimientos.
+ *             2 = perspectiva del jugador local (hacia arriba)
+ *             1 = perspectiva del rival (invertido)
+ * colorDots:  clase Tailwind para los puntos activos (movimientos posibles).
+ *             Por defecto azul; se sobreescribe según posición/equipo.
+ */
+function MiniGrid({
+  carta, equipo, colorDots = "bg-blue-500",
+}: {
+  carta: CartaMovDef; equipo: EquipoID; colorDots?: string;
+}) {
   const CENTRO = 3;
   const signo = equipo === 2 ? 1 : -1;
   const activas = new Set<string>();
@@ -82,7 +93,7 @@ function MiniGrid({ carta, equipo }: { carta: CartaMovDef; equipo: EquipoID }) {
             <div
               key={`${f}-${c}`}
               className={`w-[5px] h-[5px] rounded-[1px] ${
-                esC ? "bg-gray-300" : esA ? "bg-blue-400" : "bg-gray-700"
+                esC ? "bg-[#9a8a72]" : esA ? colorDots : "bg-[#c8bba8]"
               }`}
             />
           );
@@ -95,10 +106,11 @@ function MiniGrid({ carta, equipo }: { carta: CartaMovDef; equipo: EquipoID }) {
 // ─── Tarjeta de movimiento ────────────────────────────────────────────────────
 
 function CartaBtn({
-  carta, equipo, seleccionada = false, onClick, desactivada = false,
+  carta, equipo, colorDots = "bg-blue-500",
+  seleccionada = false, onClick, desactivada = false,
 }: {
-  carta: CartaMovDef; equipo: EquipoID; seleccionada?: boolean;
-  onClick?: () => void; desactivada?: boolean;
+  carta: CartaMovDef; equipo: EquipoID; colorDots?: string;
+  seleccionada?: boolean; onClick?: () => void; desactivada?: boolean;
 }) {
   return (
     <button
@@ -110,38 +122,51 @@ function CartaBtn({
         seleccionada
           ? "border-blue-400 bg-blue-900/60 text-blue-100 scale-[1.03]"
           : desactivada
-          ? "border-white/10 bg-white/5 text-white/40 cursor-default"
-          : "border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-white/40 cursor-pointer"
+          ? "border-[#c8b89a]/50 bg-[#f5ede0] text-[#5c4a35]/60 cursor-default"
+          : "border-[#c8b89a] bg-[#f5ede0] text-[#2d1a0a] hover:bg-[#ede0cc] hover:border-[#a8906a] cursor-pointer"
       }`}
     >
       <span className="text-lg shrink-0">{carta.emoji}</span>
       <div className="flex flex-col gap-0.5 min-w-0">
         <span className="font-bold uppercase tracking-wide leading-none text-[10px] truncate">{carta.nombre}</span>
-        <MiniGrid carta={carta} equipo={equipo} />
+        <MiniGrid carta={carta} equipo={equipo} colorDots={colorDots} />
       </div>
     </button>
   );
 }
 
-// ─── Carta pequeña (cola) ────────────────────────────────────────────────────
+// ─── Carta pequeña (mazo) ────────────────────────────────────────────────────
 
-function CartaCola({ carta, equipo, esLaSiguiente }: {
-  carta: CartaMovDef; equipo: EquipoID; esLaSiguiente: boolean;
+/**
+ * La carta muestra siempre su nombre del animal dentro.
+ * Si es la SIGUIENTE, aparece además una etiqueta "Siguiente" debajo de la carta.
+ */
+function CartaCola({
+  carta, equipo, colorDots, esLaSiguiente,
+}: {
+  carta: CartaMovDef; equipo: EquipoID; colorDots: string; esLaSiguiente: boolean;
 }) {
   return (
-    <div
-      className={`flex flex-col items-center gap-1 rounded-lg px-2 py-1.5 border transition-all ${
-        esLaSiguiente
-          ? "border-yellow-600 bg-yellow-200 text-yellow-900 shadow-md scale-[1.02]"
-          : "border-[#1a2d4a]/20 bg-white/50 text-[#1a2d4a]/70"
-      }`}
-      title={carta.nombre}
-    >
-      <span className="text-base">{carta.emoji}</span>
-      <MiniGrid carta={carta} equipo={equipo} />
-      <span className="text-[9px] font-bold uppercase tracking-wide truncate w-full text-center">
-        {esLaSiguiente ? "Siguiente" : carta.nombre}
-      </span>
+    <div className="flex flex-col items-center gap-[3px]">
+      <div
+        className={`flex flex-col items-center gap-1 rounded-lg px-2 py-1.5 border transition-all ${
+          esLaSiguiente
+            ? "border-yellow-600 bg-yellow-200 text-yellow-900 shadow-md scale-[1.02]"
+            : "border-[#c8b89a]/60 bg-[#f5ede0] text-[#2d1a0a]"
+        }`}
+        title={carta.nombre}
+      >
+        <span className="text-base">{carta.emoji}</span>
+        <MiniGrid carta={carta} equipo={equipo} colorDots={colorDots} />
+        <span className="text-[9px] font-bold uppercase tracking-wide truncate w-full text-center">
+          {carta.nombre}
+        </span>
+      </div>
+      {esLaSiguiente && (
+        <span className="text-[8px] font-bold uppercase tracking-widest text-yellow-600/90">
+          Siguiente
+        </span>
+      )}
     </div>
   );
 }
@@ -170,7 +195,7 @@ function Celda({
       {esTrono && equipoTrono && (
         <div className="absolute inset-0 opacity-40">
           <Image
-            src={equipoTrono === 1 ? "/temploRojo.png" : "/temploAzul.png"}
+            src={equipoTrono === 1 ? "/temploAzul.png" : "/temploRojo.png"}
             alt="Templo"
             fill
             className="object-cover"
@@ -184,8 +209,8 @@ function Celda({
           <Image
             src={
               ficha.esRey
-                ? (ficha.equipo === 1 ? "/reyRojo.png" : "/reyAzul.png")
-                : (ficha.equipo === 1 ? "/peonRojo.PNG" : "/peonAzul.png")
+                ? (ficha.equipo === 1 ? "/reyAzul.png" : "/reyRojo.png")
+                : (ficha.equipo === 1 ? "/peonAzul.png" : "/peonRojo.PNG")
             }
             alt={ficha.esRey ? "Rey" : "Peón"}
             fill
@@ -209,8 +234,11 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
 
   // ── Detectar modo servidor (se comprueba una vez al montar) ─────────────────
   const enServidor = useRef(!!getWsActivo());
-  /** Equipo del jugador local: 1 = arriba, 2 = abajo (por defecto 2 en mock) */
+  /** Equipo del jugador local: 1 = arriba (rojo), 2 = abajo (azul). Por defecto 2 en mock. */
   const equipoJugadorRef = useRef<1 | 2>(2);
+
+  // ── Datos del jugador local (sesión o mock) ──────────────────────────────────
+  const jugadorActual = obtenerJugadorActivo();
 
   // ── Estado inicial: desde servidor (sessionStorage) o mock ──────────────────
   const [estado, setEstado] = useState<EstadoJuego>(() => {
@@ -228,7 +256,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
     return crearEstadoInicial();
   });
 
-  // ── Datos del oponente (del servidor o mock) ────────────────────────────────
+  // ── Datos del oponente y equipo asignado (del servidor o mock) ──────────────
   const infoOponente = useRef<{ nombre: string; puntos: number }>(MOCK_OPONENTE);
   useEffect(() => {
     const raw = sessionStorage.getItem("datosPartida");
@@ -245,10 +273,24 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
   const [tiempoRestante, setTiempoRestante] = useState(TIEMPO_TURNO);
 
   /**
-   * Mientras aguardandoInicio = true (solo en modo servidor), el jugador
-   * no puede interactuar. Se desactiva al recibir TU_TURNO o el primer MOVER.
+   * aguardandoInicio: bloquea la interacción del jugador hasta que sea su turno.
+   *  - Mock: false siempre (equipo 2 empieza en mock local).
+   *  - Servidor, equipo 1: false (equipo 1 empieza; puede mover inmediatamente).
+   *  - Servidor, equipo 2: true (espera a que equipo 1 mueva; se desbloquea al llegar MOVER).
+   * Se lee sessionStorage sincrónico para evitar un render extra.
    */
-  const [aguardandoInicio, setAguardandoInicio] = useState(() => enServidor.current);
+  const [aguardandoInicio, setAguardandoInicio] = useState<boolean>(() => {
+    if (!getWsActivo()) return false; // modo mock
+    try {
+      const raw = typeof window !== "undefined" ? sessionStorage.getItem("datosPartida") : null;
+      if (raw) {
+        const datos = JSON.parse(raw) as RespuestaPartidaEncontrada;
+        equipoJugadorRef.current = datos.equipo;
+        return datos.equipo === 2; // Equipo 2 espera; equipo 1 empieza
+      }
+    } catch { /* ignorar */ }
+    return true; // Seguro por defecto: esperar
+  });
 
   /**
    * Resultado declarado por el servidor (TERMINAR_PARTIDA).
@@ -267,34 +309,49 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
   useEffect(() => {
     if (!enServidor.current) return; // Modo mock: no hay WS
 
-    // Avisar al servidor que la pantalla está lista (espera ambos ESTOY_LISTO)
+    // Avisar al servidor (ignorado por el servidor actual, pero mantener por compatibilidad futura)
     enviarEstoyListo();
 
-    // Escuchar mensajes del servidor durante la partida
     const desconectar = conectarPartida((msg) => {
       switch (msg.tipo) {
+
         case "TU_TURNO":
-          // El servidor nos autoriza a mover primero
+          // El servidor nos autoriza a mover primero (por si Ciro lo implementa en el futuro)
           setAguardandoInicio(false);
           break;
 
         case "MOVER": {
-          // El oponente ha movido; actualizamos el tablero
+          // El oponente ha movido; reflejamos el movimiento en el tablero local
           const m = msg as RespuestaMover;
-          const carta = TODAS_LAS_CARTAS.find((c) => c.nombre === m.carta);
-          if (!carta) return;
-          setAguardandoInicio(false); // Si el oponente movió primero, ahora nos toca
+          setAguardandoInicio(false); // Nuestro turno comienza
           setEstado((prev) => {
+            // Buscar la carta en las del oponente para mantener la rotación FIFO correcta.
+            // Si no se encuentra (incompatibilidad de nombres), usar el catálogo local.
+            const carta =
+              prev.cartasOponente.find((c) => c.nombre === m.carta) ??
+              TODAS_LAS_CARTAS.find((c) => c.nombre === m.carta);
+            if (!carta) return prev;
             const { nuevoEstado } = ejecutarMovimiento(
-              prev, m.fila_origen, m.col_origen, m.fila_destino, m.col_destino, carta
+              prev, m.fila_origen, m.col_origen, m.fila_destino, m.col_destino, carta,
+              equipoJugadorRef.current
             );
             return nuevoEstado;
           });
           break;
         }
 
+        case "VICTORIA":
+          // El servidor nos declara ganadores de esta partida
+          setResultadoFinal({ ganador: jugadorActual.nombre, razon: "REY_CAPTURADO" });
+          break;
+
+        case "DERROTA":
+          // El servidor declara al oponente como ganador
+          setResultadoFinal({ ganador: infoOponente.current.nombre, razon: "REY_CAPTURADO" });
+          break;
+
         case "TERMINAR_PARTIDA": {
-          // El servidor declara el resultado (tiempo, victoria, abandono)
+          // Compatibilidad con futuras versiones del servidor que usen TERMINAR_PARTIDA
           const t = msg as RespuestaTerminarPartida;
           setResultadoFinal({ ganador: t.ganador, razon: t.razon });
           break;
@@ -303,6 +360,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
     });
 
     return desconectar;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Solo al montar
 
   // ─── Timer visual ─────────────────────────────────────────────────────────
@@ -341,6 +399,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
   const ejecutarIa = useCallback((est: EstadoJuego) => {
     if (iaOcupada.current) return;
     iaOcupada.current = true;
+    const equipoIA: EquipoID = equipoJugadorRef.current === 2 ? 1 : 2;
     setTimeout(() => {
       const jugadas: {
         fila: number; col: number; carta: CartaMovDef;
@@ -348,9 +407,9 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
       }[] = [];
       for (let f = 0; f < DIM; f++) {
         for (let c = 0; c < DIM; c++) {
-          if (est.tablero[f][c].ficha?.equipo !== 1) continue;
+          if (est.tablero[f][c].ficha?.equipo !== equipoIA) continue;
           for (const carta of est.cartasOponente) {
-            const destinos = calcularMovimientosValidos(est.tablero, f, c, carta, 1);
+            const destinos = calcularMovimientosValidos(est.tablero, f, c, carta, equipoIA);
             if (destinos.length > 0) jugadas.push({ fila: f, col: c, carta, destinos });
           }
         }
@@ -358,14 +417,16 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
       if (jugadas.length === 0) { iaOcupada.current = false; return; }
       const j = jugadas[Math.floor(Math.random() * jugadas.length)];
       const d = j.destinos[Math.floor(Math.random() * j.destinos.length)];
-      const { nuevoEstado } = ejecutarMovimiento(est, j.fila, j.col, d.fila, d.col, j.carta);
+      const { nuevoEstado } = ejecutarMovimiento(est, j.fila, j.col, d.fila, d.col, j.carta, equipoJugadorRef.current);
       setEstado(nuevoEstado);
       iaOcupada.current = false;
     }, 900);
   }, []);
 
+  // La IA solo corre en mock y cuando le toca al equipo contrario al jugador local
   useEffect(() => {
-    if (!enServidor.current && estado.turnoActual === 1 && !estado.ganador) {
+    const equipoIA = equipoJugadorRef.current === 2 ? 1 : 2;
+    if (!enServidor.current && estado.turnoActual === equipoIA && !estado.ganador) {
       ejecutarIa(estado);
     }
   }, [estado, ejecutarIa]);
@@ -373,7 +434,8 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
   // ─── Interacciones del jugador ─────────────────────────────────────────────
 
   const handleCelda = (fila: number, col: number) => {
-    if (aguardandoInicio || estado.turnoActual !== 2 || estado.ganador || resultadoFinal) return;
+    const miEquipo = equipoJugadorRef.current;
+    if (aguardandoInicio || estado.turnoActual !== miEquipo || estado.ganador || resultadoFinal) return;
     const celda = estado.tablero[fila][col];
 
     // Destino válido → ejecutar y enviar al servidor
@@ -387,13 +449,14 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
         estado.fichaSeleccionada.fila,
         estado.fichaSeleccionada.col,
         fila, col,
-        estado.cartaSeleccionada
+        estado.cartaSeleccionada,
+        equipoJugadorRef.current
       );
       setEstado(nuevoEstado);
 
-      // Enviar al servidor (solo si está conectado)
+      // Enviar movimiento al servidor (ignorado si no hay conexión activa)
       enviarMovimiento({
-        equipo: equipoJugadorRef.current,
+        equipo: miEquipo,
         col_origen: estado.fichaSeleccionada.col,
         fila_origen: estado.fichaSeleccionada.fila,
         col_destino: col,
@@ -404,9 +467,9 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
     }
 
     // Ficha propia → seleccionar
-    if (celda.ficha?.equipo === 2) {
+    if (celda.ficha?.equipo === miEquipo) {
       const movimientosValidos = estado.cartaSeleccionada
-        ? calcularMovimientosValidos(estado.tablero, fila, col, estado.cartaSeleccionada, 2)
+        ? calcularMovimientosValidos(estado.tablero, fila, col, estado.cartaSeleccionada, miEquipo)
         : [];
       setEstado((prev) => ({ ...prev, fichaSeleccionada: { fila, col }, movimientosValidos }));
       return;
@@ -419,14 +482,15 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
   };
 
   const handleCarta = (carta: CartaMovDef) => {
-    if (aguardandoInicio || estado.turnoActual !== 2 || estado.ganador || resultadoFinal) return;
+    const miEquipo = equipoJugadorRef.current;
+    if (aguardandoInicio || estado.turnoActual !== miEquipo || estado.ganador || resultadoFinal) return;
     if (estado.cartaSeleccionada?.nombre === carta.nombre) {
       setEstado((prev) => ({ ...prev, cartaSeleccionada: null, movimientosValidos: [] }));
       return;
     }
     const movimientosValidos = estado.fichaSeleccionada
       ? calcularMovimientosValidos(
-          estado.tablero, estado.fichaSeleccionada.fila, estado.fichaSeleccionada.col, carta, 2
+          estado.tablero, estado.fichaSeleccionada.fila, estado.fichaSeleccionada.col, carta, miEquipo
         )
       : [];
     setEstado((prev) => ({ ...prev, cartaSeleccionada: carta, movimientosValidos }));
@@ -443,18 +507,19 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
 
   const min = String(Math.floor(tiempoRestante / 60)).padStart(2, "0");
   const seg = String(tiempoRestante % 60).padStart(2, "0");
-  const esTurnoJugador = !aguardandoInicio && estado.turnoActual === 2 && !estado.ganador && !resultadoFinal;
+  const miEquipoActual = equipoJugadorRef.current;
+  const esTurnoJugador = !aguardandoInicio && estado.turnoActual === miEquipoActual && !estado.ganador && !resultadoFinal;
 
-  // Ganador: en mock viene de estado.ganador; en servidor de resultadoFinal
-  const hayFinPartida = enServidor.current
-    ? resultadoFinal !== null
-    : estado.ganador !== null;
+  // Ganador: puede llegar por resultadoFinal (VICTORIA/DERROTA del servidor) o por
+  // detección local (ejecutarMovimiento). Ambas fuentes se muestran; resultadoFinal
+  // tiene prioridad para el mensaje de texto de la razón.
+  const hayFinPartida = resultadoFinal !== null || estado.ganador !== null;
 
-  const esVictoria = enServidor.current
-    ? resultadoFinal?.ganador === mockJugador.nombre
-    : estado.ganador === 2;
+  const esVictoria = resultadoFinal
+    ? resultadoFinal.ganador === jugadorActual.nombre
+    : estado.ganador === miEquipoActual;
 
-  const razonFin = resultadoFinal?.razon ?? (estado.ganador === 2 ? "Victoria" : "Derrota");
+  const razonFin = resultadoFinal?.razon ?? (esVictoria ? "Victoria" : "Derrota");
 
   const nombreOponente = infoOponente.current.nombre;
 
@@ -483,14 +548,14 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">
             <Image src="/katanas.png" alt="Puntos" width={18} height={18} className="h-4 w-auto" />
-            <span className="text-white font-semibold text-xs">{mockJugador.puntos.toLocaleString()}</span>
+            <span className="text-white font-semibold text-xs">{jugadorActual.puntos.toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-1">
             <Image src="/core.png" alt="Cores" width={18} height={18} className="h-4 w-auto" />
-            <span className="text-white font-semibold text-xs">{mockJugador.cores.toLocaleString()}</span>
+            <span className="text-white font-semibold text-xs">{jugadorActual.cores.toLocaleString()}</span>
           </div>
           <div className="w-8 h-8 rounded-full bg-[#2a4a6a] border-2 border-white/30 flex items-center justify-center">
-            <span className="text-white/50 text-xs">{mockJugador.nombre.charAt(0).toUpperCase()}</span>
+            <span className="text-white/50 text-xs">{jugadorActual.nombre.charAt(0).toUpperCase()}</span>
           </div>
         </div>
       </header>
@@ -564,9 +629,15 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
         {/* ─── PANEL IZQUIERDO: oponente ──────────────────────────────────── */}
+        {/* El oponente siempre es el equipo contrario al jugador local */}
+        {/* Equipo 1 = Azul, Equipo 2 = Rojo */}
         <aside className="w-48 shrink-0 flex flex-col gap-3 px-2 pt-3 pb-2 bg-[#162235] border-r border-white/10 overflow-y-auto">
           <div className="flex flex-col items-center gap-1">
-            <div className="w-11 h-11 rounded-full bg-red-900/60 border-2 border-red-400/40 flex items-center justify-center shrink-0">
+            <div className={`w-11 h-11 rounded-full border-2 flex items-center justify-center shrink-0 ${
+              miEquipoActual === 2
+                ? "bg-blue-900/60 border-blue-400/40"   // oponente es equipo 1 (azul)
+                : "bg-red-900/60 border-red-400/40"     // oponente es equipo 2 (rojo)
+            }`}>
               <span className="text-white/60 text-base">{nombreOponente.charAt(0).toUpperCase()}</span>
             </div>
             <span className="text-white/80 text-[11px] font-semibold">@{nombreOponente}</span>
@@ -575,8 +646,16 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
 
           <div className="flex flex-col gap-1.5">
             <p className="text-white/40 text-[9px] uppercase tracking-widest text-center">Cartas del oponente</p>
-            {estado.cartasOponente.map((c) => (
-              <CartaBtn key={c.nombre} carta={c} equipo={1} desactivada />
+            {estado.cartasOponente.map((c, i) => (
+              // equipo={1}: movimientos invertidos (perspectiva del rival)
+              // colorDots: color del rival (opuesto al jugador local)
+              <CartaBtn
+                key={`${c.nombre}-oponente-${i}`}
+                carta={c}
+                equipo={1}
+                colorDots={miEquipoActual === 1 ? "bg-red-500" : "bg-blue-500"}
+                desactivada
+              />
             ))}
           </div>
 
@@ -584,13 +663,15 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
 
           <div className="flex flex-col items-center gap-1">
             <p className={`text-center text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md ${
-              !aguardandoInicio && estado.turnoActual === 1 && !hayFinPartida
-                ? "text-red-300 bg-red-900/30 animate-pulse"
+              !aguardandoInicio && estado.turnoActual !== miEquipoActual && !hayFinPartida
+                ? miEquipoActual === 2
+                  ? "text-blue-300 bg-blue-900/30 animate-pulse"
+                  : "text-red-300 bg-red-900/30 animate-pulse"
                 : "text-white/30"
             }`}>
               {aguardandoInicio
                 ? "Preparando…"
-                : !aguardandoInicio && estado.turnoActual === 1 && !hayFinPartida
+                : !aguardandoInicio && estado.turnoActual !== miEquipoActual && !hayFinPartida
                 ? `Turno de @${nombreOponente}`
                 : "Esperando…"}
             </p>
@@ -612,8 +693,17 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
               aspectRatio: "1",
             }}
           >
-            {Array.from({ length: DIM }, (_, fila) =>
-              Array.from({ length: DIM }, (_, col) => {
+            {/*
+              Cada jugador ve siempre sus piezas abajo y las del rival arriba.
+              Para equipo 1: rotación 180° completa (filas Y columnas invertidas).
+              Esto es necesario porque calcularMovimientosValidos usa signo=-1 que
+              espeja ambos ejes; sin invertir columnas los movimientos válidos aparecerían
+              en el lado contrario al que muestra el MiniGrid de la carta.
+            */}
+            {Array.from({ length: DIM }, (_, filaVisual) => {
+              const fila = miEquipoActual === 1 ? (DIM - 1 - filaVisual) : filaVisual;
+              return Array.from({ length: DIM }, (_, colVisual) => {
+                const col = miEquipoActual === 1 ? (DIM - 1 - colVisual) : colVisual;
                 const celda = estado.tablero[fila][col];
                 const esSel = estado.fichaSeleccionada?.fila === fila && estado.fichaSeleccionada?.col === col;
                 const esValido = estado.movimientosValidos.some((m) => m.fila === fila && m.col === col);
@@ -633,15 +723,28 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
                     onClick={() => handleCelda(fila, col)}
                   />
                 );
-              })
-            )}
+              });
+            })}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <p className="text-[#1a2d4a]/70 font-bold text-[9px] uppercase tracking-widest mr-1">Cola:</p>
-            {estado.cartasSiguientes.map((carta, i) => (
-              <CartaCola key={carta.nombre} carta={carta} equipo={2} esLaSiguiente={i === 0} />
-            ))}
+            <p className="text-[#1a2d4a]/70 font-bold text-[9px] uppercase tracking-widest mr-1">Mazo:</p>
+            {estado.cartasSiguientes.map((carta, i) => {
+              // SIGUIENTE (i=0): color del equipo que moverá (quien recibirá esta carta)
+              // Resto (i>0): blanco/gris claro (todavía en espera en el mazo)
+              const colorDots = i === 0
+                ? (estado.turnoActual === 1 ? "bg-blue-500" : "bg-red-500")
+                : "bg-white/50";
+              return (
+                <CartaCola
+                  key={`${carta.nombre}-${i}`}
+                  carta={carta}
+                  equipo={2}
+                  colorDots={colorDots}
+                  esLaSiguiente={i === 0}
+                />
+              );
+            })}
           </div>
         </main>
 
@@ -660,11 +763,12 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
             <p className="text-white/40 text-[9px] uppercase tracking-widest text-center">
               {esTurnoJugador ? "Elige una carta" : "Tus cartas"}
             </p>
-            {estado.cartasJugador.map((carta) => (
+            {estado.cartasJugador.map((carta, i) => (
               <CartaBtn
-                key={carta.nombre}
+                key={`${carta.nombre}-jugador-${i}`}
                 carta={carta}
                 equipo={2}
+                colorDots={miEquipoActual === 1 ? "bg-blue-500" : "bg-red-500"}
                 seleccionada={estado.cartaSeleccionada?.nombre === carta.nombre}
                 onClick={() => handleCarta(carta)}
                 desactivada={!esTurnoJugador}
@@ -680,17 +784,22 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
 
           <div className="flex flex-col items-center gap-1 shrink-0">
             <p className={`text-center text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md ${
-              esTurnoJugador ? "text-blue-300 bg-blue-900/30"
-              : aguardandoInicio ? "text-yellow-300/70 bg-yellow-900/20"
-              : "text-white/30"
+              esTurnoJugador
+                ? miEquipoActual === 1 ? "text-blue-300 bg-blue-900/30" : "text-red-300 bg-red-900/30"
+                : aguardandoInicio ? "text-yellow-300/70 bg-yellow-900/20"
+                : "text-white/30"
             }`}>
               {aguardandoInicio ? "Esperando inicio…" : esTurnoJugador ? "¡Es tu turno!" : "Esperando…"}
             </p>
-            <div className="w-9 h-9 rounded-full bg-[#2a4a6a] border-2 border-blue-400/40 flex items-center justify-center">
-              <span className="text-white/60 text-xs">{mockJugador.nombre.charAt(0).toUpperCase()}</span>
+            <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center ${
+              miEquipoActual === 1
+                ? "bg-blue-900/60 border-blue-400/40"
+                : "bg-red-900/60 border-red-400/40"
+            }`}>
+              <span className="text-white/60 text-xs">{jugadorActual.nombre.charAt(0).toUpperCase()}</span>
             </div>
-            <span className="text-white/60 text-[10px]">@{mockJugador.nombre}</span>
-            <span className="text-white/30 text-[9px]">{mockJugador.puntos} pts</span>
+            <span className="text-white/60 text-[10px]">@{jugadorActual.nombre}</span>
+            <span className="text-white/30 text-[9px]">{jugadorActual.puntos} pts</span>
           </div>
         </aside>
       </div>

@@ -141,39 +141,68 @@ export function calcularMovimientosValidos(
 // ─── Creación del estado a partir de datos del servidor ──────────────────────
 
 /**
- * Construye el estado inicial de la partida usando los datos recibidos del servidor
- * en el mensaje PARTIDA_ENCONTRADA.
- *
- * El servidor es el responsable de elegir las 7 cartas aleatorias y de decidir
- * qué cartas corresponden a cada jugador. Esta función traduce esos nombres
- * al objeto CartaMovDef completo (movimientos, emoji, etc.) consultando
- * el catálogo local de cartas.
- *
- * @param datos  Datos del mensaje PARTIDA_ENCONTRADA (cartas como strings de nombre)
+ * Formato de carta tal como la envía el servidor en PARTIDA_ENCONTRADA.
+ * El servidor incluye los movimientos con coordenadas {x, y} sacadas de la BD.
+ * Convención: x = delta de columna (dc), y = delta de fila (df).
+ * Ambos valores son equivalentes a los dc/df del catálogo local (cartas.ts).
  */
-export function crearEstadoDesdeServidor(datos: {
-  cartas_jugador: string[];
-  cartas_oponente: string[];
-  carta_siguiente: string[];
-  equipo?: 1 | 2;
-}): EstadoJuego {
-  const buscar = (nombre: string): CartaMovDef => {
-    const encontrada = TODAS_LAS_CARTAS.find((c) => c.nombre === nombre);
+export interface CartaServidor {
+  nombre: string;
+  movimientos: { x: number; y: number }[];
+}
+
+/**
+ * Convierte una carta del formato servidor al formato frontend.
+ * Si el servidor no envía movimientos (retrocompatibilidad mock), se busca
+ * por nombre en el catálogo local.
+ */
+function convertirCarta(carta: CartaServidor | string): CartaMovDef {
+  // Formato antiguo: solo nombre (mock o versión anterior del servidor)
+  if (typeof carta === "string") {
+    const encontrada = TODAS_LAS_CARTAS.find((c) => c.nombre === carta);
     if (!encontrada) {
-      console.warn(`[juego] Carta "${nombre}" no encontrada en el catálogo. Usando primera disponible.`);
+      console.warn(`[juego] Carta "${carta}" no encontrada en catálogo. Usando primera disponible.`);
       return TODAS_LAS_CARTAS[0];
     }
     return encontrada;
-  };
+  }
 
+  // Formato nuevo: objeto con nombre y movimientos del servidor
+  const emoji = TODAS_LAS_CARTAS.find((c) => c.nombre === carta.nombre)?.emoji ?? "🃏";
+  return {
+    nombre: carta.nombre,
+    emoji,
+    // El servidor usa (x,y) que equivale a (dc,df) del frontend
+    movimientos: carta.movimientos.map((m) => ({ dc: m.x, df: m.y })),
+  };
+}
+
+/**
+ * Construye el estado inicial de la partida usando los datos recibidos del servidor
+ * en el mensaje PARTIDA_ENCONTRADA.
+ *
+ * El servidor envía las cartas con sus movimientos (x,y) ya calculados desde la BD.
+ * Acepta tanto el formato nuevo { nombre, movimientos } como el antiguo string (mock).
+ *
+ * Convención de turnos: equipo 1 siempre empieza (Ciro no envía TU_TURNO,
+ * la pantalla de partida lo gestiona con aguardandoInicio según el equipo asignado).
+ *
+ * @param datos  Datos del mensaje PARTIDA_ENCONTRADA
+ */
+export function crearEstadoDesdeServidor(datos: {
+  cartas_jugador: (CartaServidor | string)[];
+  cartas_oponente: (CartaServidor | string)[];
+  carta_siguiente: (CartaServidor | string)[];
+  equipo?: 1 | 2;
+}): EstadoJuego {
   return {
     tablero: crearTableroInicial(),
-    // El turno inicial lo determinará el mensaje TU_TURNO del servidor.
-    // Provisionalmente se pone 2 (jugador local); se sobreescribirá si llega TU_TURNO.
-    turnoActual: 2,
-    cartasJugador: datos.cartas_jugador.map(buscar),
-    cartasOponente: datos.cartas_oponente.map(buscar),
-    cartasSiguientes: datos.carta_siguiente.map(buscar),
+    // Equipo 1 empieza siempre. La pantalla de partida bloquea al equipo 2
+    // hasta recibir el primer MOVER del equipo 1 (aguardandoInicio).
+    turnoActual: 1,
+    cartasJugador: datos.cartas_jugador.map(convertirCarta),
+    cartasOponente: datos.cartas_oponente.map(convertirCarta),
+    cartasSiguientes: datos.carta_siguiente.map(convertirCarta),
     fichaSeleccionada: null,
     cartaSeleccionada: null,
     movimientosValidos: [],
@@ -202,13 +231,20 @@ export interface ResultadoMovimiento {
  * para actualizar el estado visual tras recibir la confirmación del servidor
  * via mensaje WebSocket tipo MOVER.
  */
+/**
+ * equipoLocal: equipo del jugador local en esta pestaña (1 o 2).
+ * Determina qué array (cartasJugador / cartasOponente) recibe la carta nueva
+ * de la cola tras un movimiento, independientemente de quién mueva en este turno.
+ * Por defecto 2 para mantener compatibilidad con el modo mock.
+ */
 export function ejecutarMovimiento(
   estado: EstadoJuego,
   origenFila: number,
   origenCol: number,
   destinoFila: number,
   destinoCol: number,
-  carta: CartaMovDef
+  carta: CartaMovDef,
+  equipoLocal: EquipoID = 2
 ): ResultadoMovimiento {
   // Copia profunda del tablero
   const tablero: Celda[][] = estado.tablero.map((fila) =>
@@ -242,15 +278,18 @@ export function ejecutarMovimiento(
   ];
 
   const equipoActual = estado.turnoActual;
+
+  // Si el equipo que mueve ahora ES el jugador local → actualizar cartasJugador.
+  // Si el equipo que mueve ahora ES el oponente      → actualizar cartasOponente.
   const nuevasCartasJugador =
-    equipoActual === 2
+    equipoActual === equipoLocal
       ? estado.cartasJugador.map((c) =>
           c.nombre === carta.nombre ? cartaRecibida : c
         )
       : [...estado.cartasJugador];
 
   const nuevasCartasOponente =
-    equipoActual === 1
+    equipoActual !== equipoLocal
       ? estado.cartasOponente.map((c) =>
           c.nombre === carta.nombre ? cartaRecibida : c
         )

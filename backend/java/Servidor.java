@@ -315,10 +315,11 @@ public class Servidor extends WebSocketServer {
                 // -2 -> movimiento no valido
                 int estado = -2;
 
-                if(XO > -1 && YO > -1 && XD > -1 && YO > -1){
+                if(XO > -1 && YO > -1 && XD > -1 && YD > -1){
                     Tablero tb = pj.partida.getTablero();
                     estado = pj.partida.moverFicha(equipo, tb.getPosicion(XO,YO), tb.getPosicion(XD,YD), carta);
-                    pj.partida.rotarCartas(carta, equipo);
+                    // rotarCartas se llama internamente en moverFicha (solo en movimientos válidos)
+                    //pj.partida.rotarCartas(carta, equipo);
                 }
                 
                 JSONObject msg = new JSONObject();
@@ -402,7 +403,7 @@ public class Servidor extends WebSocketServer {
         String correo = obj.getString("correo");
         String nombre = obj.getString("nombre");
         String contrasena = obj.getString("password");
-        Jugador prueba = new Jugador(correo, nombre, Autenticacion.hashearPassword(contrasena));
+        Jugador prueba = new Jugador(correo, nombre, contrasena); // El constructor ya hashea la contraseña internamente
         if(prueba.registrarse()){
             conn.send(new JSONObject().put("tipo", "REGISTRO_EXITOSO").toString());
         }else{
