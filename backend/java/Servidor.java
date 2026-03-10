@@ -7,6 +7,9 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import VO.Partida;
 import VO.CartaMov;
 import VO.Posicion;
@@ -16,7 +19,7 @@ import VO.Autenticacion;
 import JDBC.JugadorJDBC;
 
 //POR HACER:
-// -> Mejorar el servidor con semaforos e hilos/subrutinas: PRIORIDAD MUY ALTA
+// -> Mejorar la busqueda de oponentes, es decir, que si no encuentra que se cree un hilo que vuelva a buscar al rato: PRIORIDAD ALTA
 // -> El xml que querias hacer: PRIORIDAD ALTA <-- Puedes empezar con esto si quieres 
 // -> Abandono: PRIORIDAD ALTA
 // -> Solicitudes de amistad: PRIORIDAD ALTA
@@ -70,9 +73,10 @@ class Pareja{
 //BORRO PARTIDA
 
 public class Servidor extends WebSocketServer {
-    List<InfoJugador> buscando_partida;
+    private List<InfoJugador> buscando_partida;
     List<Pareja> parejas;
-
+    private ExecutorService hilos = Executors.newFixedThreadPool(50);
+    private Semaphore mutex = new Semaphore(1);
     
     private void cartasPartida(Pareja pj, JSONArray mazoJ1, JSONArray mazoJ2, JSONArray cola) {
         List<CartaMov> cartas = pj.partida.getCartasMovimiento();
@@ -147,29 +151,36 @@ public class Servidor extends WebSocketServer {
         int puntos = obj.getInt("puntos");
 
         InfoJugador oponente = null;
-        // todavía no hemos matcheado
 
-        for (InfoJugador j : buscando_partida){
-            int dif = j.puntos - puntos;
-            if (dif >= -100 && dif <= 100) { 
-                oponente = j;
-                break;
+        try{
+            mutex.acquire(); //WAIT
+
+            for (InfoJugador j : buscando_partida){
+                int dif = j.puntos - puntos;
+                if (dif >= -100 && dif <= 100) { 
+                    oponente = j;
+                    break;
+                }
             }
-        }
-        
-        // if gestiona caso de match y else si no ha habido match
-        if (oponente != null){
-            buscando_partida.remove(oponente);
-            InfoJugador nuevoJugador = new InfoJugador(conn, nombre, puntos);
-            Pareja pj = new Pareja(oponente, nuevoJugador);
+            
+            // if gestiona caso de match y else si no ha habido match
+            if (oponente != null){
+                buscando_partida.remove(oponente);
+                InfoJugador nuevoJugador = new InfoJugador(conn, nombre, puntos);
+                Pareja pj = new Pareja(oponente, nuevoJugador);
 
-            parejas.add(pj);
-            iniciar(pj);
+                parejas.add(pj);
+                iniciar(pj);
 
-            System.out.println("Partida creada: " + nombre + " VS " + oponente.nombre);
-        } else {
-            buscando_partida.add(new InfoJugador(conn, nombre, puntos));
-            System.out.println(nombre + " está esperando a unirse a una partida.");
+                System.out.println("Partida creada: " + nombre + " VS " + oponente.nombre);
+            } else {
+                buscando_partida.add(new InfoJugador(conn, nombre, puntos));
+                System.out.println(nombre + " está esperando a unirse a una partida.");
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            mutex.release(); //SIGNAL
         }
     }
 
@@ -326,20 +337,19 @@ public class Servidor extends WebSocketServer {
     public void onMessage(WebSocket conn, String message) {
         System.out.println("Mensaje recibido: " + message);
 
-        JSONObject obj = new JSONObject(message);
-        String tipoMSG = obj.getString("tipo");
-
-
-        
-        if(tipoMSG.equals("BUSCAR_PARTIDA")){
-            gestionarBusquedaPartida(conn, obj);
-        } else if (tipoMSG.equals("MOVER")) {
-            gestionarPartida(conn, obj);
-        } else if (tipoMSG.equals("INICIAR_SESION")){
-            iniciarSesion(conn, obj);
-        } else if (tipoMSG.equals("REGISTRARSE")){
-            registrarJugador(conn, obj);
-        }
+        hilos.submit(() -> {
+            JSONObject obj = new JSONObject(message);
+            String tipoMSG = obj.getString("tipo");
+            if(tipoMSG.equals("BUSCAR_PARTIDA")){
+                gestionarBusquedaPartida(conn, obj);
+            } else if (tipoMSG.equals("MOVER")) {
+                gestionarPartida(conn, obj);
+            } else if (tipoMSG.equals("INICIAR_SESION")){
+                iniciarSesion(conn, obj);
+            } else if (tipoMSG.equals("REGISTRARSE")){
+                registrarJugador(conn, obj);
+            }
+        });
     }
 
     @Override
