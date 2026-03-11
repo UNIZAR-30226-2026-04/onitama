@@ -51,6 +51,21 @@ export const TODAS_LAS_CARTAS: CartaMovDef[] = [
 ];
 
 /**
+ * Devuelve la ruta de la imagen para una carta.
+ * Los archivos en public usan el nombre del animal (Trigre.png para Tigre).
+ */
+export function getImagenCarta(nombre: string): string {
+  const mapa: Record<string, string> = {
+    Tigre: "Trigre", Dragon: "Dragon", Rana: "Rana", Conejo: "Conejo",
+    Cangrejo: "Cangrejo", Elefante: "Elefante", Ganso: "Ganso", Gallo: "Gallo",
+    Mono: "Mono", Mantis: "Mantis", Caballo: "Caballo", Buey: "Buey",
+    Grulla: "Grulla", Oso: "Oso", Aguila: "Aguila", Cobra: "Cobra",
+  };
+  const archivo = mapa[nombre] ?? nombre;
+  return `/${archivo}.png`;
+}
+
+/**
  * Devuelve n cartas elegidas aleatoriamente del catálogo completo.
  * Se usa al crear una partida local (mock) sin servidor.
  */
