@@ -18,7 +18,6 @@ import VO.Autenticacion;
 import JDBC.JugadorJDBC;
 
 //POR HACER:
-// -> Mejorar la busqueda de oponentes, es decir, que si no encuentra que se cree un hilo que vuelva a buscar al rato: PRIORIDAD ALTA
 // -> El xml que querias hacer: PRIORIDAD ALTA <-- Puedes empezar con esto si quieres 
 // -> Abandono: PRIORIDAD ALTA
 // -> Solicitudes de amistad: PRIORIDAD ALTA
