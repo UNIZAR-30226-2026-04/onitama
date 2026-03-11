@@ -39,7 +39,7 @@ import {
   type EquipoID,
   DIM,
 } from "@/lib/juego";
-import { TODAS_LAS_CARTAS, type CartaMovDef } from "@/lib/cartas";
+import { TODAS_LAS_CARTAS, getImagenCarta, type CartaMovDef } from "@/lib/cartas";
 import { obtenerJugadorActivo } from "@/lib/sesion";
 import {
   getWsActivo,
@@ -67,9 +67,9 @@ const MOCK_OPONENTE = { nombre: "granluchador", puntos: 1200 };
  *             Por defecto azul; se sobreescribe según posición/equipo.
  */
 function MiniGrid({
-  carta, equipo, colorDots = "bg-blue-500",
+  carta, equipo, colorDots = "bg-blue-500", size = 5,
 }: {
-  carta: CartaMovDef; equipo: EquipoID; colorDots?: string;
+  carta: CartaMovDef; equipo: EquipoID; colorDots?: string; size?: number;
 }) {
   const CENTRO = 3;
   const signo = equipo === 2 ? 1 : -1;
@@ -81,8 +81,13 @@ function MiniGrid({
   }
   return (
     <div
-      className="grid gap-[1px] shrink-0"
-      style={{ gridTemplateColumns: `repeat(${DIM}, 1fr)` }}
+      className="grid shrink-0"
+      style={{
+        gridTemplateColumns: `repeat(${DIM}, 1fr)`,
+        gap: "1px",
+        width: size * DIM + (DIM - 1),
+        height: size * DIM + (DIM - 1),
+      }}
       aria-hidden
     >
       {Array.from({ length: DIM }, (_, f) =>
@@ -92,9 +97,10 @@ function MiniGrid({
           return (
             <div
               key={`${f}-${c}`}
-              className={`w-[5px] h-[5px] rounded-[1px] ${
+              className={`rounded-[1px] ${
                 esC ? "bg-[#9a8a72]" : esA ? colorDots : "bg-[#c8bba8]"
               }`}
+              style={{ width: size, height: size }}
             />
           );
         })
@@ -118,7 +124,7 @@ function CartaBtn({
       onClick={onClick}
       disabled={desactivada}
       title={carta.nombre}
-      className={`flex items-center gap-2 rounded-lg px-2 py-1.5 border-2 transition-all duration-150 text-xs w-full ${
+      className={`flex items-stretch gap-3 rounded-xl px-2 py-2 border-2 transition-all duration-150 text-xs w-full overflow-hidden ${
         seleccionada
           ? "border-blue-400 bg-blue-900/60 text-blue-100 scale-[1.03]"
           : desactivada
@@ -126,10 +132,20 @@ function CartaBtn({
           : "border-[#c8b89a] bg-[#f5ede0] text-[#2d1a0a] hover:bg-[#ede0cc] hover:border-[#a8906a] cursor-pointer"
       }`}
     >
-      <span className="text-lg shrink-0">{carta.emoji}</span>
-      <div className="flex flex-col gap-0.5 min-w-0">
-        <span className="font-bold uppercase tracking-wide leading-none text-[10px] truncate">{carta.nombre}</span>
-        <MiniGrid carta={carta} equipo={equipo} colorDots={colorDots} />
+      <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-[#2d1a0a]/15 border border-[#c8b89a]/30">
+        <Image
+          src={getImagenCarta(carta.nombre)}
+          alt={carta.nombre}
+          fill
+          className="object-contain p-1"
+          sizes="80px"
+        />
+      </div>
+      <div className="flex flex-col gap-1 min-w-0 flex-1 justify-center items-center">
+        <span className="font-bold uppercase tracking-wide leading-none text-xs truncate text-center">
+          {carta.nombre}
+        </span>
+        <MiniGrid carta={carta} equipo={equipo} colorDots={colorDots} size={6} />
       </div>
     </button>
   );
@@ -147,23 +163,33 @@ function CartaCola({
   carta: CartaMovDef; equipo: EquipoID; colorDots: string; esLaSiguiente: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center gap-[3px]">
+    <div className="flex flex-col items-center gap-1">
       <div
-        className={`flex flex-col items-center gap-1 rounded-lg px-2 py-1.5 border transition-all ${
+        className={`flex items-center gap-2 rounded-xl px-3 py-2 border transition-all ${
           esLaSiguiente
             ? "border-yellow-600 bg-yellow-200 text-yellow-900 shadow-md scale-[1.02]"
             : "border-[#c8b89a]/60 bg-[#f5ede0] text-[#2d1a0a]"
         }`}
         title={carta.nombre}
       >
-        <span className="text-base">{carta.emoji}</span>
-        <MiniGrid carta={carta} equipo={equipo} colorDots={colorDots} />
-        <span className="text-[9px] font-bold uppercase tracking-wide truncate w-full text-center">
-          {carta.nombre}
-        </span>
+        <div className="relative w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-white/50">
+          <Image
+            src={getImagenCarta(carta.nombre)}
+            alt={carta.nombre}
+            fill
+            className="object-contain p-0.5"
+            sizes="40px"
+          />
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] font-bold uppercase tracking-wide truncate">
+            {carta.nombre}
+          </span>
+          <MiniGrid carta={carta} equipo={equipo} colorDots={colorDots} size={5} />
+        </div>
       </div>
       {esLaSiguiente && (
-        <span className="text-[8px] font-bold uppercase tracking-widest text-yellow-600/90">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-yellow-600/90">
           Siguiente
         </span>
       )}
@@ -216,11 +242,7 @@ function Celda({
             fill
             className="object-contain drop-shadow-md"
           />
-          {ficha.esRey && (
-            <div className="absolute -top-1 -right-1 z-20 drop-shadow-sm">
-              <span className="text-[14px] leading-none select-none">👑</span>
-            </div>
-          )}
+          
         </div>
       )}
     </button>
@@ -631,7 +653,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
         {/* ─── PANEL IZQUIERDO: oponente ──────────────────────────────────── */}
         {/* El oponente siempre es el equipo contrario al jugador local */}
         {/* Equipo 1 = Azul, Equipo 2 = Rojo */}
-        <aside className="w-48 shrink-0 flex flex-col gap-3 px-2 pt-3 pb-2 bg-[#162235] border-r border-white/10 overflow-y-auto">
+        <aside className="w-64 shrink-0 flex flex-col gap-3 px-3 pt-3 pb-2 bg-[#162235] border-r border-white/10 overflow-hidden min-h-0">
           <div className="flex flex-col items-center gap-1">
             <div className={`w-11 h-11 rounded-full border-2 flex items-center justify-center shrink-0 ${
               miEquipoActual === 2
@@ -644,7 +666,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
             <span className="text-white/30 text-[9px]">{infoOponente.current.puntos} pts</span>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 shrink-0">
             <p className="text-white/40 text-[9px] uppercase tracking-widest text-center">Cartas del oponente</p>
             {estado.cartasOponente.map((c, i) => (
               // equipo={1}: movimientos invertidos (perspectiva del rival)
@@ -659,9 +681,9 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
             ))}
           </div>
 
-          <div className="flex-1" />
+          <div className="flex-1 min-h-2" />
 
-          <div className="flex flex-col items-center gap-1">
+          <div className="flex flex-col items-center gap-1 shrink-0">
             <p className={`text-center text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md ${
               !aguardandoInicio && estado.turnoActual !== miEquipoActual && !hayFinPartida
                 ? miEquipoActual === 2
@@ -684,12 +706,12 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
         </aside>
 
         {/* ─── CENTRO: tablero + cola de cartas ───────────────────────────── */}
-        <main className="flex-1 bg-[#dbeafe] flex flex-col items-center justify-center gap-3 px-4 min-h-0 min-w-0">
+        <main className="flex-1 bg-[#dbeafe] flex flex-col items-center justify-center gap-2 px-3 min-h-0 min-w-0 overflow-hidden">
           <div
             className="grid border-2 border-[#1a2d4a]/30 shadow-2xl shrink-0 bg-white"
             style={{
               gridTemplateColumns: `repeat(${DIM}, 1fr)`,
-              width: "min(min(55vh, 460px), calc(100vw - 460px))",
+              width: "min(min(52vh, 440px), calc(100vw - 520px))",
               aspectRatio: "1",
             }}
           >
@@ -727,8 +749,8 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
             })}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <p className="text-[#1a2d4a]/70 font-bold text-[9px] uppercase tracking-widest mr-1">Mazo:</p>
+          <div className="flex items-center justify-center gap-2 shrink-0">
+            <p className="text-[#1a2d4a]/70 font-bold text-[9px] uppercase tracking-widest shrink-0">Mazo:</p>
             {estado.cartasSiguientes.map((carta, i) => {
               // SIGUIENTE (i=0): color del equipo que moverá (quien recibirá esta carta)
               // Resto (i>0): blanco/gris claro (todavía en espera en el mazo)
@@ -749,7 +771,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
         </main>
 
         {/* ─── PANEL DERECHO: acciones del jugador ────────────────────────── */}
-        <aside className="w-52 shrink-0 flex flex-col gap-3 px-2 pt-3 pb-2 bg-[#162235] border-l border-white/10 overflow-y-auto">
+        <aside className="w-64 shrink-0 flex flex-col gap-3 px-3 pt-3 pb-2 bg-[#162235] border-l border-white/10 overflow-hidden min-h-0">
           {/* Botón ABANDONAR (reemplaza PAUSAR) */}
           <button
             type="button"
@@ -759,7 +781,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
             🚩 Abandonar
           </button>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 shrink-0">
             <p className="text-white/40 text-[9px] uppercase tracking-widest text-center">
               {esTurnoJugador ? "Elige una carta" : "Tus cartas"}
             </p>
@@ -776,8 +798,8 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
             ))}
           </div>
 
-          <div className="flex-1 min-h-0" />
-          <div className="rounded-lg border border-white/10 bg-white/5 p-2 flex flex-col items-center gap-1 shrink-0">
+          <div className="flex-1 min-h-2" />
+          <div className="rounded-lg border border-white/10 bg-white/5 p-1.5 flex flex-col items-center gap-0.5 shrink-0">
             <p className="text-white/30 text-[9px] uppercase tracking-widest text-center">Cartas de acción</p>
             <p className="text-white/20 text-[8px] text-center italic">(Próximamente)</p>
           </div>

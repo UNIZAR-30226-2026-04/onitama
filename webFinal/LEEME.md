@@ -59,22 +59,22 @@ El frontend puede funcionar de dos modos:
 
 ### Pasos para conectar con el servidor
 
-1. **Crea el fichero de variables de entorno:**
+1. **Copiar el archivo de ejemplo de variables de entorno:**
 
    En Linux/Mac:
    ```bash
-   touch .env.local
+   cp .env.local.example .env.local
    ```
 
    En Windows (PowerShell):
    ```powershell
-   New-Item .env.local -ItemType File
+   Copy-Item .env.local.example .env.local
    ```
 
-2. **Editar `.env.local`** y poner la siguiente linea:
+2. **Editar `.env.local`** y ajustar la URL del servidor:
 
    ```
-   NEXT_PUBLIC_WS_URL=ws://localhost:8080
+   NEXT_PUBLIC_API_URL=http://localhost:8080
    ```
 
    Cambia `8080` por el puerto en el que corre tu servidor Java.
