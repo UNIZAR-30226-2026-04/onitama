@@ -1,12 +1,12 @@
 package VO;
 
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 import JDBC.JugadorJDBC;
 import JDBC.SkinJDBC;
 import gestor.GestorNotificaciones;
-import java.util.List;
-import java.util.ArrayList;
-import java.sql.SQLException;
-import VO.Notificacion;
 
 //Faltan las skins
 public class Jugador {
@@ -269,17 +269,19 @@ public class Jugador {
         }
     }
     
-    // Método para incrementar partidas jugadas
-    public void incrementarPartidasJugadas(){
+    // Método para registrar partida (modifica partidas ganadas, jugadas, puntos y cores)
+    public void registrarPartida(int coresGanados, int puntosGanados, boolean victoria){
+        if (victoria) {
+            this.partidasGanadas++;
+        }
         this.partidasJugadas++;
-    }
-    
-    // Método para registrar victoria (incrementa partidas ganadas y jugadas)
-    public void registrarVictoria(int coresGanados, int puntosGanados){
-        this.partidasGanadas++;
-        this.partidasJugadas++;
+        if (puntosGanados < 0) {
+            this.puntos = Math.max(0, this.puntos + puntosGanados); // Evitamos puntos negativos
+        } else {
+            this.puntos += puntosGanados;
+        }
         this.cores += coresGanados;
-        this.puntos += puntosGanados;
+        actualizarBD();
     }
     
 }

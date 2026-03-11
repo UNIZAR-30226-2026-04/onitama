@@ -1,11 +1,12 @@
 package VO;
 
+import java.sql.SQLException;
+import java.util.List;
+
 import JDBC.CartasAccionJDBC;
 import JDBC.CartasMovJDBC;
 import JDBC.JugadorJDBC;
 import JDBC.PartidaJDBC;
-import java.sql.SQLException;
-import java.util.List;
 
 public class Partida{
     private int IDPartida, tiempo, muertesJ1, muertesJ2, turno;
@@ -189,9 +190,9 @@ public class Partida{
         }
     }
 
-    //Inicia la partida: cambia estado a Jugandose, asigna las cartas y las reparte
+    //Inicia la partida: cambia estado a JUGANDOSE, asigna las cartas y las reparte
     public boolean iniciarPartida(){
-        this.estado = "Jugandose";
+        this.estado = "JUGANDOSE";
         this.tiempo = 0;
         this.tablero.cargarTablero();
         asignarCartas();
@@ -201,10 +202,10 @@ public class Partida{
 
     //Pausa la partida cambiando su estado
     public boolean pausarPartida(){
-        if (!"Jugandose".equals(estado)) {
+        if (!"JUGANDOSE".equals(estado)) {
             return false; //Solo se puede pausar una partida en curso
         }
-        this.estado = "Pausada";
+        this.estado = "PAUSADA";
         try {
             return jdbc.updateEstado(IDPartida, estado);
         } catch (SQLException e) {
@@ -214,10 +215,10 @@ public class Partida{
 
     //Reanuda la partida desde el estado de pausa
     public boolean reanudarPartida(){
-        if (!"Pausada".equals(estado)) {
-            return false; //Solo se puede reanudar una partida pausada
+        if (!"PAUSADA".equals(estado)) {
+            return false; //Solo se puede reanudar una partida PAUSADA
         }
-        this.estado = "Jugandose";
+        this.estado = "JUGANDOSE";
         try {
             return jdbc.updateEstado(IDPartida, estado);
         } catch (SQLException e) {
@@ -227,7 +228,7 @@ public class Partida{
 
     //Un jugador abandona la partida, el otro gana automaticamente
     public boolean abandonarPartida(int equipoQueAbandona){
-        this.estado = "Abandonada";
+        this.estado = "FINALIZADA";
         if (equipoQueAbandona == 1) {
             this.j2Ganador = true;
             this.j1Ganador = false;
@@ -240,77 +241,22 @@ public class Partida{
 
     //Finaliza la partida y actualiza las estadisticas de los jugadores
     public boolean finalizarPartida(){
-        this.estado = "Finalizada";
+        this.estado = "FINALIZADA";
         //Actualizar estadisticas de los jugadores
         if (j1Ganador && jugador1 != null) {
-            jugador1.registrarVictoria(10, 50); //Cores y puntos por ganar
-            jugador1.actualizarBD();
+            jugador1.registrarPartida(10, 50, true);
         }
         if (j2Ganador && jugador2 != null) {
-            jugador2.registrarVictoria(10, 50);
-            jugador2.actualizarBD();
+            jugador2.registrarPartida(10, 50, true);
         }
-        //El perdedor solo incrementa partidas jugadas
         if (!j1Ganador && jugador1 != null) {
-            jugador1.incrementarPartidasJugadas();
-            jugador1.actualizarBD();
+            jugador1.registrarPartida(0, -20, false);
         }
         if (!j2Ganador && jugador2 != null) {
-            jugador2.incrementarPartidasJugadas();
-            jugador2.actualizarBD();
+            jugador2.registrarPartida(0, -20, false);
         }
         return actualizarBD();
     }
-
-    /* REVISAR (Ciro): Creo que seria mejor comprobar la victoria al realizar el movimiento
-    //Comprueba si hay condicion de victoria:
-    //1. Rey capturado (no hay rey en el tablero)
-    //2. Rey en trono enemigo
-    //Devuelve 0 si no hay victoria, 1 si gana equipo 1, 2 si gana equipo 2
-    public int verificarVictoria(){
-        boolean reyJ1Vivo = false;
-        boolean reyJ2Vivo = false;
-        int DIM = tablero.getDIM();
-
-        for (int i = 0; i < DIM; i++) {
-            for (int j = 0; j < DIM; j++) {
-                Posicion pos = tablero.getPosicion(j, i);
-                Ficha ficha = pos.getFicha();
-                if (ficha != null && ficha.getVivo()) {
-                    if (ficha.isRey() && ficha.getEquipo() == 1) {
-                        reyJ1Vivo = true;
-                        //Victoria por trono: rey del equipo 1 llega al trono del equipo 2
-                        if (pos == tablero.trono2) {
-                            j1Ganador = true;
-                            return 1;
-                        }
-                    }
-                    if (ficha.isRey() && ficha.getEquipo() == 2) {
-                        reyJ2Vivo = true;
-                        //Victoria por trono: rey del equipo 2 llega al trono del equipo 1
-                        if (pos == tablero.trono1) {
-                            j2Ganador = true;
-                            return 2;
-                        }
-                    }
-                }
-            }
-        }
-        
-
-        //Victoria por captura: si un rey esta muerto, gana el otro equipo
-        if (!reyJ1Vivo) {
-            j2Ganador = true;
-            return 2;
-        }
-        if (!reyJ2Vivo) {
-            j1Ganador = true;
-            return 1;
-        }
-
-        return 0; //No hay victoria todavia
-    }
-    */
 
    // 0 -> Movimiento realizado con exito
    // 1 -> equipo 1 gana
@@ -350,11 +296,6 @@ public class Partida{
                     break;
                 }
             }
-            if(!movExiste){
-                System.out.println(1);
-            }if(fOrigen == null){
-                System.out.println(2);
-            }
             //Por si acaso comprobamos que el movimiento existe
             if (fOrigen == null || fOrigen.getEquipo() != equipo || !movExiste || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
                 return -2; //Movimiento no valido segun la carta
@@ -366,10 +307,12 @@ public class Partida{
                     if (equipo == 1) {
                         j1Ganador = true;
                         muertesJ2++;
+                        finalizarPartida();
                         return 1;
                     } else {
                         j2Ganador = true;
                         muertesJ1++;
+                        finalizarPartida();
                         return 2;
                     }
                 }
@@ -386,8 +329,15 @@ public class Partida{
             if (fOrigen.isRey()) {
                 Posicion tronoEnemigo = (equipo == 1) ? tablero.trono2 : tablero.trono1;
                 if (destino == tronoEnemigo) {
-                    if (equipo == 1) { j1Ganador = true; return 1; }
-                    else             { j2Ganador = true; return 2; }
+                    if (equipo == 1) { 
+                        j1Ganador = true; 
+                        finalizarPartida();
+                        return 1; 
+                    }else { 
+                        j2Ganador = true; 
+                        finalizarPartida();
+                        return 2; 
+                    }
                 }
             }
 

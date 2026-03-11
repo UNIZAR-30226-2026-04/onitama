@@ -105,11 +105,11 @@ CREATE TABLE Partida_Cartas_Accion (
 --Indices que se encargan que solo haya una partida en marcha por jugador
 CREATE UNIQUE INDEX solo1J1 
 ON PARTIDA (J1, Estado) 
-WHERE Estado = 'Jugandose';
+WHERE Estado = 'JUGANDOSE';
 
 CREATE UNIQUE INDEX solo1J2 
 ON PARTIDA (J2, Estado) 
-WHERE Estado = 'Jugandose';
+WHERE Estado = 'JUGANDOSE';
 
 -- Índice para notificaciones pendientes por destinatario
 CREATE INDEX idx_notif_dest_pendiente 

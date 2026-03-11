@@ -35,6 +35,18 @@ Si esta variable no está definida (o el servidor no responde), el frontend usa 
 
 ### 2.2 Mensajes que envía el CLIENTE al servidor
 
+#### `ABANDONO`
+Se envía al pulsar el boton de abandonar en la partida.
+
+```json
+{
+  "tipo": "ABANDONO",
+  "equipo": 1
+}
+```
+
+---
+
 #### `REGISTRARSE`
 Se envía al abrir registrarse una nueva cuenta. Necesita nombre, contraseña sin hashear y correo del nuevo jugador
 

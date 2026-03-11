@@ -19,7 +19,6 @@ import JDBC.JugadorJDBC;
 
 //POR HACER:
 // -> El xml que querias hacer: PRIORIDAD ALTA <-- Puedes empezar con esto si quieres 
-// -> Abandono: PRIORIDAD ALTA
 // -> Solicitudes de amistad: PRIORIDAD ALTA
 // -> Solicitudes de partida privadas: PRIORIDAD MEDIA (Antes hay que hacer lo anterior)
 // -> Reanudar/Pausar una partida privada: PRIORIDAD MEDIA (Antes hay que hacer lo anterior)
@@ -368,6 +367,45 @@ public class Servidor extends WebSocketServer {
         }
     }
 
+    public void abandonarPartida(WebSocket conn, JSONObject obj){
+        int equipoAbandona = obj.getInt("equipo");
+        Pareja pj = null;
+        try{
+            mutexParejas.acquire();
+            for (Pareja pareja : parejas) {
+                if (pareja.buscar(conn)) {
+                    pj = pareja;
+                    break;
+                }
+            }
+        }catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            mutexParejas.release(); //SIGNAL
+        }
+
+        if(pj != null){
+            InfoJugador oponente = pj.getOponente(conn);
+            JSONObject msg = new JSONObject();
+
+            if (oponente != null && oponente.ws.isOpen()) {
+                msg.put("tipo", "VICTORIA");
+                oponente.ws.send(msg.toString());
+            }
+
+            pj.partida.abandonarPartida(equipoAbandona); //Actualizamos la partida en la BD con el abandono
+
+            try{
+                mutexParejas.acquire();
+                parejas.remove(pj);
+            }catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                mutexParejas.release(); //SIGNAL
+            }
+        }
+    }
+
     public void iniciarSesion(WebSocket conn, JSONObject obj){
         JugadorJDBC jdbc = new JugadorJDBC();
         
@@ -455,6 +493,8 @@ public class Servidor extends WebSocketServer {
                 iniciarSesion(conn, obj);
             } else if (tipoMSG.equals("REGISTRARSE")){
                 registrarJugador(conn, obj);
+            } else if (tipoMSG.equals("ABANDONAR")){
+                abandonarPartida(conn, obj);
             }
         });
     }
