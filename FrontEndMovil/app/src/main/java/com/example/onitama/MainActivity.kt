@@ -1,5 +1,6 @@
 package com.example.onitama
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.onitama.ui.activities.Ini_Ses_Activity
 import com.example.onitama.ui.theme.OnitamaTheme
 
 class MainActivity : ComponentActivity() {
@@ -32,10 +34,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
+    Ini_Ses_Activity()
 }
 
 @Preview(showBackground = true)
