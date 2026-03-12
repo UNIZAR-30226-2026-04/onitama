@@ -24,7 +24,8 @@ class Ini_Reg_Activity: AppCompatActivity() {
         }
 
         loginButton.setOnClickListener {
-
+            val intent: Intent = Intent(this, Reg_Activity::class.java)
+            startActivity(intent)
         }
     }
 }
