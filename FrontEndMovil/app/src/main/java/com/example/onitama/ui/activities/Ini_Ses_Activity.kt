@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.onitama.R
 import com.example.onitama.api.Auth
 import kotlinx.coroutines.launch
+import com.example.onitama.lib.validar
 
 class Ini_Ses_Activity: AppCompatActivity()  {
     private val authClient = Auth("ws://TU_IP_O_DOMINIO:PUERTO")
@@ -36,11 +37,7 @@ class Ini_Ses_Activity: AppCompatActivity()  {
                 Toast.makeText(this, "Por favor, completa todos los campos", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            // 3. Feedback visual: deshabilitamos el botón para evitar doble clic
-            loginButton.isEnabled = false
-            loginButton.text = "CARGANDO..."
 
-            // 4. Lanzamos la corrutina
             lifecycleScope.launch {
                 try {
                     // Llamamos al servidor (o al mock)
@@ -55,17 +52,10 @@ class Ini_Ses_Activity: AppCompatActivity()  {
                 } catch (e: Exception) {
                     // Algo falló (contraseña mal, usuario no existe, sin internet...)
                     Toast.makeText(this@Ini_Ses_Activity, e.message ?: "Error al iniciar sesión", Toast.LENGTH_LONG).show()
-                } finally {
-                    // 5. Restauramos el botón falle o acierte
-                    loginButton.isEnabled = true
-                    loginButton.text = "CONTINUAR"
                 }
             }
 
-
         }
-
-
 
     }
 }
