@@ -521,7 +521,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
   /** El jugador confirma que quiere abandonar: notifica al servidor y vuelve */
   const handleConfirmarAbandonar = () => {
     setMostrarModalAbandono(false);
-    enviarAbandonar(); // No hace nada si no hay servidor conectado
+    enviarAbandonar(equipoJugadorRef.current); // No hace nada si no hay servidor conectado
     router.push("/partidas");
   };
 
