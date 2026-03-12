@@ -48,6 +48,8 @@ export interface MensajeMover {
 /** El jugador abandona voluntariamente; el servidor declarará ganador al rival */
 export interface MensajeAbandonar {
   tipo: "ABANDONAR";
+  /** Equipo del jugador que abandona: 1 = arriba (rojo), 2 = abajo (azul) */
+  equipo: 1 | 2;
 }
 
 // ── Respuestas del servidor ───────────────────────────────────────────────────
@@ -121,6 +123,8 @@ export type MensajeServidor =
  * Persiste durante toda la navegación dentro de la misma pestaña.
  */
 let wsActivo: WebSocket | null = null;
+/** Para evitar enviar ESTOY_LISTO más de una vez por conexión (p. ej. React StrictMode) */
+let wsEstoyListoEnviado: WebSocket | null = null;
 
 export function getWsActivo(): WebSocket | null {
   return wsActivo;
@@ -132,8 +136,10 @@ export function getWsActivo(): WebSocket | null {
  */
 export function setWsActivo(ws: WebSocket): void {
   wsActivo = ws;
+  wsEstoyListoEnviado = null; // Nueva conexión: permitir enviar ESTOY_LISTO al entrar a partida
   wsActivo.onclose = () => {
     wsActivo = null;
+    wsEstoyListoEnviado = null;
   };
 }
 
@@ -184,6 +190,7 @@ export function desconectarPartida(): void {
   if (wsActivo) {
     wsActivo.close();
     wsActivo = null;
+    wsEstoyListoEnviado = null;
   }
 }
 
@@ -199,9 +206,13 @@ function enviar(msg: object): boolean {
   }
 }
 
-/** Avisa al servidor que el cliente tiene la pantalla de partida lista */
+/** Avisa al servidor que el cliente tiene la pantalla de partida lista (solo una vez por conexión) */
 export function enviarEstoyListo(): boolean {
-  return enviar({ tipo: "ESTOY_LISTO" } satisfies MensajeEstoyListo);
+  if (!wsActivo || wsActivo.readyState !== WebSocket.OPEN) return false;
+  if (wsEstoyListoEnviado === wsActivo) return true; // Ya enviado para esta conexión
+  const ok = enviar({ tipo: "ESTOY_LISTO" } satisfies MensajeEstoyListo);
+  if (ok) wsEstoyListoEnviado = wsActivo;
+  return ok;
 }
 
 /** Envía un movimiento al servidor (sin partida_id, el servidor lo identifica por conexión) */
@@ -212,6 +223,6 @@ export function enviarMovimiento(
 }
 
 /** Notifica al servidor que el jugador abandona la partida voluntariamente */
-export function enviarAbandonar(): boolean {
-  return enviar({ tipo: "ABANDONAR" } satisfies MensajeAbandonar);
+export function enviarAbandonar(equipo: 1 | 2): boolean {
+  return enviar({ tipo: "ABANDONAR", equipo } satisfies MensajeAbandonar);
 }

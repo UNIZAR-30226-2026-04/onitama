@@ -4,9 +4,8 @@
  * Pantalla principal del jugador autenticado (prototipo 4. - Partidas.jpg).
  * Muestra el menú lateral y los tres tipos de partida disponibles.
  *
- * Datos del jugador: por ahora usamos mockJugador (sin servidor).
- * TODO: Reemplazar mockJugador por los datos reales del jugador autenticado
- *       cuando el servidor esté listo.
+ * Datos del jugador: se obtienen de la sesión (sessionStorage), que se guarda
+ * al iniciar sesión con los valores que envía el servidor (puntos, cores, etc.).
  *
  * Navegación:
  *  - "Partida Pública" → /buscar (busca oponente en línea)
@@ -16,7 +15,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { mockJugador } from "@/lib/mockJugador";
+import { obtenerJugadorActivo } from "@/lib/sesion";
 
 // Tipos de partida disponibles con imagen y descripción
 const TIPOS_PARTIDA = [
@@ -50,6 +49,7 @@ const MENU_LATERAL = [
 
 export default function PartidasPage() {
   const router = useRouter();
+  const jugador = obtenerJugadorActivo();
 
   /** Navega a la pantalla correspondiente según el tipo de partida */
   const handleIniciarPartida = (id: string) => {
@@ -83,7 +83,7 @@ export default function PartidasPage() {
           {/* Avatar placeholder - se reemplazará por la imagen real del jugador */}
           <div className="w-11 h-11 rounded-full bg-[#2a4a6a] border-2 border-white/30 flex items-center justify-center overflow-hidden">
             <span className="text-white/50 text-xs select-none">
-              {mockJugador.nombre.charAt(0).toUpperCase()}
+              {jugador.nombre.charAt(0).toUpperCase()}
             </span>
           </div>
 
@@ -97,7 +97,7 @@ export default function PartidasPage() {
               className="h-5 w-auto"
             />
             <span className="text-white font-semibold text-sm">
-              {mockJugador.puntos.toLocaleString()}
+              {jugador.puntos.toLocaleString()}
             </span>
           </div>
 
@@ -111,7 +111,7 @@ export default function PartidasPage() {
               className="h-5 w-auto"
             />
             <span className="text-white font-semibold text-sm">
-              {mockJugador.cores.toLocaleString()}
+              {jugador.cores.toLocaleString()}
             </span>
           </div>
         </div>
