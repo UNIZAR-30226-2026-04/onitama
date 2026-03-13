@@ -20,7 +20,7 @@ import com.example.onitama.ui.activities.Ini_Reg_Activity
 import com.example.onitama.ui.activities.MenuPrincipalActivity
 import com.example.onitama.autoLogin
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         

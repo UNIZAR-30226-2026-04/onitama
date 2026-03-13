@@ -29,9 +29,9 @@ class Auth(
     /** true cuando hay URL de servidor configurada */
     val usarServidor: Boolean get() = wsUrl.isNotEmpty()
 
-    private val gson = Gson()
+    //private val gson = Gson()
 
-    private val client = OkHttpClient().Builder.build()
+    private val client = OkHttpClient()
 
     // ─── Datos mock para desarrollo sin servidor ──────────────────────────────────
     private val MOCK_USUARIOS = mapOf(
