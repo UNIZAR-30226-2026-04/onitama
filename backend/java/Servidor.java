@@ -450,6 +450,27 @@ public class Servidor extends WebSocketServer {
         }
     }
 
+    public void cancelarBusqueda(WebSocket conn){
+        try{
+            mutex.acquire(); //WAIT
+            InfoJugador jugadorBorrar = null;
+            for(InfoJugador j : buscando_partida){
+                if(j.ws == conn){
+                    jugadorBorrar = j;
+                    tareaLoop[0].cancel(true);
+                }
+            }
+            if(jugadorBorrar != null){
+                buscando_partida.remove(jugadorBorrar);
+                conn.send(new JSONObject().put("tipo", "CANCELAR_EXITO").toString());
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            mutex.release(); //SIGNAL
+        }
+    }
+
     public Servidor(int puerto) {
         super(new InetSocketAddress(puerto));
         // conexiones = new ArrayList<>(); 
@@ -495,6 +516,8 @@ public class Servidor extends WebSocketServer {
                 registrarJugador(conn, obj);
             } else if (tipoMSG.equals("ABANDONAR")){
                 abandonarPartida(conn, obj);
+            } else if (tipoMSG.equals("CANCELAR")){
+                cancelarBusqueda(conn);
             }
         });
     }
