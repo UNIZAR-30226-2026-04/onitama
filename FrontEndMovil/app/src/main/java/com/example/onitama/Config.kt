@@ -7,5 +7,5 @@ object Config {
     private const val IP = "10.0.2.2"
     private const val PUERTO = "8080"
 
-    const val WS_URL = "ws://$IP:PUERTO"
+    const val WS_URL = "ws://$IP:$PUERTO"
 }
