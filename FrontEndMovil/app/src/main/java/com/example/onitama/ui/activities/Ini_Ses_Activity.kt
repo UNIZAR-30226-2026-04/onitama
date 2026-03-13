@@ -31,6 +31,10 @@ class Ini_Ses_Activity: AppCompatActivity()  {
             startActivity(intent)
         }
 
+        nameMailEditText.setOnClickListener {
+            nameMailEditText.text.clear()
+         }
+
         loginButton.setOnClickListener {
             val nameMail = nameMailEditText.text.toString()
             val password = passwordEditText.text.toString()

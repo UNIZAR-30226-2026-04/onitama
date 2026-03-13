@@ -31,6 +31,13 @@ class Reg_Activity: AppCompatActivity() {
             val intent: Intent = Intent(this, Ini_Ses_Activity::class.java)
             startActivity(intent)
         }
+        nameEditText.setOnClickListener {
+            nameEditText.text.clear()
+         }
+        emailEditText.setOnClickListener {
+            emailEditText.text.clear()
+         }
+
 
         regButton.setOnClickListener {
             val name = nameEditText.text.toString().trim()

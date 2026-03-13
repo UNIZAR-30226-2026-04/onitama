@@ -27,7 +27,7 @@ class Auth(
 ) {
 
     /** true cuando hay URL de servidor configurada */
-    val usarServidor: Boolean get() = wsUrl.isNotEmpty()
+    val usarServidor: Boolean get() = (wsUrl != "ws://10.0.2.2:8080")
 
     //private val gson = Gson()
 
