@@ -48,7 +48,7 @@
             </ImageView>
 
             <TextView
-                android:id="@+id/honor_count"
+                android:id="@+id/katanas_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="5dp"

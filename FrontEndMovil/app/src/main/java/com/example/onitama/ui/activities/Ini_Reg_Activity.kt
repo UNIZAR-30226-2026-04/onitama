@@ -19,12 +19,12 @@ class Ini_Reg_Activity: AppCompatActivity() {
         val registerButton = findViewById<Button>(R.id.boton_registrarse)
 
         registerButton.setOnClickListener {
-            val intent: Intent = Intent(this, Ini_Ses_Activity::class.java)
+            val intent: Intent = Intent(this, Reg_Activity::class.java)
             startActivity(intent)
         }
 
         loginButton.setOnClickListener {
-            val intent: Intent = Intent(this, Reg_Activity::class.java)
+            val intent: Intent = Intent(this, Ini_Ses_Activity::class.java)
             startActivity(intent)
         }
     }

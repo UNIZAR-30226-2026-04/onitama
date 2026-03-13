@@ -12,9 +12,12 @@ import com.example.onitama.R
 import com.example.onitama.api.Auth
 import kotlinx.coroutines.launch
 import com.example.onitama.lib.validar
+import com.example.onitama.autoLogin
 
 class Ini_Ses_Activity: AppCompatActivity()  {
-    private val authClient = Auth("ws://TU_IP_O_DOMINIO:PUERTO")
+
+    private val authClient = Auth()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.init_sesion)
@@ -28,8 +31,6 @@ class Ini_Ses_Activity: AppCompatActivity()  {
             startActivity(intent)
         }
 
-
-
         loginButton.setOnClickListener {
             val nameMail = nameMailEditText.text.toString()
             val password = passwordEditText.text.toString()
@@ -38,18 +39,30 @@ class Ini_Ses_Activity: AppCompatActivity()  {
                 return@setOnClickListener
             }
 
+            loginButton.isEnabled = false
+
             lifecycleScope.launch {
                 try {
                     // Llamamos al servidor (o al mock)
                     val datosSesion = authClient.iniciarSesion(nameMail, password)
                     
-                    
+                    autoLogin.inicioSesion(
+                        this@Ini_Ses_Activity,
+                        datosSesion.nombre,
+                        datosSesion.puntos,
+                        datosSesion.cores
+                    )
+
                     val intent = Intent(this@Ini_Ses_Activity, MenuPrincipalActivity::class.java)
-                    startActivity(intent)
-                    finish() // Usamos finish() para que no puedan volver al login usando el botón "Atrás"
                     
+                    startActivity(intent)
+                    
+                    // Usamos finish() para que no puedan volver al login usando el botón "Atrás"
+                    finish() 
 
                 } catch (e: Exception) {
+                    loginButton.isEnabled = true
+                    
                     // Algo falló (contraseña mal, usuario no existe, sin internet...)
                     Toast.makeText(this@Ini_Ses_Activity, e.message ?: "Error al iniciar sesión", Toast.LENGTH_LONG).show()
                 }

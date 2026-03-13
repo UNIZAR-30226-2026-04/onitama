@@ -1,5 +1,6 @@
 package com.example.onitama.api
 
+import com.example.onitama.Config
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.*
@@ -20,13 +21,17 @@ data class DatosSesion(
 
 class Auth(
     // Esta variable se leerá de build.config (cuando la fijemos)
-    private val wsUrl: String = ""
+    // No he implementado esto aún, pero he hecho una manera sencilla con un archivo config
+    // Para poder ir comprobando cosas con servidro
+    private val wsUrl: String = Config.WS_URL
 ) {
 
     /** true cuando hay URL de servidor configurada */
     val usarServidor: Boolean get() = wsUrl.isNotEmpty()
 
-    private val client = OkHttpClient()
+    private val gson = Gson()
+
+    private val client = OkHttpClient().Builder.build()
 
     // ─── Datos mock para desarrollo sin servidor ──────────────────────────────────
     private val MOCK_USUARIOS = mapOf(
