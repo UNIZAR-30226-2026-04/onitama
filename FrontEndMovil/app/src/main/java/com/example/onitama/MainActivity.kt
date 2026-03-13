@@ -14,33 +14,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.onitama.ui.activities.Ini_Ses_Activity
 import com.example.onitama.ui.theme.OnitamaTheme
+import android.content.Intent
+import androidx.appcompat.app.AppCompatActivity
+import com.example.onitama.ui.activities.Ini_Reg_Activity
+import com.example.onitama.ui.activities.MenuPrincipalActivity
+import com.example.onitama.autoLogin
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            OnitamaTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+        
+        if (autoLogin.yaHaIniciadoSesion(this)){
+            // Creación del Intent
+            val intent = Intent(this, MenuPrincipalActivity::class.java)
+
+            // Lo iniciamos
+            startActivity(intent)
         }
-    }
-}
+        else {
+            // Creación del Intent
+            val intent = Intent(this, Ini_Reg_Activity::class.java)
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Ini_Ses_Activity()
-}
+            // Lo iniciamos
+            startActivity(intent)
+        }
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    OnitamaTheme {
-        Greeting("Android")
+        finish()
     }
 }

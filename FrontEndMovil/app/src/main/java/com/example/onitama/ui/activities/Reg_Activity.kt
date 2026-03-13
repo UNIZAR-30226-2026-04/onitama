@@ -13,8 +13,11 @@ import com.example.onitama.R
 import com.example.onitama.api.Auth
 import com.example.onitama.lib.validar
 import kotlinx.coroutines.launch
+
 class Reg_Activity: AppCompatActivity() {
-    private val authClient = Auth("ws://TU_IP_O_DOMINIO:PUERTO")
+
+    private val authClient = Auth()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.regis)
@@ -29,8 +32,6 @@ class Reg_Activity: AppCompatActivity() {
             startActivity(intent)
         }
 
-
-
         regButton.setOnClickListener {
             val name = nameEditText.text.toString().trim()
             val email = emailEditText.text.toString().trim()
@@ -44,19 +45,24 @@ class Reg_Activity: AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            regButton.isEnabled = false
 
             lifecycleScope.launch {
                 try {
                     // Llamamos al servidor (o al mock)
                     authClient.registrarUsuario(email, name, password )
 
-
+                    Toast.makeText(this@Reg_Activity, "Registro completado con éxito. A continuación inica sesión", Toast.LENGTH_LONG).show()
+                    
                     val intent = Intent(this@Reg_Activity, Ini_Ses_Activity::class.java)
+                    
                     startActivity(intent)
-                    finish() // Usamos finish() para que no puedan volver al login usando el botón "Atrás"
-
+                    
+                    // Usamos finish() para que no puedan volver al login usando el botón "Atrás"
+                    finish()
 
                 } catch (e: Exception) {
+                    regButton.isEnabled = true
                     // Algo falló (contraseña mal, usuario no existe, sin internet...)
                     Toast.makeText(this@Reg_Activity, e.message ?: "Error al registrarse", Toast.LENGTH_LONG).show()
                 }
