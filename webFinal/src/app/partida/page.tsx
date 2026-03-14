@@ -590,7 +590,14 @@ function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificult
       {hayFinPartida && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-10 flex flex-col items-center gap-5 shadow-2xl max-w-xs w-full mx-4">
-            <span className="text-5xl">{esVictoria ? "🏆" : "💀"}</span>
+            <div className="relative w-20 h-20 shrink-0">
+              <Image
+                src={esVictoria ? "/emoteVictoria.png" : "/emoteDerrota.png"}
+                alt={esVictoria ? "Victoria" : "Derrota"}
+                fill
+                className="object-contain"
+              />
+            </div>
             <h2 className="text-2xl font-bold text-white uppercase tracking-widest text-center">
               {esVictoria ? "¡Victoria!" : "Derrota"}
             </h2>

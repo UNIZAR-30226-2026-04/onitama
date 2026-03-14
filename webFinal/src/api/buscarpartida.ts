@@ -25,7 +25,7 @@ export interface MensajeBuscarPartida {
   puntos: number;
 }
 
-export type EstadoPartida = "BUSCANDO" | "ENCONTRADA" | "ERROR" | "TIMEOUT";
+export type EstadoPartida = "BUSCANDO" | "ENCONTRADA" | "ERROR" | "TIMEOUT" | "CANCELADO";
 
 export interface RespuestaBuscarPartida {
   estado: EstadoPartida;
@@ -53,8 +53,14 @@ function mockBuscarPartida(): Promise<RespuestaBuscarPartida> {
 
 // ─── Función principal ────────────────────────────────────────────────────────
 
+export interface ResultadoBusqueda {
+  promise: Promise<RespuestaBuscarPartida>;
+  cancel: () => void;
+}
+
 /**
  * Busca una partida pública enviando BUSCAR_PARTIDA al servidor.
+ * Devuelve { promise, cancel } para poder cancelar la búsqueda enviando CANCELAR.
  *
  * @param nombre    Nombre de usuario del jugador (para el matchmaking)
  * @param puntos    Puntuación del jugador (matchmaking ±100 puntos)
@@ -64,77 +70,115 @@ export function buscarPartida(
   nombre = "Jugador",
   puntos = 0,
   timeoutMs = 30_000
-): Promise<RespuestaBuscarPartida> {
-  if (!usarServidor) return mockBuscarPartida();
-
-  return new Promise((resolve) => {
-    let ws: WebSocket;
-
-    try {
-      ws = new WebSocket(WS_URL);
-    } catch {
-      console.warn("[buscar] No se pudo abrir WebSocket. Usando mock.");
-      mockBuscarPartida().then(resolve);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      ws.onmessage = null;
-      ws.close();
-      resolve({ estado: "TIMEOUT", mensaje: "Sin respuesta del servidor. Inténtalo de nuevo." });
-    }, timeoutMs);
-
-    ws.onopen = () => {
-      const mensaje: MensajeBuscarPartida = {
-        tipo: "BUSCAR_PARTIDA",
-        nombre,
-        puntos,
-      };
-      ws.send(JSON.stringify(mensaje));
+): ResultadoBusqueda {
+  if (!usarServidor) {
+    return {
+      promise: mockBuscarPartida(),
+      cancel: () => {},
     };
+  }
 
-    ws.onmessage = (event) => {
-      try {
-        const datos = JSON.parse(event.data as string);
-
-        if (datos.tipo === "PARTIDA_ENCONTRADA") {
-          clearTimeout(timer);
-
-          // Guardar todos los datos de la partida para que /partida/page.tsx los lea
-          sessionStorage.setItem("datosPartida", JSON.stringify(datos));
-
-          // Traspasar el WS a partida.ts (sin cerrarlo) para reutilizarlo en el juego
-          ws.onmessage = null; // Limpiar este handler antes de traspasar
-          setWsActivo(ws);
-
-          resolve({
-            estado: "ENCONTRADA",
-            mensaje: `¡Partida encontrada! Rivalizarás contra @${datos.oponente as string}`,
-            partida_id: datos.partida_id as string,
-            oponente: datos.oponente as string,
-            oponentePt: datos.oponentePt as number,
-          });
-        }
-      } catch {
-        clearTimeout(timer);
-        console.warn("[buscar] Respuesta inválida del servidor. Usando mock.");
-        mockBuscarPartida().then(resolve);
-      }
-    };
-
-    ws.onerror = () => {
-      clearTimeout(timer);
-      // Servidor no disponible → fallback al mock para no bloquear el desarrollo
-      console.warn("[buscar] Servidor no disponible. Usando mock de partida.");
-      mockBuscarPartida().then(resolve);
-    };
-
-    ws.onclose = (event) => {
-      if (!event.wasClean) {
-        clearTimeout(timer);
-        console.warn("[buscar] Conexión cerrada inesperadamente. Usando mock.");
-        mockBuscarPartida().then(resolve);
-      }
-    };
+  let resolvePromise: (r: RespuestaBuscarPartida) => void;
+  const promise = new Promise<RespuestaBuscarPartida>((resolve) => {
+    resolvePromise = resolve;
   });
+
+  let ws: WebSocket;
+  let resuelto = false;
+
+  const resolver = (r: RespuestaBuscarPartida) => {
+    if (resuelto) return;
+    resuelto = true;
+    resolvePromise(r);
+  };
+
+  try {
+    ws = new WebSocket(WS_URL);
+  } catch {
+    console.warn("[buscar] No se pudo abrir WebSocket. Usando mock.");
+    return {
+      promise: mockBuscarPartida(),
+      cancel: () => {},
+    };
+  }
+
+  const timer = setTimeout(() => {
+    if (resuelto) return;
+    ws.onmessage = null;
+    ws.close();
+    resolver({ estado: "TIMEOUT", mensaje: "Sin respuesta del servidor. Inténtalo de nuevo." });
+  }, timeoutMs);
+
+  const cancel = () => {
+    if (resuelto) return;
+    clearTimeout(timer);
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ tipo: "CANCELAR" }));
+      ws.close();
+    }
+    resolver({ estado: "CANCELADO", mensaje: "Búsqueda cancelada" });
+  };
+
+  ws.onopen = () => {
+    const mensaje: MensajeBuscarPartida = {
+      tipo: "BUSCAR_PARTIDA",
+      nombre,
+      puntos,
+    };
+    ws.send(JSON.stringify(mensaje));
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const datos = JSON.parse(event.data as string);
+
+      if (datos.tipo === "PARTIDA_ENCONTRADA") {
+        clearTimeout(timer);
+        if (resuelto) return;
+        resuelto = true;
+
+        // Guardar todos los datos de la partida para que /partida/page.tsx los lea
+        sessionStorage.setItem("datosPartida", JSON.stringify(datos));
+
+        // Traspasar el WS a partida.ts (sin cerrarlo) para reutilizarlo en el juego
+        ws.onmessage = null;
+        setWsActivo(ws);
+
+        resolvePromise({
+          estado: "ENCONTRADA",
+          mensaje: `¡Partida encontrada! Rivalizarás contra @${datos.oponente as string}`,
+          partida_id: datos.partida_id as string,
+          oponente: datos.oponente as string,
+          oponentePt: datos.oponentePt as number,
+        });
+      }
+    } catch {
+      clearTimeout(timer);
+      if (!resuelto) {
+        resuelto = true;
+        console.warn("[buscar] Respuesta inválida del servidor. Usando mock.");
+        mockBuscarPartida().then(resolvePromise);
+      }
+    }
+  };
+
+  ws.onerror = () => {
+    clearTimeout(timer);
+    if (!resuelto) {
+      resuelto = true;
+      console.warn("[buscar] Servidor no disponible. Usando mock de partida.");
+      mockBuscarPartida().then(resolvePromise);
+    }
+  };
+
+  ws.onclose = (event) => {
+    if (!event.wasClean && !resuelto) {
+      clearTimeout(timer);
+      resuelto = true;
+      console.warn("[buscar] Conexión cerrada inesperadamente. Usando mock.");
+      mockBuscarPartida().then(resolvePromise);
+    }
+  };
+
+  return { promise, cancel };
 }
