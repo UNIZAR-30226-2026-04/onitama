@@ -41,6 +41,7 @@ import {
 } from "@/lib/juego";
 import { TODAS_LAS_CARTAS, getImagenCarta, type CartaMovDef } from "@/lib/cartas";
 import { obtenerJugadorActivo } from "@/lib/sesion";
+import { calcularMejorMovimientoIA, type Dificultad } from "@/lib/ia";
 import {
   getWsActivo,
   conectarPartida,
@@ -55,7 +56,16 @@ import {
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const TIEMPO_TURNO = 120;
-const MOCK_OPONENTE = { nombre: "granluchador", puntos: 1200 };
+
+const NOMBRE_DIFICULTAD: Record<Dificultad, string> = {
+  facil: "Fácil",
+  medio: "Medio",
+  dificil: "Difícil",
+};
+
+function getMockOponente(dificultad: Dificultad) {
+  return { nombre: `Iron Bot (${NOMBRE_DIFICULTAD[dificultad]})`, puntos: dificultad === "facil" ? 800 : dificultad === "medio" ? 1200 : 1600 };
+}
 
 // ─── Mini cuadrícula de la carta ─────────────────────────────────────────────
 
@@ -97,9 +107,8 @@ function MiniGrid({
           return (
             <div
               key={`${f}-${c}`}
-              className={`rounded-[1px] ${
-                esC ? "bg-[#9a8a72]" : esA ? colorDots : "bg-[#c8bba8]"
-              }`}
+              className={`rounded-[1px] ${esC ? "bg-[#9a8a72]" : esA ? colorDots : "bg-[#c8bba8]"
+                }`}
               style={{ width: size, height: size }}
             />
           );
@@ -124,13 +133,12 @@ function CartaBtn({
       onClick={onClick}
       disabled={desactivada}
       title={carta.nombre}
-      className={`flex items-stretch gap-3 rounded-xl px-2 py-2 border-2 transition-all duration-150 text-xs w-full overflow-hidden ${
-        seleccionada
-          ? "border-blue-400 bg-blue-900/60 text-blue-100 scale-[1.03]"
-          : desactivada
+      className={`flex items-stretch gap-3 rounded-xl px-2 py-2 border-2 transition-all duration-150 text-xs w-full overflow-hidden ${seleccionada
+        ? "border-blue-400 bg-blue-900/60 text-blue-100 scale-[1.03]"
+        : desactivada
           ? "border-[#c8b89a]/50 bg-[#f5ede0] text-[#5c4a35]/60 cursor-default"
           : "border-[#c8b89a] bg-[#f5ede0] text-[#2d1a0a] hover:bg-[#ede0cc] hover:border-[#a8906a] cursor-pointer"
-      }`}
+        }`}
     >
       <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-[#2d1a0a]/15 border border-[#c8b89a]/30">
         <Image
@@ -165,11 +173,10 @@ function CartaCola({
   return (
     <div className="flex flex-col items-center gap-1">
       <div
-        className={`flex items-center gap-2 rounded-xl px-3 py-2 border transition-all ${
-          esLaSiguiente
-            ? "border-yellow-600 bg-yellow-200 text-yellow-900 shadow-md scale-[1.02]"
-            : "border-[#c8b89a]/60 bg-[#f5ede0] text-[#2d1a0a]"
-        }`}
+        className={`flex items-center gap-2 rounded-xl px-3 py-2 border transition-all ${esLaSiguiente
+          ? "border-yellow-600 bg-yellow-200 text-yellow-900 shadow-md scale-[1.02]"
+          : "border-[#c8b89a]/60 bg-[#f5ede0] text-[#2d1a0a]"
+          }`}
         title={carta.nombre}
       >
         <div className="relative w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-white/50">
@@ -224,6 +231,7 @@ function Celda({
             src={equipoTrono === 1 ? "/temploAzul.png" : "/temploRojo.png"}
             alt="Templo"
             fill
+            sizes="(max-width: 768px) 100vw, 100px"
             className="object-cover"
           />
         </div>
@@ -240,9 +248,10 @@ function Celda({
             }
             alt={ficha.esRey ? "Rey" : "Peón"}
             fill
+            sizes="(max-width: 768px) 100vw, 100px"
             className="object-contain drop-shadow-md"
           />
-          
+
         </div>
       )}
     </button>
@@ -251,7 +260,7 @@ function Celda({
 
 // ─── Lógica principal ─────────────────────────────────────────────────────────
 
-function PartidaInterna({ partidaId }: { partidaId: string }) {
+function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificultad: Dificultad }) {
   const router = useRouter();
 
   // ── Detectar modo servidor (se comprueba una vez al montar) ─────────────────
@@ -279,7 +288,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
   });
 
   // ── Datos del oponente y equipo asignado (del servidor o mock) ──────────────
-  const infoOponente = useRef<{ nombre: string; puntos: number }>(MOCK_OPONENTE);
+  const infoOponente = useRef<{ nombre: string; puntos: number }>(getMockOponente(dificultad));
   useEffect(() => {
     const raw = sessionStorage.getItem("datosPartida");
     if (raw) {
@@ -382,7 +391,7 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
     });
 
     return desconectar;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Solo al montar
 
   // ─── Timer visual ─────────────────────────────────────────────────────────
@@ -417,35 +426,30 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
     return () => clearInterval(intervalo);
   }, [estado.turnoActual, estado.ganador, resultadoFinal]);
 
-  // ─── IA del oponente (solo en modo mock) ──────────────────────────────────
+  // ─── IA del oponente (solo en modo mock / entrenamiento) ──────────────────
   const ejecutarIa = useCallback((est: EstadoJuego) => {
     if (iaOcupada.current) return;
     iaOcupada.current = true;
     const equipoIA: EquipoID = equipoJugadorRef.current === 2 ? 1 : 2;
     setTimeout(() => {
-      const jugadas: {
-        fila: number; col: number; carta: CartaMovDef;
-        destinos: { fila: number; col: number }[];
-      }[] = [];
-      for (let f = 0; f < DIM; f++) {
-        for (let c = 0; c < DIM; c++) {
-          if (est.tablero[f][c].ficha?.equipo !== equipoIA) continue;
-          for (const carta of est.cartasOponente) {
-            const destinos = calcularMovimientosValidos(est.tablero, f, c, carta, equipoIA);
-            if (destinos.length > 0) jugadas.push({ fila: f, col: c, carta, destinos });
-          }
-        }
-      }
-      if (jugadas.length === 0) { iaOcupada.current = false; return; }
-      const j = jugadas[Math.floor(Math.random() * jugadas.length)];
-      const d = j.destinos[Math.floor(Math.random() * j.destinos.length)];
-      const { nuevoEstado } = ejecutarMovimiento(est, j.fila, j.col, d.fila, d.col, j.carta, equipoJugadorRef.current);
+      const jugada = calcularMejorMovimientoIA(
+        est,
+        equipoIA,
+        equipoJugadorRef.current,
+        dificultad
+      );
+      if (!jugada) { iaOcupada.current = false; return; }
+      const { nuevoEstado } = ejecutarMovimiento(
+        est, jugada.origenFila, jugada.origenCol,
+        jugada.destinoFila, jugada.destinoCol,
+        jugada.carta, equipoJugadorRef.current
+      );
       setEstado(nuevoEstado);
       iaOcupada.current = false;
-    }, 900);
-  }, []);
+    }, 600);
+  }, [dificultad]);
 
-  // La IA solo corre en mock y cuando le toca al equipo contrario al jugador local
+  // La IA solo corre en modo entrenamiento/mock y cuando le toca al equipo contrario
   useEffect(() => {
     const equipoIA = equipoJugadorRef.current === 2 ? 1 : 2;
     if (!enServidor.current && estado.turnoActual === equipoIA && !estado.ganador) {
@@ -512,8 +516,8 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
     }
     const movimientosValidos = estado.fichaSeleccionada
       ? calcularMovimientosValidos(
-          estado.tablero, estado.fichaSeleccionada.fila, estado.fichaSeleccionada.col, carta, miEquipo
-        )
+        estado.tablero, estado.fichaSeleccionada.fila, estado.fichaSeleccionada.col, carta, miEquipo
+      )
       : [];
     setEstado((prev) => ({ ...prev, cartaSeleccionada: carta, movimientosValidos }));
   };
@@ -655,11 +659,10 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
         {/* Equipo 1 = Azul, Equipo 2 = Rojo */}
         <aside className="w-64 shrink-0 flex flex-col gap-3 px-3 pt-3 pb-2 bg-[#162235] border-r border-white/10 overflow-hidden min-h-0">
           <div className="flex flex-col items-center gap-1">
-            <div className={`w-11 h-11 rounded-full border-2 flex items-center justify-center shrink-0 ${
-              miEquipoActual === 2
-                ? "bg-blue-900/60 border-blue-400/40"   // oponente es equipo 1 (azul)
-                : "bg-red-900/60 border-red-400/40"     // oponente es equipo 2 (rojo)
-            }`}>
+            <div className={`w-11 h-11 rounded-full border-2 flex items-center justify-center shrink-0 ${miEquipoActual === 2
+              ? "bg-blue-900/60 border-blue-400/40"   // oponente es equipo 1 (azul)
+              : "bg-red-900/60 border-red-400/40"     // oponente es equipo 2 (rojo)
+              }`}>
               <span className="text-white/60 text-base">{nombreOponente.charAt(0).toUpperCase()}</span>
             </div>
             <span className="text-white/80 text-[11px] font-semibold">@{nombreOponente}</span>
@@ -684,22 +687,20 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
           <div className="flex-1 min-h-2" />
 
           <div className="flex flex-col items-center gap-1 shrink-0">
-            <p className={`text-center text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md ${
-              !aguardandoInicio && estado.turnoActual !== miEquipoActual && !hayFinPartida
-                ? miEquipoActual === 2
-                  ? "text-blue-300 bg-blue-900/30 animate-pulse"
-                  : "text-red-300 bg-red-900/30 animate-pulse"
-                : "text-white/30"
-            }`}>
+            <p className={`text-center text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md ${!aguardandoInicio && estado.turnoActual !== miEquipoActual && !hayFinPartida
+              ? miEquipoActual === 2
+                ? "text-blue-300 bg-blue-900/30 animate-pulse"
+                : "text-red-300 bg-red-900/30 animate-pulse"
+              : "text-white/30"
+              }`}>
               {aguardandoInicio
                 ? "Preparando…"
                 : !aguardandoInicio && estado.turnoActual !== miEquipoActual && !hayFinPartida
-                ? `Turno de @${nombreOponente}`
-                : "Esperando…"}
+                  ? `Turno de @${nombreOponente}`
+                  : "Esperando…"}
             </p>
-            <p className={`font-mono text-2xl font-bold tabular-nums ${
-              tiempoRestante <= 15 && tiempoRestante > 0 ? "text-red-400 animate-pulse" : "text-white/70"
-            }`}>
+            <p className={`font-mono text-2xl font-bold tabular-nums ${tiempoRestante <= 15 && tiempoRestante > 0 ? "text-red-400 animate-pulse" : "text-white/70"
+              }`}>
               {min}:{seg}
             </p>
           </div>
@@ -805,19 +806,17 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
           </div>
 
           <div className="flex flex-col items-center gap-1 shrink-0">
-            <p className={`text-center text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md ${
-              esTurnoJugador
-                ? miEquipoActual === 1 ? "text-blue-300 bg-blue-900/30" : "text-red-300 bg-red-900/30"
-                : aguardandoInicio ? "text-yellow-300/70 bg-yellow-900/20"
+            <p className={`text-center text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md ${esTurnoJugador
+              ? miEquipoActual === 1 ? "text-blue-300 bg-blue-900/30" : "text-red-300 bg-red-900/30"
+              : aguardandoInicio ? "text-yellow-300/70 bg-yellow-900/20"
                 : "text-white/30"
-            }`}>
+              }`}>
               {aguardandoInicio ? "Esperando inicio…" : esTurnoJugador ? "¡Es tu turno!" : "Esperando…"}
             </p>
-            <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center ${
-              miEquipoActual === 1
-                ? "bg-blue-900/60 border-blue-400/40"
-                : "bg-red-900/60 border-red-400/40"
-            }`}>
+            <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center ${miEquipoActual === 1
+              ? "bg-blue-900/60 border-blue-400/40"
+              : "bg-red-900/60 border-red-400/40"
+              }`}>
               <span className="text-white/60 text-xs">{jugadorActual.nombre.charAt(0).toUpperCase()}</span>
             </div>
             <span className="text-white/60 text-[10px]">@{jugadorActual.nombre}</span>
@@ -841,7 +840,11 @@ function PartidaInterna({ partidaId }: { partidaId: string }) {
 function PartidaConParams() {
   const searchParams = useSearchParams();
   const partidaId = searchParams.get("id") ?? "local";
-  return <PartidaInterna partidaId={partidaId} />;
+  const dificultadParam = searchParams.get("dificultad") ?? "medio";
+  const dificultad: Dificultad = (["facil", "medio", "dificil"] as const).includes(dificultadParam as Dificultad)
+    ? (dificultadParam as Dificultad)
+    : "medio";
+  return <PartidaInterna partidaId={partidaId} dificultad={dificultad} />;
 }
 
 export default function PartidaPage() {
