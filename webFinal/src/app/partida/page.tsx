@@ -33,6 +33,7 @@ import Link from "next/link";
 import {
   crearEstadoInicial,
   crearEstadoDesdeServidor,
+  crearTableroInicial,
   calcularMovimientosValidos,
   ejecutarMovimiento,
   type EstadoJuego,
@@ -267,66 +268,52 @@ function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificult
   const enServidor = useRef(!!getWsActivo());
   /** Equipo del jugador local: 1 = arriba (rojo), 2 = abajo (azul). Por defecto 2 en mock. */
   const equipoJugadorRef = useRef<1 | 2>(2);
-
-  // ── Datos del jugador local (sesión o mock) ──────────────────────────────────
   const jugadorActual = obtenerJugadorActivo();
-
-  // ── Estado inicial: desde servidor (sessionStorage) o mock ──────────────────
-  const [estado, setEstado] = useState<EstadoJuego>(() => {
-    if (typeof window !== "undefined") {
-      const raw = sessionStorage.getItem("datosPartida");
-      if (raw) {
-        try {
-          const datos = JSON.parse(raw) as RespuestaPartidaEncontrada;
-          return crearEstadoDesdeServidor(datos);
-        } catch {
-          console.warn("[partida] Datos de sessionStorage inválidos. Usando mock.");
-        }
-      }
-    }
-    return crearEstadoInicial();
-  });
-
-  // ── Datos del oponente y equipo asignado (del servidor o mock) ──────────────
   const infoOponente = useRef<{ nombre: string; puntos: number }>(getMockOponente(dificultad));
+
+  const [mounted, setMounted] = useState(false);
+  const [estado, setEstado] = useState<EstadoJuego>(() => ({
+    tablero: crearTableroInicial(),
+    turnoActual: 2,
+    // Use first 7 cards as stable initial state for SSR
+    cartasJugador: [TODAS_LAS_CARTAS[0], TODAS_LAS_CARTAS[1]],
+    cartasOponente: [TODAS_LAS_CARTAS[2], TODAS_LAS_CARTAS[3]],
+    cartasSiguientes: [TODAS_LAS_CARTAS[4], TODAS_LAS_CARTAS[5], TODAS_LAS_CARTAS[6]],
+    fichaSeleccionada: null,
+    cartaSeleccionada: null,
+    movimientosValidos: [],
+    ganador: null,
+    ultimoMovimiento: null,
+  }));
+
+  const [aguardandoInicio, setAguardandoInicio] = useState<boolean>(true);
+
   useEffect(() => {
+    setMounted(true);
     const raw = sessionStorage.getItem("datosPartida");
     if (raw) {
       try {
         const datos = JSON.parse(raw) as RespuestaPartidaEncontrada;
+        setEstado(crearEstadoDesdeServidor(datos));
         equipoJugadorRef.current = datos.equipo;
         infoOponente.current = { nombre: datos.oponente, puntos: datos.oponentePt };
-      } catch { /* mantener mock */ }
+        setAguardandoInicio(datos.equipo === 2);
+      } catch {
+        setEstado(crearEstadoInicial());
+        setAguardandoInicio(false);
+      }
+    } else {
+      // Mock mode: randomization happens only on client
+      setEstado(crearEstadoInicial());
+      setAguardandoInicio(false);
     }
   }, []);
-
-  // ── Estados adicionales ─────────────────────────────────────────────────────
-  const [tiempoRestante, setTiempoRestante] = useState(TIEMPO_TURNO);
-
-  /**
-   * aguardandoInicio: bloquea la interacción del jugador hasta que sea su turno.
-   *  - Mock: false siempre (equipo 2 empieza en mock local).
-   *  - Servidor, equipo 1: false (equipo 1 empieza; puede mover inmediatamente).
-   *  - Servidor, equipo 2: true (espera a que equipo 1 mueva; se desbloquea al llegar MOVER).
-   * Se lee sessionStorage sincrónico para evitar un render extra.
-   */
-  const [aguardandoInicio, setAguardandoInicio] = useState<boolean>(() => {
-    if (!getWsActivo()) return false; // modo mock
-    try {
-      const raw = typeof window !== "undefined" ? sessionStorage.getItem("datosPartida") : null;
-      if (raw) {
-        const datos = JSON.parse(raw) as RespuestaPartidaEncontrada;
-        equipoJugadorRef.current = datos.equipo;
-        return datos.equipo === 2; // Equipo 2 espera; equipo 1 empieza
-      }
-    } catch { /* ignorar */ }
-    return true; // Seguro por defecto: esperar
-  });
 
   /**
    * Resultado declarado por el servidor (TERMINAR_PARTIDA).
    * En mock, el ganador se lee de estado.ganador.
    */
+  const [tiempoRestante, setTiempoRestante] = useState(TIEMPO_TURNO);
   const [resultadoFinal, setResultadoFinal] = useState<{
     ganador: string; razon: string;
   } | null>(null);
@@ -562,14 +549,13 @@ function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificult
       : `Turno de @${nombreOponente}…`;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: "#111d2c" }}>
 
       {/* ═══ HEADER ════════════════════════════════════════════════════════ */}
       <header className="bg-[#1a2d4a] px-5 py-2 flex items-center justify-between shrink-0 shadow-lg">
         <Link href="/" className="flex items-center">
-          <Image src="/nombre.png" alt="Onitama" width={110} height={32} priority className="h-8 w-auto object-contain" />
+          <Image src="/nombre.png" alt="Onitama" width={110} height={32} priority className="h-8 w-auto object-contain" style={{ height: '2rem', width: 'auto' }} />
         </Link>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">
