@@ -9,9 +9,10 @@
  *
  * Navegación:
  *  - "Partida Pública" → /buscar (busca oponente en línea)
- *  - "Partida Entrenamiento" → /partida?modo=entrenamiento (sin servidor, TODO)
+ *  - "Partida Entrenamiento" → modal de dificultad → /partida?modo=entrenamiento&dificultad=X
  *  - "Partida Privada" → TODO
  */
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -47,19 +48,56 @@ const MENU_LATERAL = [
   { id: "tienda", label: "Tienda" },
 ];
 
+// Niveles de dificultad para el entrenamiento
+const NIVELES_DIFICULTAD = [
+  {
+    id: "facil",
+    nombre: "Principiante",
+    descripcion: "IA básica. Ideal para aprender los movimientos.",
+    color: "bg-[#e8e8e8] text-[#1a2d4a]",
+    textColor: "text-[#1a2d4a]",
+    descColor: "text-[#1a2d4a]/70",
+    hover: "hover:bg-white hover:scale-[1.02]",
+  },
+  {
+    id: "medio",
+    nombre: "Guerrero",
+    descripcion: "IA equilibrada. Un desafío moderado.",
+    color: "bg-[#1a2d4a] text-white border-2 border-white/20",
+    textColor: "text-white",
+    descColor: "text-white/60",
+    hover: "hover:bg-[#203a60] hover:border-white/40 hover:scale-[1.02]",
+  },
+  {
+    id: "dificil",
+    nombre: "Maestro",
+    descripcion: "IA experta con visión estratégica profunda.",
+    color: "bg-red-900/30 text-red-100 border-2 border-red-500/40",
+    textColor: "text-red-100",
+    descColor: "text-red-200/70",
+    hover: "hover:bg-red-900/50 hover:border-red-400 hover:scale-[1.02] shadow-[0_0_15px_rgba(239,68,68,0.2)]",
+  },
+];
+
 export default function PartidasPage() {
   const router = useRouter();
   const jugador = obtenerJugadorActivo();
+  const [mostrarModalDificultad, setMostrarModalDificultad] = useState(false);
 
   /** Navega a la pantalla correspondiente según el tipo de partida */
   const handleIniciarPartida = (id: string) => {
     if (id === "publica") {
       router.push("/buscar");
     } else if (id === "entrenamiento") {
-      // Sin servidor: inicia directamente contra la IA local
-      router.push("/partida?modo=entrenamiento");
+      setMostrarModalDificultad(true);
     }
     // TODO: id === "privada" → enviar SOLICITUD_PARTIDA al servidor
+  };
+
+  /** Inicia partida de entrenamiento con la dificultad seleccionada */
+  const handleSeleccionarDificultad = (dificultad: string) => {
+    setMostrarModalDificultad(false);
+    router.push(`/partida?modo=entrenamiento&dificultad=${dificultad}`);
   };
 
   return (
@@ -179,6 +217,55 @@ export default function PartidasPage() {
           </div>
         </main>
       </div>
+
+      {/* ═══ MODAL: SELECCIÓN DE DIFICULTAD ══════════════════════════════════ */}
+      {mostrarModalDificultad && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-[#1a2d4a]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-6">
+
+            {/* Cabecera del modal */}
+            <div className="flex flex-col items-center gap-3 w-full border-b border-white/10 pb-6">
+              <div className="w-16 h-16 rounded-full bg-stone-300 flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                <Image src="/pEntrenamiento.png" alt="Iron Bot" width={64} height={64} className="rounded-full object-cover" />
+              </div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-widest text-center mt-2">
+                Entrenamiento
+              </h2>
+              <p className="text-white/60 text-sm text-center">
+                Elige la dificultad del bot Iron
+              </p>
+            </div>
+
+            {/* Botones de dificultad */}
+            <div className="flex flex-col gap-4 w-full pt-2">
+              {NIVELES_DIFICULTAD.map((nivel) => (
+                <button
+                  key={nivel.id}
+                  type="button"
+                  onClick={() => handleSeleccionarDificultad(nivel.id)}
+                  className={`w-full flex flex-col items-center justify-center py-4 rounded-xl transition-all duration-200 cursor-pointer active:scale-100 ${nivel.color} ${nivel.hover}`}
+                >
+                  <span className={`font-bold text-lg uppercase tracking-widest ${nivel.textColor}`}>
+                    {nivel.nombre}
+                  </span>
+                  <span className={`text-xs mt-1 ${nivel.descColor}`}>
+                    {nivel.descripcion}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Botón cancelar */}
+            <button
+              type="button"
+              onClick={() => setMostrarModalDificultad(false)}
+              className="text-white/50 text-sm hover:text-white transition-colors mt-2"
+            >
+              ← Cancelar y volver
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
