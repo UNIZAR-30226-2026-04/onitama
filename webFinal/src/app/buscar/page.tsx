@@ -27,6 +27,9 @@ export default function BuscarPartidaPage() {
   const [estadoUI, setEstadoUI] = useState<EstadoUI>("buscando");
   const [respuesta, setRespuesta] = useState<RespuestaBuscarPartida | null>(null);
 
+  /** Ref para poder cancelar la búsqueda desde el botón */
+  const cancelarBusquedaRef = useRef<(() => void) | null>(null);
+
   /** Inicia la búsqueda de partida (se llama al montar y en reintentos) */
   const iniciarBusqueda = () => {
     setEstadoUI("buscando");
@@ -36,8 +39,12 @@ export default function BuscarPartidaPage() {
 
     // Pasar nombre y puntos del jugador logueado para matchmaking por puntuación
     const jugador = obtenerJugadorActivo();
-    buscarPartida(jugador.nombre, jugador.puntos).then((resultado) => {
+    const { promise, cancel } = buscarPartida(jugador.nombre, jugador.puntos);
+    cancelarBusquedaRef.current = cancel;
+
+    promise.then((resultado) => {
       setRespuesta(resultado);
+      cancelarBusquedaRef.current = null;
 
       if (resultado.estado === "ENCONTRADA") {
         // En lugar de navegar inmediatamente, mostramos la pantalla VS
@@ -49,12 +56,20 @@ export default function BuscarPartidaPage() {
           router.push(`/partida?id=${encodeURIComponent(id)}`);
         }, 3500);
 
+      } else if (resultado.estado === "CANCELADO") {
+        router.push("/partidas");
       } else if (resultado.estado === "TIMEOUT") {
         setEstadoUI("timeout");
       } else {
         setEstadoUI("error");
       }
     });
+  };
+
+  /** Cancela la búsqueda, envía CANCELAR al servidor y vuelve a partidas */
+  const handleCancelarBusqueda = () => {
+    cancelarBusquedaRef.current?.();
+    // La promesa se resuelve con CANCELADO y el .then() hace router.push("/partidas")
   };
 
   // Guard para evitar la doble ejecución de React StrictMode en desarrollo.
@@ -231,6 +246,13 @@ export default function BuscarPartidaPage() {
               <p className="text-white/50 text-xs animate-pulse">
                 Esto puede tardar unos segundos…
               </p>
+              <button
+                type="button"
+                onClick={handleCancelarBusqueda}
+                className="w-full py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-red-700 text-white hover:bg-red-600 active:bg-red-800 transition-colors border-2 border-red-500/50"
+              >
+                Cancelar búsqueda
+              </button>
             </>
           )}
 
