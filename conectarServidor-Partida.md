@@ -134,7 +134,8 @@ Se env√≠a cuando el jugador ejecuta un movimiento. Solo se incluyen los datos m√
   "tipo": "SOLICITUD_AMISTAD",
   "remitente": "Iron",
   "fecha_ini": "10/03/2026",
-  "fecha_fin": "20/03/2026"
+  "fecha_fin": "20/03/2026",
+  "idNotificacion": 1
 }
 ```
 

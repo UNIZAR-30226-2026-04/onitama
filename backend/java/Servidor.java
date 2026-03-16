@@ -13,6 +13,7 @@ import java.util.concurrent.*;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.sql.SQLException;
 
 import VO.Partida;
 import VO.CartaMov;
@@ -21,6 +22,7 @@ import VO.Tablero;
 import VO.Jugador;
 import VO.Autenticacion;
 import JDBC.JugadorJDBC;
+import JDBC.NotificacionJDBC;
 import VO.Notificacion;
 
 //POR HACER:
@@ -512,6 +514,7 @@ public class Servidor extends WebSocketServer {
                 msg.put("remitente", remitente);
                 msg.put("fecha_ini", ahora.toString());
                 msg.put("fecha_fin", expiracion.toString());
+                msg.put("idNotificacion", n.getIdNotificacion());
                 ws.send(msg.toString());
             }
         } else {
@@ -519,6 +522,30 @@ public class Servidor extends WebSocketServer {
             msg.put("tipo", "ERROR_SOLICITUD_AMISTAD");
             msg.put("destinatario", destinatario);
             conn.send(msg.toString());
+        }
+    }
+
+    private void aceptarAmistad(WebSocket conn, JSONObject obj){
+        NotificacionJDBC notificacionJDBC = new NotificacionJDBC();
+        try {
+            notificacionJDBC.borrar(obj.getInt("idNotificacion")); //DUDA, ARREGLAR 
+            JugadorJDBC jugadorJDBC = new JugadorJDBC();
+            if(jugadorJDBC.insertarAmistad(obj.getString("remitente"), obj.getString("destinatario"))){
+                System.out.println("Amistad registrada entre " + obj.getString("remitente") + " y " + obj.getString("destinatario"));
+                WebSocket ws = buscarConexion(obj.getString("remitente"));
+                if (ws != null && ws.isOpen()) {
+                    JSONObject msg = new JSONObject();
+                    msg.put("tipo", "AMISTAD_ACEPTADA");
+                    msg.put("amigo", obj.getString("destinatario"));
+                    ws.send(msg.toString());
+                    JSONObject msg2 = new JSONObject();
+                    msg2.put("tipo", "AMISTAD_ACEPTADA");
+                    msg2.put("amigo", obj.getString("remitente"));
+                    conn.send(msg2.toString());
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al borrar notificación de amistad: " + e.getMessage());
         }
     }
 
@@ -613,6 +640,8 @@ public class Servidor extends WebSocketServer {
                 cancelarBusqueda(conn);
             } else if (tipoMSG.equals("INVITACION_AMISTAD")){
                 notificarAmistad(conn, obj);
+            } else if (tipoMSG.equals("ACEPTAR_AMISTAD")){
+                aceptarAmistad(conn, obj);
             }
         });
     }

@@ -117,6 +117,15 @@ public final class NotificacionJDBC {
         return null;
     }
 
+    public void borrar(int ID) throws SQLException {
+        final String sql = "DELETE FROM Notificaciones WHERE ID_Notificacion = ?";
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, ID);
+            ps.executeUpdate();
+        }
+    }
+
     private Notificacion montarNotificacion(ResultSet rs) throws SQLException {
         int id = rs.getInt("ID_Notificacion");
         String tipo = rs.getString("Tipo");
