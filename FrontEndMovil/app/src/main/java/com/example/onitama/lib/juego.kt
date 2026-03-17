@@ -8,8 +8,8 @@ const val CENTRO = (DIM/2)
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 enum class EquipoID (val id: Int){
-    ID1(1),
-    ID2(2)
+    ARROJO(1),
+    ABAZUL(2)
 }
 
 data class Ficha(
@@ -71,10 +71,10 @@ fun crearTableroInicial(): List<List<Celda>> {
             if (fila == 0 || fila == DIM - 1){
                 val equipo: EquipoID
                 if (fila == 0){
-                    equipo = EquipoID.ID1
+                    equipo = EquipoID.ARROJO
                 }
                 else {
-                    equipo = EquipoID.ID2
+                    equipo = EquipoID.ABAZUL
                 }
                 ficha = Ficha(equipo, col == CENTRO)
             }
@@ -94,7 +94,7 @@ fun crearEstadoInicial(): EstadoJuego {
     val cartas = cartas.selectRandomCards(7)
     return EstadoJuego(
         tablero = crearTableroInicial(),
-        turnoActual = EquipoID.ID2,
+        turnoActual = EquipoID.ABAZUL,
         cartasJugador = listOf(cartas[0], cartas[1]),
         cartasOponente = listOf(cartas[2], cartas[3]),
         cartasSiguientes = listOf(cartas[4], cartas[5], cartas[6]),
@@ -121,7 +121,7 @@ fun calcularMovimientosValidos (
     equipo: EquipoID
 ): List<Posicion> {
     var signo: Int
-    if (equipo == EquipoID.ID2) {
+    if (equipo == EquipoID.ABAZUL) {
         signo = 1
     }
     else {
@@ -219,7 +219,7 @@ fun crearEstadoServidor (
 ): EstadoJuego {
     return EstadoJuego (
         tablero = crearTableroInicial(),
-        turnoActual = EquipoID.ID1,
+        turnoActual = EquipoID.ARROJO,
         cartasJugador = cartas_jugador.map { convertirCarta(it) },
         cartasOponente = cartas_oponente.map { convertirCarta(it) },
         cartasSiguientes = carta_siguiente.map { convertirCarta(it) },
@@ -264,7 +264,7 @@ fun ejecutarMovimiento (
     origen: Posicion,
     destino: Posicion,
     carta: carta,
-    equipoLocal: EquipoID = EquipoID.ID2
+    equipoLocal: EquipoID = EquipoID.ABAZUL
 ): ResultadoMovimiento {
     val tablero = estado.tablero.map { fila ->
         fila.toMutableList()
@@ -281,8 +281,8 @@ fun ejecutarMovimiento (
 
     /** Victoria por trono: el rey llega al trono enemigo */
     val victoriaPorTrono = fichaMovida.esRey &&
-            ((fichaMovida.equipo === EquipoID.ID2 && destino.fila == 0 && destino.col === CENTRO) ||
-                    (fichaMovida.equipo === EquipoID.ID1 && destino.fila === DIM - 1 && destino.col === CENTRO));
+            ((fichaMovida.equipo === EquipoID.ABAZUL && destino.fila == 0 && destino.col === CENTRO) ||
+                    (fichaMovida.equipo === EquipoID.ARROJO && destino.fila === DIM - 1 && destino.col === CENTRO));
 
     /** El jugador recibe la primera carta de la cola; la carta usada va al final.*/
     val cartaRecibida = estado.cartasSiguientes[0]
@@ -316,7 +316,7 @@ fun ejecutarMovimiento (
 
     val nuevoEstado = estado.copy(
         tablero,
-        turnoActual = if (equipoActual == EquipoID.ID1) EquipoID.ID2 else EquipoID.ID1,
+        turnoActual = if (equipoActual == EquipoID.ARROJO) EquipoID.ABAZUL else EquipoID.ARROJO,
         cartasJugador = nuevasCartasJugador,
         cartasOponente = nuevasCartasOponente,
         cartasSiguientes = nuevasSiguientes,

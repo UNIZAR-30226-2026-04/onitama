@@ -3,7 +3,7 @@ package com.example.onitama.api
 
 import android.util.Log
 import com.example.onitama.Config
-import com.example.onitama.GameSession
+import com.example.onitama.PartidaActiva
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -120,7 +120,7 @@ class BuscarPartida(
             }
             override fun onMessage(webSocket: WebSocket, event: String) { //al recibir un mensaje del websocket
                 if (promise.isCompleted) {
-                    GameSession.onMensajeJuegoRecibido?.invoke(event) //si la partida ya ha empezado se le pasa el mensaje a la pantalla de juego usando el objeto gamesession
+                    PartidaActiva.onMensajeJuegoRecibido?.invoke(event) //si la partida ya ha empezado se le pasa el mensaje a la pantalla de juego usando el objeto gamesession
                     return
                 }
                 try {
@@ -131,8 +131,8 @@ class BuscarPartida(
                         val resultadoFinal = datos.copy(
                             mensaje = "Partida encontrada, te enfrentarás a ${datos.oponente}"
                         )
-                        GameSession.datosPartida = resultadoFinal
-                        GameSession.wsActivo = webSocket
+                        PartidaActiva.datosPartida = resultadoFinal
+                        PartidaActiva.wsActivo = webSocket
                         promise.complete(resultadoFinal)
 
                     }

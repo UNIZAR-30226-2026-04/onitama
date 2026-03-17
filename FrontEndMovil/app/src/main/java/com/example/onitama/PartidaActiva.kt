@@ -9,7 +9,9 @@ import okhttp3.WebSocket
  * así que se tiene que guardar en un objeto global para que se pueda acceder al servidor desde
  * múltiples pantallas o activities.
  * **/
-object GameSession {
+object PartidaActiva {
+
+    var wsEstoyListoEnviado: Boolean = false
     var datosPartida: BuscarPartida.RespuestaBuscarPartida? = null
     var wsActivo: WebSocket? = null
 
