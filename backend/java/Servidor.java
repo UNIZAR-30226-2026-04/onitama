@@ -597,6 +597,7 @@ public class Servidor extends WebSocketServer {
         // he comentado esto porque 'conexiones' no estaba definido en ningún
         // otro sitio de 'Servidor.java', luego he continuado con la inicialización 
         // de las dos listas previamente declaradas.
+        conectados = new ArrayList<>();
         buscando_partida = new ArrayList<>();
         parejas = new ArrayList<>();
     }
