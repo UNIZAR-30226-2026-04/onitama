@@ -236,7 +236,7 @@ public class Partida{
             this.j1Ganador = true;
             this.j2Ganador = false;
         }
-        return actualizarBD();
+        return finalizarPartida();
     }
 
     //Finaliza la partida y actualiza las estadisticas de los jugadores

@@ -186,7 +186,8 @@ public class Servidor extends WebSocketServer {
             mutex.acquire(); //WAIT
 
             for (InfoJugador j : buscando_partida){
-                if (!j.nombre.equals(nombre)) { 
+                int dif = j.puntos - puntos;
+                if (dif >= -100 && dif <= 100 && !j.nombre.equals(nombre)) { 
                     oponente = j;
                     break;
                 }
@@ -259,7 +260,8 @@ public class Servidor extends WebSocketServer {
                     for (InfoJugador j : buscando_partida) {
                         if (jug.equals(j)) continue; // No emparejarse consigo mismo
                         
-                        if (!j.nombre.equals(jug.nombre)) { 
+                        int dif = j.puntos - jug.puntos;
+                        if (dif >= -100 && dif <= 100 && !j.nombre.equals(jug.nombre)) { 
                             oponenteEncontrado = j;
                             break;
                         }
