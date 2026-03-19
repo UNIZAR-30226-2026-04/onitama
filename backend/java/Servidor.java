@@ -186,8 +186,7 @@ public class Servidor extends WebSocketServer {
             mutex.acquire(); //WAIT
 
             for (InfoJugador j : buscando_partida){
-                int dif = j.puntos - puntos;
-                if (dif >= -100 && dif <= 100 && !j.nombre.equals(nombre)) { 
+                if (!j.nombre.equals(nombre)) { 
                     oponente = j;
                     break;
                 }
@@ -260,8 +259,7 @@ public class Servidor extends WebSocketServer {
                     for (InfoJugador j : buscando_partida) {
                         if (jug.equals(j)) continue; // No emparejarse consigo mismo
                         
-                        int dif = j.puntos - jug.puntos;
-                        if (dif >= -100 && dif <= 100 && !j.nombre.equals(jug.nombre)) { 
+                        if (!j.nombre.equals(jug.nombre)) { 
                             oponenteEncontrado = j;
                             break;
                         }
@@ -842,11 +840,6 @@ public class Servidor extends WebSocketServer {
 
     public Servidor(int puerto) {
         super(new InetSocketAddress(puerto));
-        // conexiones = new ArrayList<>(); 
-        // he comentado esto porque 'conexiones' no estaba definido en ningún
-        // otro sitio de 'Servidor.java', luego he continuado con la inicialización 
-        // de las dos listas previamente declaradas
-
         conectados = new ArrayList<>();
         buscando_partida = new ArrayList<>();
         parejas = new ArrayList<>();
