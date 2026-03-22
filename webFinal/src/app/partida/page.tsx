@@ -41,7 +41,8 @@ import {
   DIM,
 } from "@/lib/juego";
 import { TODAS_LAS_CARTAS, getImagenCarta, type CartaMovDef } from "@/lib/cartas";
-import { obtenerJugadorActivo } from "@/lib/sesion";
+import { obtenerJugadorActivo, guardarSesion } from "@/lib/sesion";
+import { obtenerPerfil } from "@/api/auth";
 import { calcularMejorMovimientoIA, type Dificultad } from "@/lib/ia";
 import {
   getWsActivo,
@@ -609,10 +610,23 @@ function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificult
     setEstado((prev) => ({ ...prev, cartaSeleccionada: carta, movimientosValidos }));
   };
 
-  /** Vuelve a /partidas; esa pantalla pide OBTENER_PERFIL al montar (F5 y vuelta desde partida). */
+  /** Espera a que el servidor persista abandono/victoria en la BD antes de leer el perfil */
+  const DELAY_PERFIL_MS = 500;
+
+  /**
+   * Tras un breve delay, pide el perfil actualizado y vuelve a /partidas.
+   * El delay evita leer la BD antes de que el backend termine de actualizar puntos/cores.
+   */
   const volverAPartidas = useCallback(() => {
-    router.push("/partidas");
-  }, [router]);
+    window.setTimeout(() => {
+      obtenerPerfil(jugadorActual.nombre)
+        .then((datos) => guardarSesion(datos))
+        .catch(() => {
+          /* si falla, /partidas reintenta en useEffect */
+        })
+        .finally(() => router.push("/partidas"));
+    }, DELAY_PERFIL_MS);
+  }, [jugadorActual.nombre, router]);
 
   /** El jugador confirma que quiere abandonar: notifica al servidor y vuelve */
   const handleConfirmarAbandonar = () => {

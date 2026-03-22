@@ -248,7 +248,7 @@ public class Servidor extends WebSocketServer {
                 }
 
                 boolean hayGente = buscando_partida.size() > 1;
-                boolean prioridad = tiempoActual > 120 && hayGente;
+                boolean prioridad = tiempoActual > 20 && hayGente;
 
                 if (prioridad) {
                     // Sacamos al primero que no sea él mismo (el que ha estado más tiempo esperando)
@@ -297,7 +297,7 @@ public class Servidor extends WebSocketServer {
                 System.out.println(jug.nombre + " sigue buscando... (" + tiempoActual + "s)");
             }
 
-        }, 10, 10, TimeUnit.SECONDS); //Se repite cada 10 segundos
+        }, 5, 5, TimeUnit.SECONDS); //Se repite cada 5 segundos
     }
 
     private void gestionarPartida(WebSocket conn, JSONObject obj) {
