@@ -1,5 +1,6 @@
 package com.example.onitama.api
 
+import android.util.Log
 import com.example.onitama.Config
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
@@ -27,7 +28,7 @@ class Auth(
 ) {
 
     /** true cuando hay URL de servidor configurada */
-    val usarServidor: Boolean get() = (wsUrl != "ws://10.0.2.2:8080")
+    val usarServidor: Boolean get() = !(wsUrl.isEmpty())
 
     //private val gson = Gson()
 
@@ -57,10 +58,12 @@ class Auth(
 
             val listener = object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
+                    Log.d("WS_CLIENT", "Conectado. Enviando: $mensajeJson")
                     webSocket.send(mensajeJson)
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
+                    Log.d("WS_CLIENT", "Mensaje recibido del servidor: $text")
                     webSocket.close(1000, "Cierre normal") // Cierra temporalmente como en la web
                     if (continuation.isActive) {
                         try {
@@ -73,8 +76,16 @@ class Auth(
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    Log.e("WS_CLIENT", "Fallo en el socket", t)
                     if (continuation.isActive) {
                         continuation.resumeWithException(Exception("Error de conexión con el servidor."))
+                    }
+                }
+
+                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    Log.w("WS_CLIENT", "El servidor cerró la conexión. Razón: $reason")
+                    if (continuation.isActive) {
+                        continuation.resumeWithException(Exception("El servidor cerró la conexión sin responder."))
                     }
                 }
             }
@@ -83,6 +94,7 @@ class Auth(
 
             // Si se cancela la corrutina (ej. por timeout), cerramos el socket
             continuation.invokeOnCancellation {
+                Log.w("WS_CLIENT", "Corrutina cancelada. Cerrando conexión.")
                 ws.cancel()
             }
         }
@@ -99,7 +111,7 @@ class Auth(
 
         // ── Servidor ──
         // Envolvemos en un timeout de 10 segundos
-        val respuesta = withTimeoutOrNull(10_000L) {
+        val respuesta = withTimeoutOrNull(100_000L) {
             val requestJson = JSONObject().apply {
                 put("tipo", "INICIAR_SESION")
                 put("nombre", nombre)
@@ -133,7 +145,7 @@ class Auth(
         }
 
         // ── Servidor ──
-        val respuesta = withTimeoutOrNull(10_000L) {
+        val respuesta = withTimeoutOrNull(100_000L) {
             val requestJson = JSONObject().apply {
                 put("tipo", "REGISTRARSE")
                 put("correo", correo)

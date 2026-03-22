@@ -43,7 +43,7 @@ class Partida(
     private val wsUrl: String = Config.WS_URL
 ){
 
-    val usarServidor: Boolean get() = (wsUrl != "ws://10.0.2.2:8080")
+    val usarServidor: Boolean get() = !(wsUrl.isEmpty())
     @Serializable
     sealed class MensajeServidor
 

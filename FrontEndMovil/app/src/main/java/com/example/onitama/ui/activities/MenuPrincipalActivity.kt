@@ -6,74 +6,34 @@ import android.widget.Button
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import com.example.onitama.R
 import com.example.onitama.autoLogin
+import com.example.onitama.ui.pages.MainMenuScreen
 
 class MenuPrincipalActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main_menu)
-
-        // Información de la parte superior de la pantalla
-        val botonPerfil = findViewById<ImageButton>(R.id.btn_perfil)
-        val cores = findViewById<TextView>(R.id.core_count)
-        val katanas = findViewById<TextView>(R.id.katanas_count)
-
-        val nombre = autoLogin.obtenerNombre(this)
+        val nombreUsuario = autoLogin.obtenerNombre(this) ?: "Jugador"
         val valorCores = autoLogin.obtenerCores(this)
         val valorKatanas = autoLogin.obtenerKatanas(this)
-
-        cores.text = valorCores.toString()
-        katanas.text = valorKatanas.toString()
-
-        // Botones de los tipos de partidss disponibles
-        val botonPartidaOnline = findViewById<Button>(R.id.btn_publicmatch)
-        val botonPartidaEntrenamiento = findViewById<Button>(R.id.btn_botmatch)
-        val botonPartidaPrivada = findViewById<Button>(R.id.btn_privatematch)
-
-        // Otros botones en la parte inferior para cambiar a diferentes menus
-        val botonTablerosSkins = findViewById<ImageButton>(R.id.btn_myskins)
-        val botonCartas = findViewById<ImageButton>(R.id.btn_mycards)
-        val botonJugarPartidas = findViewById<ImageButton>(R.id.btn_AjUGAR)
-        val botonAmigos = findViewById<ImageButton>(R.id.btn_friends)
-        val botonTienda = findViewById<ImageButton>(R.id.btn_shop)
-
-        // Configuramos los botonse, INCOMPLETO
-        botonPerfil.setOnClickListener {
-
-        }
-
-        botonPartidaOnline.setOnClickListener {
-
-        }
-
-        botonPartidaEntrenamiento.setOnClickListener {
-
-        }
-
-        botonPartidaPrivada.setOnClickListener {
-
-        }
-
-        botonTablerosSkins.setOnClickListener {
-
-        }
-
-        botonCartas.setOnClickListener {
-
-        }
-
-        botonJugarPartidas.setOnClickListener {
-
-        }
-
-        botonAmigos.setOnClickListener {
-
-        }
-
-        botonTienda.setOnClickListener {
-
+        setContent {
+            // Un contenedor base opcional (útil para temas y colores de fondo por defecto)
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                MainMenuScreen(
+                    nombre = nombreUsuario,
+                    cores = valorCores,
+                    katanas = valorKatanas
+                )
+            }
         }
     }
 }
