@@ -64,7 +64,7 @@ public final class JugadorJDBC{
     }
 
     public List<Jugador> buscarJugadoresPorRaiz(String nombreUS) throws SQLException {
-        final String sql = "SELECT * FROM jugadores WHERE nombre LIKE ?";
+        final String sql = "SELECT * FROM Jugador WHERE Nombre_US LIKE ?";
         List<Jugador> lista = new ArrayList<>();
 
         try (Connection conn = dataSource.getConnection();
