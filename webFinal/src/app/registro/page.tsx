@@ -16,14 +16,17 @@
  */
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import HeaderLogo from "@/components/HeaderLogo";
 import FondoPantalla from "@/components/FondoPantalla";
 import { validarContrasena, HINT_CONTRASENA } from "@/lib/validacion";
 import { registrarUsuario } from "@/api/auth";
+import { guardarSesion } from "@/lib/sesion";
 
 type Paso = 1 | 2;
 
 export default function RegistroPage() {
+  const router = useRouter();
   const [paso, setPaso] = useState<Paso>(1);
   const [correo, setCorreo] = useState("");
   const [nombre, setNombre] = useState("");
@@ -70,12 +73,13 @@ export default function RegistroPage() {
     setErrorRegistro("");
     setCargando(true);
     try {
-      await registrarUsuario(
+      const datos = await registrarUsuario(
         correo.trim(),
         nombre.trim().replace(/^@/, ""),
         contrasena
       );
-      window.location.href = "/iniciar-sesion";
+      guardarSesion(datos);
+      router.push("/partidas");
     } catch (err) {
       setErrorRegistro(
         err instanceof Error ? err.message : "Error al registrarse."

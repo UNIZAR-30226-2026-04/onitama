@@ -1,0 +1,63 @@
+/**
+ * notificaciones.ts – Almacenamiento persistente de notificaciones pendientes.
+ *
+ * Guarda las notificaciones en sessionStorage para que sobrevivan a
+ * navegaciones dentro de la misma sesión (ej. /partidas → /buscar → /partidas).
+ *
+ * El listener de WS (inicializado en auth.ts tras el login) llama a
+ * guardarNotificacion() cuando el servidor envía SOLICITUD_AMISTAD o
+ * INVITACION_PARTIDA, independientemente de en qué pantalla esté el usuario.
+ */
+
+export interface Notificacion {
+  idNotificacion: number;
+  tipo: "SOLICITUD_AMISTAD" | "INVITACION_PARTIDA";
+  remitente: string;
+  fecha_ini?: string;
+  fecha_fin?: string;
+}
+
+const CLAVE = "onitama_notificaciones";
+
+function leer(): Notificacion[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(sessionStorage.getItem(CLAVE) ?? "[]") as Notificacion[];
+  } catch {
+    return [];
+  }
+}
+
+function escribir(lista: Notificacion[]): void {
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem(CLAVE, JSON.stringify(lista));
+  }
+}
+
+/** Devuelve la lista actual de notificaciones pendientes. */
+export function leerNotificaciones(): Notificacion[] {
+  return leer();
+}
+
+/**
+ * Añade una notificación al almacén si no existe ya (por idNotificacion).
+ * Llamado desde el listener WS en auth.ts.
+ */
+export function guardarNotificacion(n: Notificacion): void {
+  const lista = leer();
+  if (!lista.find((x) => x.idNotificacion === n.idNotificacion)) {
+    escribir([...lista, n]);
+  }
+}
+
+/** Elimina una notificación por id (tras aceptar, rechazar o expirar). */
+export function eliminarNotificacion(id: number): void {
+  escribir(leer().filter((n) => n.idNotificacion !== id));
+}
+
+/** Limpia todas las notificaciones (al cerrar sesión). */
+export function limpiarNotificaciones(): void {
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem(CLAVE);
+  }
+}

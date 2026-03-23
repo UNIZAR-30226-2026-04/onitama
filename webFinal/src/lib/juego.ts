@@ -93,7 +93,7 @@ export function crearEstadoInicial(): EstadoJuego {
   const cartas = seleccionarCartasAleatorias(7);
   return {
     tablero: crearTableroInicial(),
-    turnoActual: 2,
+    turnoActual: 1,
     cartasJugador: [cartas[0], cartas[1]],
     cartasOponente: [cartas[2], cartas[3]],
     cartasSiguientes: [cartas[4], cartas[5], cartas[6]], // cola FIFO de 3

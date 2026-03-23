@@ -1,11 +1,17 @@
 /**
- * Cliente de autenticación – Onitama Web Frontend.
+ * auth.ts – Autenticación y perfil del jugador.
  *
- * Toda la comunicación con el servidor se hace por WebSocket (igual que la partida).
+ * Usa el gestor WS compartido (ws.ts) en lugar de abrir conexiones temporales,
+ * de modo que el WebSocket permanece abierto desde el login / registro hasta
+ * que el usuario cierra sesión o abandona la aplicación.
  *
- * Mensajes que envía el cliente:
+ * Esto permite recibir notificaciones pendientes (solicitudes de amistad,
+ * invitaciones a partida…) que el servidor vuelca justo después del login.
+ *
+ * Mensajes enviados:
  *   INICIAR_SESION  { tipo, nombre, password }
  *   REGISTRARSE     { tipo, correo, nombre, password }
+ *   OBTENER_PERFIL  { tipo, nombre }
  *
  * Respuestas del servidor:
  *   INICIO_SESION_EXITOSO  { tipo, nombre, correo, puntos, partidas_ganadas, partidas_jugadas, cores }
@@ -13,19 +19,45 @@
  *   ERROR_SESION_PSSWD     { tipo }  ← contraseña incorrecta
  *   REGISTRO_EXITOSO       { tipo }
  *   REGISTRO_ERRONEO       { tipo }
- *
- * Si NEXT_PUBLIC_WS_URL no está configurado, se usa lógica mock para desarrollo.
- *
- * NOTA: cada llamada de auth abre una conexión WS temporal solo para ese mensaje.
- * No se reutiliza con la conexión de partida (que se abre después en buscarpartida.ts).
+ *   PERFIL_ACTUALIZADO     { tipo, nombre, correo, puntos, … }
  */
 
 import { DatosSesion, obtenerJugadorActivo } from "@/lib/sesion";
+import { guardarNotificacion } from "@/lib/notificaciones";
+import * as WS from "./ws";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "";
+export const usarServidor = WS.usarServidor;
 
-/** true cuando hay URL de servidor configurada */
-export const usarServidor = !!WS_URL;
+// ─── Listener de notificaciones ───────────────────────────────────────────────
+
+/**
+ * Registra suscripciones WS para capturar notificaciones (SOLICITUD_AMISTAD,
+ * INVITACION_PARTIDA) y guardarlas en sessionStorage.
+ *
+ * Se llama una vez tras un login o registro exitoso. Las notificaciones llegan
+ * justo después del INICIO_SESION_EXITOSO (el servidor las vuelca en ese momento)
+ * y también pueden llegar en cualquier momento mientras el WS esté abierto.
+ * Al guardarlas en sessionStorage sobreviven a la navegación interna de la app.
+ */
+function configurarListenerNotificaciones(): void {
+  WS.suscribir("SOLICITUD_AMISTAD", (msg) => {
+    guardarNotificacion({
+      idNotificacion: msg.idNotificacion as number,
+      tipo: "SOLICITUD_AMISTAD",
+      remitente: msg.remitente as string,
+      fecha_ini: msg.fecha_ini as string | undefined,
+      fecha_fin: msg.fecha_fin as string | undefined,
+    });
+  });
+
+  WS.suscribir("INVITACION_PARTIDA", (msg) => {
+    guardarNotificacion({
+      idNotificacion: msg.idNotificacion as number,
+      tipo: "INVITACION_PARTIDA",
+      remitente: msg.remitente as string,
+    });
+  });
+}
 
 // ─── Datos mock para desarrollo sin servidor ──────────────────────────────────
 
@@ -41,42 +73,20 @@ const MOCK_USUARIOS: Record<string, DatosSesion & { password: string }> = {
   },
 };
 
-// ─── Helper: abrir WebSocket y esperar a que esté listo ───────────────────────
-
-function abrirWS(): Promise<WebSocket> {
-  return new Promise((resolve, reject) => {
-    try {
-      const ws = new WebSocket(WS_URL);
-      ws.onopen = () => resolve(ws);
-      ws.onerror = () => reject(new Error("No se pudo conectar al servidor."));
-      ws.onclose = (e) => {
-        if (!e.wasClean) reject(new Error("Conexión cerrada inesperadamente."));
-      };
-    } catch {
-      reject(new Error("URL del servidor no válida."));
-    }
-  });
-}
-
 // ─── Inicio de sesión ─────────────────────────────────────────────────────────
 
 /**
  * Inicia sesión con nombre de usuario y contraseña.
- * Devuelve los datos del jugador si tiene éxito; lanza Error en caso contrario.
+ * Abre (o reutiliza) la conexión WS compartida y la mantiene abierta
+ * para que el servidor pueda enviar las notificaciones pendientes y
+ * para los mensajes del resto de la aplicación.
  *
- * Mensaje enviado:
- *   { tipo: "INICIAR_SESION", nombre: string, password: string }
- *
- * Respuestas esperadas:
- *   INICIO_SESION_EXITOSO → OK
- *   ERROR_SESION_USS      → usuario no encontrado
- *   ERROR_SESION_PSSWD    → contraseña incorrecta
+ * Lanza Error si las credenciales son incorrectas o hay fallo de red.
  */
 export async function iniciarSesion(
   nombre: string,
   password: string
 ): Promise<DatosSesion> {
-  // ── Mock ──────────────────────────────────────────────────────────────────
   if (!usarServidor) {
     const u = MOCK_USUARIOS[nombre];
     if (!u) throw new Error("Usuario no encontrado.");
@@ -86,142 +96,142 @@ export async function iniciarSesion(
     return datos;
   }
 
-  // ── Servidor ──────────────────────────────────────────────────────────────
-  const ws = await abrirWS();
+  await WS.conectar();
 
   return new Promise<DatosSesion>((resolve, reject) => {
     const timeout = setTimeout(() => {
-      ws.close();
+      unsub();
+      WS.desconectar();
       reject(new Error("El servidor no respondió a tiempo."));
     }, 10_000);
 
-    ws.onmessage = (ev) => {
+    const TIPOS_RESPUESTA = [
+      "INICIO_SESION_EXITOSO",
+      "ERROR_SESION_USS",
+      "ERROR_SESION_PSSWD",
+      "ERROR_BD",
+    ];
+
+    const unsub = WS.suscribirTodos((msg) => {
+      if (!TIPOS_RESPUESTA.includes(msg.tipo)) return;
+
       clearTimeout(timeout);
-      ws.close();
-      try {
-        const resp = JSON.parse(ev.data as string) as { tipo: string } & Record<string, unknown>;
-        if (resp.tipo === "INICIO_SESION_EXITOSO") {
-          resolve(resp as unknown as DatosSesion);
-        } else if (resp.tipo === "ERROR_SESION_USS") {
+      unsub();
+
+      if (msg.tipo === "INICIO_SESION_EXITOSO") {
+        // Configurar listener antes de resolver para capturar notificaciones
+        // que el servidor envía inmediatamente después de INICIO_SESION_EXITOSO
+        configurarListenerNotificaciones();
+        resolve(msg as unknown as DatosSesion);
+      } else {
+        WS.desconectar();
+        if (msg.tipo === "ERROR_SESION_USS") {
           reject(new Error("Usuario no encontrado."));
-        } else if (resp.tipo === "ERROR_SESION_PSSWD") {
+        } else if (msg.tipo === "ERROR_SESION_PSSWD") {
           reject(new Error("Contraseña incorrecta."));
         } else {
-          reject(new Error("Respuesta inesperada del servidor."));
+          reject(new Error("Error del servidor."));
         }
-      } catch {
-        reject(new Error("Respuesta inválida del servidor."));
       }
-    };
+    });
 
-    ws.onerror = () => {
-      clearTimeout(timeout);
-      reject(new Error("Error de conexión con el servidor."));
-    };
-
-    ws.send(JSON.stringify({ tipo: "INICIAR_SESION", nombre, password }));
+    WS.enviar({ tipo: "INICIAR_SESION", nombre, password });
   });
 }
 
 // ─── Registro ────────────────────────────────────────────────────────────────
 
 /**
- * Registra un nuevo usuario.
+ * Registra un nuevo usuario y devuelve los datos de sesión iniciales.
+ * El WS permanece abierto tras el registro, igual que tras el login.
+ * Los datos de sesión se construyen con los valores del formulario (puntos y
+ * cores comienzan en 0 para una cuenta nueva).
+ *
  * Lanza Error si el registro falla (usuario o correo ya existe, etc.).
- *
- * Mensaje enviado:
- *   { tipo: "REGISTRARSE", correo: string, nombre: string, password: string }
- *
- * Respuestas esperadas:
- *   REGISTRO_EXITOSO  → OK
- *   REGISTRO_ERRONEO  → error (usuario/correo ya existe)
  */
+export async function registrarUsuario(
+  correo: string,
+  nombre: string,
+  password: string
+): Promise<DatosSesion> {
+  if (!usarServidor) {
+    return {
+      nombre,
+      correo,
+      puntos: 0,
+      partidas_ganadas: 0,
+      partidas_jugadas: 0,
+      cores: 0,
+    };
+  }
+
+  await WS.conectar();
+
+  return new Promise<DatosSesion>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      unsub();
+      WS.desconectar();
+      reject(new Error("El servidor no respondió a tiempo."));
+    }, 10_000);
+
+    const unsub = WS.suscribirTodos((msg) => {
+      if (msg.tipo !== "REGISTRO_EXITOSO" && msg.tipo !== "REGISTRO_ERRONEO") return;
+
+      clearTimeout(timeout);
+      unsub();
+
+      if (msg.tipo === "REGISTRO_EXITOSO") {
+        // Configurar listener de notificaciones igual que en el login
+        configurarListenerNotificaciones();
+        resolve({
+          nombre,
+          correo,
+          puntos: 0,
+          partidas_ganadas: 0,
+          partidas_jugadas: 0,
+          cores: 0,
+        });
+      } else {
+        WS.desconectar();
+        reject(
+          new Error("No se pudo registrar. El usuario o correo ya podría existir.")
+        );
+      }
+    });
+
+    WS.enviar({ tipo: "REGISTRARSE", correo, nombre, password });
+  });
+}
+
+// ─── Obtener perfil ───────────────────────────────────────────────────────────
+
 /**
- * Pide al servidor los datos actualizados del jugador (puntos, cores, etc.)
+ * Pide al servidor los datos actualizados del jugador (puntos, cores, etc.).
  * Útil para refrescar la UI al entrar a la pantalla de partidas o tras una partida.
- *
- * Mensaje enviado:  { tipo: "OBTENER_PERFIL", nombre: string }
- * Respuesta:        PERFIL_ACTUALIZADO { tipo, nombre, correo, puntos, partidas_ganadas, partidas_jugadas, cores }
+ * Usa la conexión WS compartida; si no hay conexión activa, devuelve los datos
+ * almacenados en sesión sin lanzar error.
  */
 export async function obtenerPerfil(nombre: string): Promise<DatosSesion> {
   if (!usarServidor) {
     return obtenerJugadorActivo();
   }
 
-  const ws = await abrirWS();
+  if (!WS.estaConectado()) {
+    return obtenerJugadorActivo();
+  }
 
   return new Promise<DatosSesion>((resolve, reject) => {
     const timeout = setTimeout(() => {
-      ws.close();
+      unsub();
       reject(new Error("Timeout al obtener perfil."));
     }, 8_000);
 
-    ws.onmessage = (ev) => {
+    const unsub = WS.suscribir("PERFIL_ACTUALIZADO", (msg) => {
       clearTimeout(timeout);
-      ws.close();
-      try {
-        const resp = JSON.parse(ev.data as string) as { tipo: string } & Record<string, unknown>;
-        if (resp.tipo === "PERFIL_ACTUALIZADO") {
-          resolve(resp as unknown as DatosSesion);
-        } else {
-          reject(new Error("Respuesta inesperada del servidor."));
-        }
-      } catch {
-        reject(new Error("Respuesta inválida del servidor."));
-      }
-    };
+      unsub();
+      resolve(msg as unknown as DatosSesion);
+    });
 
-    ws.onerror = () => {
-      clearTimeout(timeout);
-      reject(new Error("Error de conexión al obtener perfil."));
-    };
-
-    ws.send(JSON.stringify({ tipo: "OBTENER_PERFIL", nombre }));
-  });
-}
-
-export async function registrarUsuario(
-  correo: string,
-  nombre: string,
-  password: string
-): Promise<void> {
-  // ── Mock ──────────────────────────────────────────────────────────────────
-  if (!usarServidor) {
-    // Simulamos éxito siempre en modo desarrollo
-    return;
-  }
-
-  // ── Servidor ──────────────────────────────────────────────────────────────
-  const ws = await abrirWS();
-
-  return new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      ws.close();
-      reject(new Error("El servidor no respondió a tiempo."));
-    }, 10_000);
-
-    ws.onmessage = (ev) => {
-      clearTimeout(timeout);
-      ws.close();
-      try {
-        const resp = JSON.parse(ev.data as string) as { tipo: string };
-        if (resp.tipo === "REGISTRO_EXITOSO") {
-          resolve();
-        } else if (resp.tipo === "REGISTRO_ERRONEO") {
-          reject(new Error("No se pudo registrar. El usuario o correo ya podría existir."));
-        } else {
-          reject(new Error("Respuesta inesperada del servidor."));
-        }
-      } catch {
-        reject(new Error("Respuesta inválida del servidor."));
-      }
-    };
-
-    ws.onerror = () => {
-      clearTimeout(timeout);
-      reject(new Error("Error de conexión con el servidor."));
-    };
-
-    ws.send(JSON.stringify({ tipo: "REGISTRARSE", correo, nombre, password }));
+    WS.enviar({ tipo: "OBTENER_PERFIL", nombre });
   });
 }

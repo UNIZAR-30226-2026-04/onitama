@@ -44,8 +44,8 @@ import { TODAS_LAS_CARTAS, getImagenCarta, type CartaMovDef } from "@/lib/cartas
 import { obtenerJugadorActivo, guardarSesion } from "@/lib/sesion";
 import { obtenerPerfil } from "@/api/auth";
 import { calcularMejorMovimientoIA, type Dificultad } from "@/lib/ia";
+import { usarServidor } from "@/api/ws";
 import {
-  getWsActivo,
   conectarPartida,
   enviarEstoyListo,
   enviarMovimiento,
@@ -324,11 +324,16 @@ function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificult
   const router = useRouter();
 
   // ── Detectar modo servidor (se comprueba una vez al montar) ─────────────────
-  const [esModoServidor] = useState<boolean>(() => !!getWsActivo());
+  // Se considera modo servidor si hay URL configurada Y datosPartida en sessionStorage
+  // (buscarpartida.ts guarda datosPartida al recibir PARTIDA_ENCONTRADA del servidor;
+  //  el modo entrenamiento/mock nunca lo guarda).
+  const [esModoServidor] = useState<boolean>(
+    () => usarServidor && !!sessionStorage.getItem("datosPartida")
+  );
   const enServidor = useRef(esModoServidor);
   /** Equipo del jugador local: 1 = arriba (rojo), 2 = abajo (azul). Por defecto 2 en mock. */
-  const equipoJugadorRef = useRef<1 | 2>(2);
-  const [miEquipoActual, setMiEquipoActual] = useState<1 | 2>(2);
+  const equipoJugadorRef = useRef<1 | 2>(1);
+  const [miEquipoActual, setMiEquipoActual] = useState<1 | 2>(1);
   const jugadorActual = obtenerJugadorActivo();
   const infoOponente = useRef<{ nombre: string; puntos: number }>(getMockOponente(dificultad));
   const [infoOponenteUI, setInfoOponenteUI] = useState<{ nombre: string; puntos: number }>(
@@ -338,7 +343,7 @@ function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificult
   const [mounted, setMounted] = useState(false);
   const [estado, setEstado] = useState<EstadoJuego>(() => ({
     tablero: crearTableroInicial(),
-    turnoActual: 2,
+    turnoActual: 1,
     // Use first 7 cards as stable initial state for SSR
     cartasJugador: [TODAS_LAS_CARTAS[0], TODAS_LAS_CARTAS[1]],
     cartasOponente: [TODAS_LAS_CARTAS[2], TODAS_LAS_CARTAS[3]],
