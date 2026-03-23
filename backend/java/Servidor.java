@@ -839,6 +839,34 @@ public class Servidor extends WebSocketServer {
         }
     }
 
+    public void buscarJugadores(WebSocket conn, JSONObject obj){
+        String raiz = obj.getString("raiz");
+        try {
+            JugadorJDBC jdbc = new JugadorJDBC();
+            List<Jugador> jugadores = jdbc.buscarJugadoresPorRaiz(raiz);
+            if (jugadores.isEmpty()) {
+                conn.send(new JSONObject().put("tipo", "NO_ENCONTRADOS").toString());
+                return;
+            }
+            JSONArray infoJugadores = new JSONArray();
+            for (Jugador j : jugadores) {
+                JSONObject info = new JSONObject();
+                info.put("nombre", j.getNombre());
+                info.put("puntos", j.getPuntos());
+                infoJugadores.put(info);
+            }
+
+            JSONObject msg = new JSONObject();
+            msg.put("tipo", "INFORMACION_JUGADORES");
+            msg.put("info", infoJugadores);
+            conn.send(msg.toString());
+                
+        } catch (SQLException e) {
+            System.err.println("Error al buscar por raiz a jugadores: " + e.getMessage());
+            conn.send(new JSONObject().put("tipo", "NO_ENCONTRADOS").toString());
+        }
+    }
+
     public Servidor(int puerto) {
         super(new InetSocketAddress(puerto));
         conectados = new ArrayList<>();
@@ -910,6 +938,8 @@ public class Servidor extends WebSocketServer {
                 rechazarInvitacion(conn, obj);
             } else if (tipoMSG.equals("OBTENER_PERFIL")){
                 obtenerPerfil(conn, obj);
+            } else if (tipoMSG.equals("BUSCAR_JUGADORES")){
+                buscarJugadores(conn, obj);
             }
         });
     }

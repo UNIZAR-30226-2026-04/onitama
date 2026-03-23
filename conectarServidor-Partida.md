@@ -35,6 +35,18 @@ Si esta variable no está definida (o el servidor no responde), el frontend usa 
 
 ### 2.2 Mensajes que envía el CLIENTE al servidor
 
+#### `BUSCAR_JUGADORES`
+Se envia cuando busques un jugador, la raiz corresponde con la subcadena
+
+```json
+{
+  "tipo": "BUSCAR_JUGADORES",
+  "raiz": "Iron"
+}
+```
+
+---
+
 #### `ACEPTAR_AMISTAD`
 Se envia cuando aceptes la solicitud, el remitente es quien te mando la solicitud
 
@@ -199,6 +211,35 @@ Se envía cuando el jugador rechaza una invitación a partida privada.
 
 ### 2.3 Mensajes que envía el SERVIDOR al cliente
 
+#### `INFORMACION_JUGADORES`
+
+```json
+{
+  "tipo": "INFORMACION_JUGADORES",
+  "info": [
+    {
+      "nombre": "Iron",
+      "puntos": 10
+    },
+    {
+      "nombre": "Iron1",
+      "puntos": 25
+    }
+  ]
+}
+```
+
+---
+#### `NO_ENCONTRADOS`
+Mensaje que manda el servidor si no encuentra ningun jugador con la subcadena
+
+```json
+{
+  "tipo": "NO_ENCONTRADOS"
+}
+```
+
+---
 #### `AMISTAD_ACEPTADA`
 
 ```json

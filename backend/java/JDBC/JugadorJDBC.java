@@ -63,6 +63,24 @@ public final class JugadorJDBC{
         }
     }
 
+    public List<Jugador> buscarJugadoresPorRaiz(String nombreUS) throws SQLException {
+        final String sql = "SELECT * FROM jugadores WHERE nombre LIKE ?";
+        List<Jugador> lista = new ArrayList<>();
+
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            ps.setString(1, nombreUS + "%");
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(montarJugador(rs));
+                }
+            }
+        }
+        return lista; 
+    }
+
     public boolean updatePuntos(String nombreUS, int nuevosPuntos) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Puntos = ? WHERE Nombre_US = ?")) { 
