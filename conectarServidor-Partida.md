@@ -34,7 +34,29 @@ Si esta variable no está definida (o el servidor no responde), el frontend usa 
 ---
 
 ### 2.2 Mensajes que envía el CLIENTE al servidor
+#### `BORRAR_AMIGO`
+Borra la amistad entre el usuario y el amigo
 
+```json
+{
+  "tipo": "BORRAR_AMIGO",
+  "usuario": "Iron",
+  "amigo": "Taisen"
+}
+```
+
+---
+#### `OBTENER_AMIGOS`
+Busca todos los amigos del usuario pasado
+
+```json
+{
+  "tipo": "OBTENER_AMIGOS",
+  "usuario": "Iron"
+}
+```
+
+---
 #### `BUSCAR_JUGADORES`
 Se envia cuando busques un jugador, la raiz corresponde con la subcadena
 
@@ -209,8 +231,64 @@ Se envía cuando el jugador rechaza una invitación a partida privada.
 
 ---
 
-### 2.3 Mensajes que envía el SERVIDOR al cliente
+### 2.3 Mensajes que envía el SERVIDOR al cliente 
+#### `ERROR_AL_BORRAR_AMIGO`
 
+```json
+{
+  "tipo": "ERROR_AL_BORRAR_AMIGO"
+}
+```
+
+---
+#### `AMIGO_BORRADO`
+
+```json
+{
+  "tipo": "AMIGO_BORRADO"
+}
+```
+
+---
+#### `ERROR_AMIGOS`
+El servidor manda este mensaje si ha habido un error al buscar amigos
+
+```json
+{
+  "tipo": "ERROR_AMIGOS"
+}
+```
+
+---
+#### `NO_AMIGOS`
+El servidor manda este mensaje si no hay amigos
+
+```json
+{
+  "tipo": "NO_AMIGOS"
+}
+```
+
+---
+#### `INFORMACION_AMIGOS`
+
+```json
+{
+  "tipo": "INFORMACION_AMIGOS",
+  "info": [
+    {
+      "nombre": "Iron",
+      "puntos": 10
+    },
+    {
+      "nombre": "Iron1",
+      "puntos": 25
+    }
+  ]
+}
+```
+
+---
 #### `INFORMACION_JUGADORES`
 
 ```json

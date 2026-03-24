@@ -862,8 +862,61 @@ public class Servidor extends WebSocketServer {
             conn.send(msg.toString());
                 
         } catch (SQLException e) {
+            e.printStackTrace();
+            System.err.println("SQL State: " + e.getSQLState());
             System.err.println("Error al buscar por raiz a jugadores: " + e.getMessage());
             conn.send(new JSONObject().put("tipo", "NO_ENCONTRADOS").toString());
+        }
+    }
+
+    public void buscarAmigos(WebSocket conn, JSONObject obj){
+        String usuario = obj.getString("usuario");
+        try {
+            JugadorJDBC jdbc = new JugadorJDBC();
+            List<Jugador> jugadores = jdbc.sacarAmigos(usuario);
+            if (jugadores.isEmpty()) {
+                conn.send(new JSONObject().put("tipo", "NO_AMIGOS").toString());
+                return;
+            }
+            JSONArray infoJugadores = new JSONArray();
+            for (Jugador j : jugadores) {
+                JSONObject info = new JSONObject();
+                info.put("nombre", j.getNombre());
+                info.put("puntos", j.getPuntos());
+                infoJugadores.put(info);
+            }
+
+            JSONObject msg = new JSONObject();
+            msg.put("tipo", "INFORMACION_AMIGOS");
+            msg.put("info", infoJugadores);
+            conn.send(msg.toString());
+                
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.err.println("SQL State: " + e.getSQLState());
+            System.err.println("Error al buscar amigos: " + e.getMessage());
+            conn.send(new JSONObject().put("tipo", "ERROR_AMIGOS").toString());
+        }
+    }
+
+    public void borrarAmigo(WebSocket conn, JSONObject obj){
+        String usuario = obj.getString("usuario");
+        String amigo = obj.getString("amigo");
+        try {
+            JugadorJDBC jdbc = new JugadorJDBC();
+            JSONObject msg = new JSONObject();
+            if(jdbc.borrarAmigo(usuario, amigo)){
+                msg.put("tipo", "AMIGO_BORRADO");
+                conn.send(msg.toString());
+            }else{
+                msg.put("tipo", "ERROR_AL_BORRAR_AMIGO");
+                conn.send(msg.toString());
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.err.println("SQL State: " + e.getSQLState());
+            System.err.println("Error al buscar amigos: " + e.getMessage());
+            conn.send(new JSONObject().put("tipo", "ERROR_AL_BORRAR_AMIGO").toString());
         }
     }
 
@@ -940,6 +993,10 @@ public class Servidor extends WebSocketServer {
                 obtenerPerfil(conn, obj);
             } else if (tipoMSG.equals("BUSCAR_JUGADORES")){
                 buscarJugadores(conn, obj);
+            } else if (tipoMSG.equals("OBTENER_AMIGOS")){
+                buscarAmigos(conn, obj);
+            } else if (tipoMSG.equals("BORRAR_AMIGO")){
+                borrarAmigo(conn, obj);
             }
         });
     }
