@@ -26,7 +26,7 @@
             </intent-filter>
         </activity>
 
-        // Resto de actividades implementadas por el momento
+
         <activity
             android:name=".ui.activities.Ini_Reg_Activity">
         </activity>
@@ -42,6 +42,10 @@
         <activity
             android:name=".ui.activities.Reg_Activity">
         </activity>
+        <activity
+            android:name=".ui.activities.Buscar_PartidaActivity">
+        </activity>
+
 
     </application>
 </manifest>

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.*
 import es.irontaisen.onitama.ui.start.PantallaInicial
 import es.irontaisen.onitama.ui.login.PantallaInicioSesion
+import es.irontaisen.onitama.ui.login.PantallaRegistro
 
 /**
  * Composable encargado de gestionar la navegación inicial.
