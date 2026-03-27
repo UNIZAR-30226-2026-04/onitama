@@ -82,7 +82,7 @@ public final class PartidaJDBC {
     }
 
     public List<Partida> buscarPartidasJugadorPublicas(String nombreUS) throws SQLException {
-        final String sql = "SELECT * FROM Partida WHERE (J1 = ? OR J2 = ?) AND Tipo = 'Publico' ORDER BY ID_Partida DESC LIMIT 3";
+        final String sql = "SELECT * FROM Partida WHERE (J1 = ? OR J2 = ?) AND Tipo = 'PUBLICA' ORDER BY ID_Partida DESC LIMIT 3";
 
         List<Partida> partidas = new ArrayList<>();
 
