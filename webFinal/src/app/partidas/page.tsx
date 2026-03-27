@@ -16,11 +16,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { obtenerJugadorActivo, guardarSesion, type DatosSesion } from "@/lib/sesion";
+import { obtenerJugadorActivo, guardarSesion, cerrarSesion, type DatosSesion } from "@/lib/sesion";
 import { obtenerPerfil } from "@/api/auth";
 import {
   leerNotificaciones,
   eliminarNotificacion,
+  limpiarNotificaciones,
   type Notificacion,
 } from "@/lib/notificaciones";
 import {
@@ -28,6 +29,7 @@ import {
   obtenerAmigos,
   borrarAmigo,
   obtenerPartidasConAmigo,
+  obtenerPartidasPublicas,
   enviarInvitacionPartidaPrivada,
   aceptarInvitacionPartidaPrivada,
   rechazarInvitacionPartidaPrivada,
@@ -37,6 +39,7 @@ import {
   type InfoJugadorBusqueda,
   type InfoAmigo,
   type ResumenPartidaAmigo,
+  type ResumenPartidaPublica,
 } from "@/api/social";
 import * as WS from "@/api/ws";
 
@@ -69,6 +72,7 @@ const MENU_LATERAL = [
   { id: "amigos", label: "Mis amigos" },
   { id: "tienda", label: "Tienda" },
   { id: "notificaciones", label: "Notificaciones" },
+  { id: "cuenta", label: "Mi cuenta" },
 ];
 
 const NIVELES_DIFICULTAD = [
@@ -138,6 +142,10 @@ export default function PartidasPage() {
     new Set()
   );
 
+  const [mostrarModalCerrarSesion, setMostrarModalCerrarSesion] = useState(false);
+  const [partidasPublicas, setPartidasPublicas] = useState<ResumenPartidaPublica[]>([]);
+  const [cargandoPartidasPublicas, setCargandoPartidasPublicas] = useState(false);
+
   // ── Efectos ─────────────────────────────────────────────────────────────────
 
   /** Cargar notificaciones del sessionStorage y suscribirse a nuevas por WS. */
@@ -199,6 +207,22 @@ export default function PartidasPage() {
       })
       .catch(() => {});
   }, []);
+
+  /** Panel Mi cuenta: refrescar perfil e historial de partidas públicas. */
+  useEffect(() => {
+    if (panelActivo !== "cuenta" || !jugador.nombre) return;
+    setCargandoPartidasPublicas(true);
+    obtenerPerfil(jugador.nombre)
+      .then((datos) => {
+        guardarSesion(datos);
+        setJugador(datos);
+      })
+      .catch(() => {});
+    obtenerPartidasPublicas(jugador.nombre)
+      .then((lista) => setPartidasPublicas(lista))
+      .catch(() => setPartidasPublicas([]))
+      .finally(() => setCargandoPartidasPublicas(false));
+  }, [panelActivo, jugador.nombre]);
 
   /** Cargar amigos desde backend al abrir el panel de amigos. */
   useEffect(() => {
@@ -302,6 +326,8 @@ export default function PartidasPage() {
 
   const handleSeleccionarDificultad = (dificultad: string) => {
     setMostrarModalDificultad(false);
+    // Evitar que datosPartida de una partida online/privada anterior active modo servidor en entrenamiento
+    sessionStorage.removeItem("datosPartida");
     router.push(`/partida?modo=entrenamiento&dificultad=${dificultad}`);
   };
 
@@ -379,6 +405,15 @@ export default function PartidasPage() {
     [jugador.nombre, amigoSeleccionado]
   );
 
+  const handleConfirmarCerrarSesion = useCallback(() => {
+    setMostrarModalCerrarSesion(false);
+    cerrarSesion();
+    limpiarNotificaciones();
+    sessionStorage.removeItem("datosPartida");
+    WS.desconectar();
+    router.push("/");
+  }, [router]);
+
   const handleInvitarPartidaPrivada = useCallback(
     (amigo: InfoAmigo) => {
       const ok = enviarInvitacionPartidaPrivada(jugador.nombre, amigo.nombre);
@@ -399,7 +434,7 @@ export default function PartidasPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <header className="bg-[#1a2d4a] px-6 py-3 flex items-center justify-between shrink-0">
+      <header className="bg-[#1a2d4a] px-6 py-3 flex items-center justify-between shrink-0 gap-4">
         <div className="flex items-center" aria-label="Onitama">
           <Image
             src="/nombre.png"
@@ -411,24 +446,48 @@ export default function PartidasPage() {
           />
         </div>
 
-        <div className="flex items-center gap-5">
-          <div className="w-11 h-11 rounded-full bg-[#2a4a6a] border-2 border-white/30 flex items-center justify-center overflow-hidden">
-            <span className="text-white/50 text-xs select-none">
+        <div className="flex items-center gap-4 sm:gap-6 min-w-0 flex-1 justify-end">
+          <button
+            type="button"
+            onClick={() => handleMenuClick("cuenta")}
+            className={`w-11 h-11 shrink-0 rounded-full border-2 flex items-center justify-center overflow-hidden transition-colors ${
+              panelActivo === "cuenta"
+                ? "bg-white/20 border-white/60"
+                : "bg-[#2a4a6a] border-white/30 hover:bg-white/10"
+            }`}
+            title="Mi cuenta"
+            aria-label="Abrir Mi cuenta"
+          >
+            <span className="text-white/90 text-sm font-semibold select-none">
               {jugador.nombre.charAt(0).toUpperCase()}
             </span>
-          </div>
+          </button>
           <div className="flex items-center gap-2">
-            <Image src="/katanas.png" alt="Puntos" width={22} height={22} className="h-5 w-auto" />
-            <span className="text-white font-semibold text-sm">
+            <Image src="/katanas.png" alt="Katanas" width={22} height={22} className="h-5 w-auto shrink-0" />
+            <span className="text-white font-semibold text-sm tabular-nums">
               {jugador.puntos.toLocaleString()}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Image src="/core.png" alt="Cores" width={22} height={22} className="h-5 w-auto" />
-            <span className="text-white font-semibold text-sm">
+            <Image src="/core.png" alt="Cores" width={22} height={22} className="h-5 w-auto shrink-0" />
+            <span className="text-white font-semibold text-sm tabular-nums">
               {jugador.cores.toLocaleString()}
             </span>
           </div>
+          <div className="hidden sm:block h-8 w-px bg-white/20 shrink-0" aria-hidden />
+          <button
+            type="button"
+            onClick={() => setMostrarModalCerrarSesion(true)}
+            className="shrink-0 p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            title="Salir"
+            aria-label="Cerrar sesión"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -550,6 +609,14 @@ export default function PartidasPage() {
               onRechazarAmistad={handleRechazarSolicitud}
               onAceptarInvitacionPartida={handleAceptarInvitacionPartida}
               onRechazarInvitacionPartida={handleRechazarInvitacionPartida}
+            />
+          )}
+
+          {panelActivo === "cuenta" && (
+            <PanelMiCuenta
+              jugador={jugador}
+              partidasPublicas={partidasPublicas}
+              cargandoPartidasPublicas={cargandoPartidasPublicas}
             />
           )}
 
@@ -707,6 +774,42 @@ export default function PartidasPage() {
       )}
 
       {/* ─── Pantalla de espera: invitación privada en curso ───────────── */}
+      {mostrarModalCerrarSesion && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
+            <span className="text-4xl" aria-hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-12 h-12 text-white/70 mx-auto">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </span>
+            <h2 className="text-xl font-bold text-white uppercase tracking-widest text-center">
+              ¿Cerrar sesión?
+            </h2>
+            <p className="text-white/60 text-sm text-center">
+              Se cerrará la conexión con el servidor y volverás a la página de inicio.
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setMostrarModalCerrarSesion(false)}
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarCerrarSesion}
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-red-700 text-white hover:bg-red-600 transition-colors"
+              >
+                Salir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {invitacionPrivadaEnCurso && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1522]/90 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg bg-[#1a2d4a] rounded-2xl border border-white/10 p-8 text-white text-center shadow-2xl">
@@ -729,6 +832,202 @@ export default function PartidasPage() {
 }
 
 // ─── Subcomponentes ───────────────────────────────────────────────────────────
+
+function formatearDuracionPartida(segundos: number): string {
+  if (!Number.isFinite(segundos) || segundos <= 0) return "";
+  const s = Math.floor(segundos % 60);
+  const m = Math.floor(segundos / 60) % 60;
+  const h = Math.floor(segundos / 3600);
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m} min ${s}s`;
+  return `${s}s`;
+}
+
+function nombresCoinciden(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/** Fila de historial (públicas o privadas): verde / rojo / amarillo (pendiente, empate, pausa…). */
+function FilaHistorialPartidaCard({
+  rivalNombre,
+  jugadorNombre,
+  estado,
+  ganador,
+  tiempo,
+}: {
+  rivalNombre: string;
+  jugadorNombre: string;
+  estado: string;
+  ganador: string | number;
+  tiempo: number;
+}) {
+  const ganadorStr = String(ganador ?? "").trim();
+  const est = String(estado ?? "").trim();
+
+  const soyGanador =
+    ganadorStr.length > 0 &&
+    ganadorStr !== "Empate" &&
+    ganadorStr !== "NO_HAY" &&
+    nombresCoinciden(ganadorStr, jugadorNombre);
+  const soyPerdedor =
+    est.toUpperCase() === "FINALIZADA" &&
+    ganadorStr.length > 0 &&
+    ganadorStr !== "Empate" &&
+    ganadorStr !== "NO_HAY" &&
+    !nombresCoinciden(ganadorStr, jugadorNombre);
+
+  const panelVictoria = soyGanador;
+  const panelDerrota = soyPerdedor;
+
+  const duracionTxt = formatearDuracionPartida(tiempo);
+
+  const liClass = panelVictoria
+    ? "rounded-xl border border-emerald-500/90 bg-emerald-600 px-4 py-3 text-sm text-white shadow-sm"
+    : panelDerrota
+      ? "rounded-xl border border-red-600/90 bg-red-700 px-4 py-3 text-sm text-white shadow-sm"
+      : "rounded-xl border border-amber-400/90 bg-amber-500 px-4 py-3 text-sm text-white shadow-sm";
+
+  const textoDuracion = "text-white/80 text-xs mt-2";
+
+  return (
+    <li className={liClass}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="font-medium text-white">vs @{rivalNombre}</span>
+        <div className="flex items-center gap-2 min-w-0">
+          {panelVictoria ? (
+            <>
+              <div className="relative w-9 h-9 shrink-0">
+                <Image
+                  src="/emoteVictoria.png"
+                  alt=""
+                  fill
+                  className="object-contain drop-shadow-sm"
+                  sizes="36px"
+                />
+              </div>
+              <span className="font-semibold text-white">
+                Ganador: <span className="font-bold">@{ganadorStr}</span>
+              </span>
+            </>
+          ) : panelDerrota ? (
+            <>
+              <div className="relative w-9 h-9 shrink-0">
+                <Image
+                  src="/emoteDerrota.png"
+                  alt=""
+                  fill
+                  className="object-contain drop-shadow-sm"
+                  sizes="36px"
+                />
+              </div>
+              <span className="font-semibold text-white">
+                Ganador: <span className="font-bold">@{ganadorStr}</span>
+              </span>
+            </>
+          ) : (
+            <>
+              <div className="relative w-9 h-9 shrink-0">
+                <Image
+                  src="/katanas.png"
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="object-contain drop-shadow-sm"
+                />
+              </div>
+              <span className="font-semibold text-white">Ganador: NO_HAY</span>
+            </>
+          )}
+        </div>
+      </div>
+      {duracionTxt ? <p className={textoDuracion}>Duración: {duracionTxt}</p> : null}
+    </li>
+  );
+}
+
+function PanelMiCuenta({
+  jugador,
+  partidasPublicas,
+  cargandoPartidasPublicas,
+}: {
+  jugador: DatosSesion;
+  partidasPublicas: ResumenPartidaPublica[];
+  cargandoPartidasPublicas: boolean;
+}) {
+  const ultimas = [...partidasPublicas].slice(-10).reverse();
+
+  return (
+    <div className="max-w-3xl mx-auto px-6 py-8">
+      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2">Mi cuenta</h2>
+      <p className="text-stone-500 text-sm mb-8">
+        Datos de tu perfil. El cambio de nombre y contraseña estará disponible cuando el servidor lo soporte.
+      </p>
+
+      <div className="rounded-2xl border border-stone-200 bg-white shadow-sm p-6 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+          <div className="w-16 h-16 rounded-full bg-[#1a2d4a] text-white flex items-center justify-center text-2xl font-bold shrink-0">
+            {jugador.nombre.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <p className="text-lg font-semibold text-stone-900">@{jugador.nombre}</p>
+            <p className="text-sm text-stone-500">{jugador.correo}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="rounded-xl bg-stone-50 border border-stone-100 px-4 py-3">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 mb-1">Katanas</p>
+            <div className="flex items-center gap-2">
+              <Image src="/katanas.png" alt="" width={20} height={20} className="h-5 w-auto" />
+              <span className="font-mono font-bold text-stone-800">{jugador.puntos.toLocaleString()}</span>
+            </div>
+          </div>
+          <div className="rounded-xl bg-stone-50 border border-stone-100 px-4 py-3">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 mb-1">Cores</p>
+            <div className="flex items-center gap-2">
+              <Image src="/core.png" alt="" width={20} height={20} className="h-5 w-auto" />
+              <span className="font-mono font-bold text-stone-800">{jugador.cores.toLocaleString()}</span>
+            </div>
+          </div>
+          <div className="rounded-xl bg-stone-50 border border-stone-100 px-4 py-3">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 mb-1">Partidas jugadas</p>
+            <span className="font-mono font-bold text-stone-800 text-lg">{jugador.partidas_jugadas}</span>
+          </div>
+          <div className="rounded-xl bg-stone-50 border border-stone-100 px-4 py-3">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 mb-1">Partidas ganadas</p>
+            <span className="font-mono font-bold text-stone-800 text-lg">{jugador.partidas_ganadas}</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-bold text-stone-700 uppercase tracking-widest mb-4">
+          Últimas partidas públicas
+        </h3>
+        {cargandoPartidasPublicas ? (
+          <p className="text-stone-400 text-sm animate-pulse">Cargando historial…</p>
+        ) : ultimas.length === 0 ? (
+          <p className="text-stone-500 text-sm rounded-xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-center">
+            No hay partidas públicas registradas o no hay conexión con el servidor.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {ultimas.map((p, idx) => (
+              <FilaHistorialPartidaCard
+                key={`${p.oponente}-${p.tiempo}-${idx}`}
+                rivalNombre={p.oponente}
+                jugadorNombre={jugador.nombre}
+                estado={p.estado}
+                ganador={p.ganador}
+                tiempo={p.tiempo}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface PanelAmigosProps {
   jugador: DatosSesion;
@@ -966,16 +1265,14 @@ function PanelAmigos({
                 ) : (
                   <ul className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
                     {partidasConAmigo.map((p, idx) => (
-                      <li
+                      <FilaHistorialPartidaCard
                         key={`${p.oponente}-${p.estado}-${p.tiempo}-${idx}`}
-                        className="rounded-2xl bg-stone-100 px-4 py-3 text-sm text-stone-700"
-                      >
-                        <span className="font-bold">{p.estado}</span>
-                        <span className="mx-2 text-stone-400">•</span>
-                        <span>Ganador: {p.ganador}</span>
-                        <span className="mx-2 text-stone-400">•</span>
-                        <span>Duración: {p.tiempo}s</span>
-                      </li>
+                        rivalNombre={p.oponente}
+                        jugadorNombre={jugador.nombre}
+                        estado={p.estado}
+                        ganador={p.ganador}
+                        tiempo={p.tiempo}
+                      />
                     ))}
                   </ul>
                 )}

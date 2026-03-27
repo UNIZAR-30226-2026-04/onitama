@@ -85,12 +85,20 @@ export interface RespuestaDerrota {
   tipo: "DERROTA";
 }
 
+/** Fin de partida con detalle (si el servidor envía TERMINAR_PARTIDA). */
+export interface RespuestaTerminarPartida {
+  tipo: "TERMINAR_PARTIDA";
+  ganador: string;
+  razon: string;
+}
+
 export type MensajeServidor =
   | RespuestaTuTurno
   | RespuestaMover
   | RespuestaPartidaEncontrada
   | RespuestaVictoria
   | RespuestaDerrota
+  | RespuestaTerminarPartida
   | { tipo: string; [key: string]: unknown };
 
 // ─── Conexión a la partida ────────────────────────────────────────────────────

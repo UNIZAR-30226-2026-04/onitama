@@ -46,6 +46,7 @@ import { calcularMejorMovimientoIA, type Dificultad } from "@/lib/ia";
 import { usarServidor } from "@/api/ws";
 import {
   conectarPartida,
+  desconectarPartida,
   enviarEstoyListo,
   enviarMovimiento,
   enviarAbandonar,
@@ -319,16 +320,28 @@ function UltimoMovimientoGhost({
 
 // ─── Lógica principal ─────────────────────────────────────────────────────────
 
-function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificultad: Dificultad }) {
+function PartidaInterna({
+  partidaId,
+  dificultad,
+  modoEntrenamiento,
+}: {
+  partidaId: string;
+  dificultad: Dificultad;
+  modoEntrenamiento: boolean;
+}) {
   const router = useRouter();
 
   // ── Detectar modo servidor (se comprueba una vez al montar) ─────────────────
   // Se considera modo servidor si hay URL configurada Y datosPartida en sessionStorage
   // (buscarpartida.ts guarda datosPartida al recibir PARTIDA_ENCONTRADA del servidor;
   //  el modo entrenamiento/mock nunca lo guarda).
-  const [esModoServidor] = useState<boolean>(
-    () => usarServidor && !!sessionStorage.getItem("datosPartida")
-  );
+  const [esModoServidor] = useState<boolean>(() => {
+    if (modoEntrenamiento) {
+      sessionStorage.removeItem("datosPartida");
+      return false;
+    }
+    return usarServidor && !!sessionStorage.getItem("datosPartida");
+  });
   const enServidor = useRef(esModoServidor);
   /** Equipo del jugador local: 1 = arriba (rojo), 2 = abajo (azul). Por defecto 2 en mock. */
   const equipoJugadorRef = useRef<1 | 2>(1);
@@ -365,14 +378,18 @@ function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificult
     const raw = sessionStorage.getItem("datosPartida");
     if (raw) {
       try {
-        const datos = JSON.parse(raw) as RespuestaPartidaEncontrada & { tipo?: string };
-        setEstado(crearEstadoDesdeServidor(datos));
+        const datos = JSON.parse(raw) as Omit<RespuestaPartidaEncontrada, "tipo"> & {
+          tipo?: "PARTIDA_ENCONTRADA" | "PARTIDA_PRIVADA_ENCONTRADA";
+        };
+        setEstado(crearEstadoDesdeServidor(datos as RespuestaPartidaEncontrada));
         equipoJugadorRef.current = datos.equipo;
         setMiEquipoActual(datos.equipo);
         infoOponente.current = { nombre: datos.oponente, puntos: datos.oponentePt };
         setInfoOponenteUI({ nombre: datos.oponente, puntos: datos.oponentePt });
         setAguardandoInicio(datos.equipo === 2);
-        setTipoPartida(datos.tipo === "PARTIDA_PRIVADA_ENCONTRADA" ? "PRIVADA" : "PUBLICA");
+        setTipoPartida(
+          datos.tipo === "PARTIDA_PRIVADA_ENCONTRADA" ? "PRIVADA" : "PUBLICA"
+        );
       } catch {
         setEstado(crearEstadoInicial());
         setAguardandoInicio(false);
@@ -398,6 +415,9 @@ function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificult
 
   /** Controla la visibilidad del modal de confirmación de abandono */
   const [mostrarModalAbandono, setMostrarModalAbandono] = useState(false);
+  /** Modal de solicitud de pausa (solo partidas privadas) */
+  const [mostrarModalPausa, setMostrarModalPausa] = useState(false);
+  const [mensajePausaPendiente, setMensajePausaPendiente] = useState<string | null>(null);
 
   const iaOcupada = useRef(false);
 
@@ -669,8 +689,21 @@ function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificult
   /** El jugador confirma que quiere abandonar: notifica al servidor y vuelve */
   const handleConfirmarAbandonar = () => {
     setMostrarModalAbandono(false);
-    enviarAbandonar(equipoJugadorRef.current);
+    if (enServidor.current) {
+      enviarAbandonar(equipoJugadorRef.current);
+      desconectarPartida();
+    }
     volverAPartidas();
+  };
+
+  /**
+   * Placeholder frontend para el flujo de pausa en privada.
+   * Cuando backend lo soporte, aquí se enviará SOLICITAR_PAUSA.
+   */
+  const handleConfirmarPausa = () => {
+    setMostrarModalPausa(false);
+    setMensajePausaPendiente("Solicitud de pausa preparada. Pendiente de soporte backend.");
+    window.setTimeout(() => setMensajePausaPendiente(null), 3500);
   };
 
   // ─── Derivados para el render ──────────────────────────────────────────────
@@ -837,6 +870,37 @@ function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificult
         </div>
       )}
 
+      {/* ═══ MODAL: SOLICITAR PAUSA (PRIVADA) ═══════════════════════════════ */}
+      {mostrarModalPausa && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
+            <span className="text-4xl">⏸️</span>
+            <h2 className="text-xl font-bold text-white uppercase tracking-widest text-center">
+              ¿Solicitar pausa?
+            </h2>
+            <p className="text-white/60 text-sm text-center">
+              Se enviará una solicitud de pausa a tu rival. Si acepta, la partida quedará pausada para reanudarla más adelante.
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setMostrarModalPausa(false)}
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarPausa}
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-amber-700 text-white hover:bg-amber-600 transition-colors"
+              >
+                Solicitar pausa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ═══ ÁREA DE JUEGO ══════════════════════════════════════════════════ */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
@@ -971,6 +1035,23 @@ function PartidaInterna({ partidaId, dificultad }: { partidaId: string; dificult
             🚩 Abandonar
           </button>
 
+          {tipoPartida === "PRIVADA" && (
+            <button
+              type="button"
+              onClick={() => setMostrarModalPausa(true)}
+              disabled={hayFinPartida}
+              className="w-full py-1.5 rounded-lg border border-amber-700/60 text-amber-300/80 text-xs font-bold uppercase tracking-widest hover:bg-amber-900/20 hover:text-amber-200 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ⏸️ Pausar
+            </button>
+          )}
+
+          {tipoPartida === "PRIVADA" && mensajePausaPendiente && (
+            <p className="text-[10px] text-amber-200/80 bg-amber-900/20 border border-amber-700/30 rounded-md px-2 py-1">
+              {mensajePausaPendiente}
+            </p>
+          )}
+
           <div className="flex flex-col gap-1.5 shrink-0">
             <p className="text-white/40 text-[9px] uppercase tracking-widest text-center">
               {esTurnoJugador ? "Elige una carta" : "Tus cartas"}
@@ -1028,10 +1109,17 @@ function PartidaConParams() {
   const searchParams = useSearchParams();
   const partidaId = searchParams.get("id") ?? "local";
   const dificultadParam = searchParams.get("dificultad") ?? "medio";
+  const modoEntrenamiento = searchParams.get("modo") === "entrenamiento";
   const dificultad: Dificultad = (["facil", "medio", "dificil"] as const).includes(dificultadParam as Dificultad)
     ? (dificultadParam as Dificultad)
     : "medio";
-  return <PartidaInterna partidaId={partidaId} dificultad={dificultad} />;
+  return (
+    <PartidaInterna
+      partidaId={partidaId}
+      dificultad={dificultad}
+      modoEntrenamiento={modoEntrenamiento}
+    />
+  );
 }
 
 export default function PartidaPage() {

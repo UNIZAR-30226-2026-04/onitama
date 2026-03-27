@@ -32,8 +32,20 @@ const suscripciones = new Map<string, Set<Listener>>();
 const suscripcionesGlobales = new Set<Listener>();
 
 function despachar(msg: MensajeWS): void {
-  suscripciones.get(msg.tipo)?.forEach((fn) => fn(msg));
-  suscripcionesGlobales.forEach((fn) => fn(msg));
+  suscripciones.get(msg.tipo)?.forEach((fn) => {
+    try {
+      fn(msg);
+    } catch (e) {
+      console.error("[ws] Error en listener tipado:", msg.tipo, e);
+    }
+  });
+  suscripcionesGlobales.forEach((fn) => {
+    try {
+      fn(msg);
+    } catch (e) {
+      console.error("[ws] Error en listener global:", msg.tipo, e);
+    }
+  });
 }
 
 /** Registra los manejadores de mensajes/errores/cierre sobre el WS activo. */

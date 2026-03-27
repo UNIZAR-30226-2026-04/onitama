@@ -67,7 +67,7 @@ export function buscarPartida(
   puntos = 0,
   timeoutMs = 45_000
 ): ResultadoBusqueda {
-  if (!WS.usarServidor || !WS.estaConectado()) {
+  if (!WS.usarServidor) {
     return {
       promise: mockBuscarPartida(),
       cancel: () => {},
@@ -81,55 +81,73 @@ export function buscarPartida(
 
   let resuelto = false;
   let unsub: (() => void) | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
 
   const resolver = (r: RespuestaBuscarPartida) => {
     if (resuelto) return;
     resuelto = true;
+    if (timer !== null) clearTimeout(timer);
     unsub?.();
     resolvePromise(r);
   };
 
-  const timer = setTimeout(() => {
-    resolver({
-      estado: "TIMEOUT",
-      mensaje: "Sin respuesta del servidor. Inténtalo de nuevo.",
-    });
-  }, timeoutMs);
-
   const cancel = () => {
     if (resuelto) return;
-    clearTimeout(timer);
     WS.enviar({ tipo: "CANCELAR" });
     resolver({ estado: "CANCELADO", mensaje: "Búsqueda cancelada" });
   };
 
-  unsub = WS.suscribirTodos((msg) => {
-    if (msg.tipo !== "PARTIDA_ENCONTRADA" && msg.tipo !== "PARTIDA_PRIVADA_ENCONTRADA") return;
+  void (async () => {
+    try {
+      await WS.conectar();
+      if (resuelto) return;
 
-    clearTimeout(timer);
-    if (resuelto) return;
+      if (!WS.estaConectado()) {
+        resolver(await mockBuscarPartida());
+        return;
+      }
 
-    // Guardar todos los datos para que /partida/page.tsx los lea al inicializarse
-    sessionStorage.setItem("datosPartida", JSON.stringify(msg));
+      const handler = (msg: WS.MensajeWS) => {
+        if (resuelto) return;
+        // Guardar todos los datos para que /partida/page.tsx los lea al inicializarse
+        sessionStorage.setItem("datosPartida", JSON.stringify(msg));
 
-    resolver({
-      estado: "ENCONTRADA",
-      mensaje: `¡Partida encontrada! Rivalizarás contra @${msg.oponente as string}`,
-      partida_id: msg.partida_id as string,
-      oponente: msg.oponente as string,
-      oponentePt: msg.oponentePt as number,
-    });
-  });
+        resolver({
+          estado: "ENCONTRADA",
+          mensaje: `¡Partida encontrada! Rivalizarás contra @${msg.oponente as string}`,
+          partida_id: msg.partida_id as string,
+          oponente: msg.oponente as string,
+          oponentePt: msg.oponentePt as number,
+        });
+      };
 
-  const enviado = WS.enviar({ tipo: "BUSCAR_PARTIDA", nombre, puntos } satisfies MensajeBuscarPartida);
-  if (!enviado) {
-    clearTimeout(timer);
-    unsub();
-    return {
-      promise: mockBuscarPartida(),
-      cancel: () => {},
-    };
-  }
+      unsub = WS.suscribir("PARTIDA_ENCONTRADA", handler);
+
+      if (resuelto) {
+        unsub();
+        return;
+      }
+
+      timer = setTimeout(() => {
+        resolver({
+          estado: "TIMEOUT",
+          mensaje: "Sin respuesta del servidor. Inténtalo de nuevo.",
+        });
+      }, timeoutMs);
+
+      const enviado = WS.enviar({ tipo: "BUSCAR_PARTIDA", nombre, puntos } satisfies MensajeBuscarPartida);
+      if (!enviado) {
+        resolver(await mockBuscarPartida());
+      }
+    } catch {
+      if (!resuelto) {
+        resolver({
+          estado: "ERROR",
+          mensaje: "No se pudo conectar al servidor. Inténtalo de nuevo.",
+        });
+      }
+    }
+  })();
 
   return { promise, cancel };
 }

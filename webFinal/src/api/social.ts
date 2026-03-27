@@ -36,6 +36,16 @@ export interface InfoAmigo {
 }
 
 export interface ResumenPartidaAmigo {
+  partida_id?: number;
+  oponente: string;
+  estado: string;
+  tiempo: number;
+  ganador: string;
+}
+
+/** Partida pública del historial del jugador (respuesta PARTIDAS_PUBLICAS). */
+export interface ResumenPartidaPublica {
+  partida_id?: number;
   oponente: string;
   estado: string;
   tiempo: number;
@@ -152,36 +162,65 @@ export async function obtenerPartidasConAmigo(
         resolve([]);
         return;
       }
-
-      // Compatibilidad: el backend puede enviar array (ideal) o un único bloque sobrescrito.
-      const posiblesArrays =
-        (msg.partidas as unknown[]) ??
-        (msg.info as unknown[]) ??
-        null;
-      if (Array.isArray(posiblesArrays)) {
-        resolve(
-          posiblesArrays.map((p) => ({
-            oponente: (p as Record<string, unknown>).oponente as string,
-            estado: (p as Record<string, unknown>).estado as string,
-            tiempo: Number((p as Record<string, unknown>).tiempo ?? 0),
-            ganador: ((p as Record<string, unknown>).ganador as string) ?? "NO_HAY",
-          }))
-        );
-        return;
-      }
-
-      // Fallback: formato plano actual del backend (solo una partida)
-      resolve([
-        {
-          oponente: (msg.oponente as string) ?? amigo,
-          estado: (msg.estado as string) ?? "DESCONOCIDO",
-          tiempo: Number(msg.tiempo ?? 0),
-          ganador: (msg.ganador as string) ?? "NO_HAY",
-        },
-      ]);
+      const partidas = Array.isArray(msg.partidas) ? (msg.partidas as unknown[]) : [];
+      resolve(
+        partidas.map((p) => {
+          const item = p as Record<string, unknown>;
+          return {
+            partida_id:
+              typeof item.partida_id === "number"
+                ? item.partida_id
+                : Number(item.partida_id ?? 0) || undefined,
+            oponente: (item.oponente as string) ?? amigo,
+            estado: (item.estado as string) ?? "DESCONOCIDO",
+            tiempo: Number(item.tiempo ?? 0),
+            ganador: ((item.ganador as string) ?? "NO_HAY"),
+          };
+        })
+      );
     });
 
     WS.enviar({ tipo: "SOLICITAR_PARTIDAS_PRIV", usuario, amigo });
+  });
+}
+
+/** Historial de partidas públicas del jugador. */
+export async function obtenerPartidasPublicas(usuario: string): Promise<ResumenPartidaPublica[]> {
+  if (!WS.usarServidor || !WS.estaConectado()) return [];
+
+  return new Promise<ResumenPartidaPublica[]>((resolve) => {
+    const timeout = setTimeout(() => {
+      unsub();
+      resolve([]);
+    }, 6_000);
+
+    const unsub = WS.suscribirTodos((msg) => {
+      if (msg.tipo !== "PARTIDAS_PUBLICAS" && msg.tipo !== "ERROR_AL_BUSCAR_PARTIDAS_PUB") return;
+      clearTimeout(timeout);
+      unsub();
+      if (msg.tipo !== "PARTIDAS_PUBLICAS") {
+        resolve([]);
+        return;
+      }
+      const partidas = Array.isArray(msg.partidas) ? (msg.partidas as unknown[]) : [];
+      resolve(
+        partidas.map((p) => {
+          const item = p as Record<string, unknown>;
+          return {
+            partida_id:
+              typeof item.partida_id === "number"
+                ? item.partida_id
+                : Number(item.partida_id ?? 0) || undefined,
+            oponente: (item.oponente as string) ?? "?",
+            estado: (item.estado as string) ?? "DESCONOCIDO",
+            tiempo: Number(item.tiempo ?? 0),
+            ganador: (item.ganador as string) ?? "NO_HAY",
+          };
+        })
+      );
+    });
+
+    WS.enviar({ tipo: "SOLICITAR_PARTIDAS_PUB", usuario });
   });
 }
 
