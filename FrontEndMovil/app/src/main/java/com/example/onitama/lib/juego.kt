@@ -288,7 +288,7 @@ fun ejecutarMovimiento (
     val fichaDestino = tablero[destino.fila][destino.col].ficha
 
     val capturado = fichaDestino != null
-    val esReyCapturado = capturado && fichaDestino!!.esRey
+    val esReyCapturado = capturado && fichaDestino.esRey
 
     tablero[destino.fila][destino.col] = tablero[destino.fila][destino.col].copy(ficha = fichaMovida)
     tablero[origen.fila][origen.col] = tablero[origen.fila][origen.col].copy(ficha = null)
@@ -306,7 +306,7 @@ fun ejecutarMovimiento (
 
     /**
      * Si el equipo que mueve ahora ES el jugador local → actualizar cartasJugador.
-     * Si el equipo que mueve ahora ES el oponente      → actualizar cartasOponente.
+     * Si el equipo que mueve ahora ES el oponente → actualizar cartasOponente.
      */
     val nuevasCartasJugador = if (equipoActual == equipoLocal) {
         estado.cartasJugador.map {
@@ -329,7 +329,7 @@ fun ejecutarMovimiento (
     }
 
     val nuevoEstado = estado.copy(
-        tablero,
+        tablero = tablero,
         turnoActual = if (equipoActual == EquipoID.ARROJO) EquipoID.ABAZUL else EquipoID.ARROJO,
         cartasJugador = nuevasCartasJugador,
         cartasOponente = nuevasCartasOponente,
@@ -337,7 +337,7 @@ fun ejecutarMovimiento (
         fichaSeleccionada = null,
         cartaSeleccionada = null,
         movimientosValidos = emptyList(),
-        ganador,
+        ganador = ganador,
         ultimoMovimiento = Pair(origen, destino)
     )
 

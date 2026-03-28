@@ -7,10 +7,14 @@
  * - Iterative Deepening (Gestión de tiempo estricta)
  * - Move Ordering heurístico (Hash move, Capturas, Centro)
  * - Quiescence Search (Anti-Efecto Horizonte)
- * - Evaluación experta ( Piece-Square Tables, Clustering, Card Denial)
+ * - Evaluación experta (Piece-Square Tables, Clustering, Card Denial)
  */
 
 package com.example.onitama.lib
+
+import com.example.onitama.PartidaActiva
+import com.example.onitama.lib.EquipoID
+import com.example.onitama.lib.TT
 
 // ─── Tipos BASE ───────────────────────────────────────────────────────────────
 
@@ -22,14 +26,14 @@ enum class Dificultad {
 
 data class JugadaIA (
     val origenFila: Int,
-    val origenCol: Int, 
+    val origenCol: Int,
     val destinoFila: Int,
     val destinoCol: Int,
-    val carta: CartaMovDef
+    val carta: Carta
 )
 
 data class JugadaSim (
-    val carta: CartaMovDef,
+    val carta: Carta,
     val origenX: Int,
     val origenY: Int,
     val destinoX: Int,
@@ -38,11 +42,11 @@ data class JugadaSim (
 
 // ─── CONFIGURACIÓN DEL MOTOR ──────────────────────────────────────────────────
 
-val TIME_LIMIT_MS = mapOf {
+val TIME_LIMIT_MS = mapOf (
     Dificultad.FACIL to 500,
     Dificultad.MEDIO to 1000,
     Dificultad.DIFICIL to 2000
-}
+)
 
 // ─── ESTRUCTURAS DE SIMULACIÓN Y ZOBRIST HASHING ──────────────────────────────
 
@@ -52,14 +56,14 @@ data class EstadoSim (
     val board: IntArray,
 
     // Arrays de cartas
-    val cEq1: MutableList<CartaMovDef>,
-    val cEq2: MutableList<CartaMovDef>,
-    val cCentro: CartaMovDef,
+    val cEq1: MutableList<Carta>,
+    val cEq2: MutableList<Carta>,
+    var cCentro: Carta,
 
     var hash: Int
 )
 
-// Generador pseudo-aleatorio para Zobrist (Seed fijo para consistencia)
+// Generador pseudoaleatorio para Zobrist (Seed fijo para consistencia)
 var pseudoRandSeed = 0x12345678
 fun xorshift32(): Int {
     pseudoRandSeed = pseudoRandSeed xor (pseudoRandSeed shl 13)
@@ -73,7 +77,7 @@ fun xorshift32(): Int {
 val ZOBRIST_PIECES: Array<IntArray> = Array(5) { IntArray(49) }
 val ZOBRIST_TURN = xorshift32()
 
-// Simplificación: Hash para cartas lo haremos sumando IDs únicos de las cartas por equipo
+// Simplificación: Hash para cartas lo haremos sumando ID únicos de las cartas por equipo
 
 var isZobristInitialized = false
 
@@ -98,44 +102,43 @@ fun initZobrist() {
 }
 
 // Hash liviano y estable para strings.
-// Lo usamos para evitar colisiones tontas en la TT por nombres parecidos.
+// Lo usamos para evitar colisiones tontas en TT por nombres parecidos.
 fun fnv1a32 (
     str: String,
-    seed: Int = 0x811c9dc5
+    seed: Int = 0x811c9dc5.toInt()
 ): Int {
     var h = seed
-    var i = 0
+    val bytes = str.encodeToByteArray()
 
-    while (i < str.lenght){
-        h = h xor str[i].code
+    for (b in bytes){
+        h = h xor (b.toInt() and 0xFF)
         h = h * 0x01000193
-        i = i + 1
     }
 
     return h
 }
 
-fun getCardStrHah (
-    cEq1: List<CartaMovDef>,
-    cEq2: List<CartaMovDef>,
-    cCentro: CartaMovDef
+fun getCardStrHash (
+    cEq1: List<Carta>,
+    cEq2: List<Carta>,
+    cCentro: Carta
 ) : Int {
     // Importante: no solo cuenta "qué cartas hay", sino también en qué lado están.
     // Mismo set de cartas en manos distintas = estado distinto de partida.
-    var h = 0x811c9dc5
+    var h = 0x811c9dc5.toInt()
     h = fnv1a32 ("C:${cCentro.nombre}|", h)
     var i = 0
 
     while (i < cEq1.size) {
         h = fnv1a32("1:${cEq1[i].nombre}|", h)
-        i = i + 1
+        i += 1
     }
 
     i = 0
 
     while (i < cEq2.size) {
         h = fnv1a32("2:${cEq2[i].nombre}|", h)
-        i = i + 1
+        i += 1
     }
 
     return h
@@ -175,12 +178,12 @@ enum class TTFlag {
     BETA
 }
 
-data class TTEntry {
+data class TTEntry (
     val depth: Int,
     val score: Int, 
     val flag: TTFlag,
     val bestMove: JugadaSim?
-}
+)
 
 val TT = mutableMapOf<Int, TTEntry>()
 
@@ -193,7 +196,7 @@ fun clearTT() {
 fun toIndex (
     x: Int,
     y: Int
-) {
+): Int {
     var resultado = 0
     resultado = y * DIM + x
 
@@ -206,7 +209,7 @@ fun crearEstadoSim (
 ) : EstadoSim {
     initZobrist()
 
-    val board = Array(49) { 0 }
+    val board = IntArray(49)
     var f = 0
     
     while (f < DIM) {
@@ -217,7 +220,7 @@ fun crearEstadoSim (
 
             if (fi != null) {
                 if (fi.esRey){
-                    if (fi.equipo == 1) {
+                    if (fi.equipo == EquipoID.ARROJO) {
                         board[toIndex(c, f)] = 3
                     } 
                     else {
@@ -225,7 +228,7 @@ fun crearEstadoSim (
                     }
                 }
                 else {
-                    if (fi.equipo == 1) {
+                    if (fi.equipo == EquipoID.ARROJO) {
                         board[toIndex(c, f)] = 1 
                     }
                     else {
@@ -234,14 +237,14 @@ fun crearEstadoSim (
                 }
             }
 
-            c = c + 1
+            c += 1
         }
 
-        f = f + 1
+        f += 1
     }
 
-    var c1
-    var c2
+    var c1: List<Carta>
+    var c2: List<Carta>
 
     if (eqLocal == 1) {
         c1 = est.cartasJugador
@@ -257,13 +260,13 @@ fun crearEstadoSim (
         c2 = est.cartasOponente
     }
 
-    val e: EstadoSim = {
-        board = board,
-        cEq1: c1.toMutableList(),
-        cEq2: c2.toMutableList,
-        cCentro: est.cartasSiguientes[0],
-        hash: 0
-    }
+    val e = EstadoSim(
+        board,
+        c1.toMutableList(),
+        c2.toMutableList(),
+        est.cartasSiguientes[0],
+        0)
+
     e.hash = computeZobrist(e, 1) // Turno base (se cambiará dinámicamente)
     return e
 }
@@ -271,13 +274,13 @@ fun crearEstadoSim (
 fun cloneSim (
     e: EstadoSim
 ) : EstadoSim {
-    return EstadoSim {
-        board: e.board.copyOf(),
+    return EstadoSim (
+        board = e.board.copyOf(),
         cEq1 = e.cEq1.toMutableList(),
         cEq2 = e.cEq2.toMutableList(),
         cCentro = e.cCentro,
         hash = e.hash
-    }
+    )
 }
 
 
@@ -288,42 +291,25 @@ fun esAmigo (
     eq: Int
 ) : Boolean {
     if (eq == 1) {
-        return p == 1
-    }
-    else {
-        return p == 3
+        return p == 1 || p == 3
     }
 
     if (eq == 2) {
-        return p == 2
-    } 
-    else {
-        return p == 4
+        return p == 2 || p == 4
     }
     
     return false
 }
 
-fun esEnemigo (
-    p: Int,
-    eq : Int
-) : Boolean {
-    if (p == 0) {
-        return false
-    }
-    return !esAmigo(p, eq)
-}
-
-
 // ─── GENERADOR DE JUGADAS ─────────────────────────────────────────────────────
 
 fun generarJugadas (
     e: EstadoSim,
-    eq: Int
+    eq: Int,
     soloCapturas: Boolean = false
-) : List<JugadasSim> {
-    val jugadas: mutableListOf<JugadaSim>()
-    var cartas
+) : List<JugadaSim> {
+    val jugadas = mutableListOf<JugadaSim>()
+    var cartas: List<Carta>
     
     if (eq == 1) {
         cartas = e.cEq1
@@ -332,58 +318,49 @@ fun generarJugadas (
         cartas = e.cEq2
     } 
 
-    var c = 0
-    while (c < cartas.size) {
-        val carta = cartas[c]
-        var i = 0
-
-        while (i <= 48) {
+    for (carta in cartas) {
+        for (i in 0..48) {
             val p = e.board[i]
             if(!esAmigo(p, eq)){
-                i = i +`1
                 continue
             }
 
             val origenX = i % DIM
             val origenY = i / DIM
 
-            var mov = 0
-            while (mov < c.movimientos.size) {
-                val movimiento = c.movimientos[mov]
+
+            for (movimiento in carta.movimientos) {
 
                 // Keep movement convention aligned with juego.ts:
                 // eq=2 -> nc = col + dc, nf = fila - df
                 // eq=1 -> nc = col - dc, nf = fila + df
-                var destinoX 
-                var destinoY 
+                var destinoX: Int
+                var destinoY: Int
 
                 if (eq == 1) {
-                    destinoX = origenX - mov.dc
+                    destinoX = origenX - movimiento.dc
                 }
                 else {
-                    destinoX = origenX + mov.dc
+                    destinoX = origenX + movimiento.dc
                 }
 
                 if (eq == 1) { 
-                    destinoY = origenY - mov.df 
+                    destinoY = origenY + movimiento.df
                 }
                 else {
-                    destinoY = origenY - mov.df
+                    destinoY = origenY - movimiento.df
                 }
             
-                if (destinoX < 0 || destinoX >= DIM || destinoY < 0 || destinoY >= DIM) {
-                    mov = mov + 1
+                if (destinoX !in 0 .. DIM-1 || destinoY !in 0 .. DIM-1) {
                     continue
                 }
 
                 val target = e.board[toIndex(destinoX, destinoY)]
                 if (esAmigo(target, eq)){
-                    mov = mov + 1
                     continue
                 }
 
                 if (soloCapturas && target == 0) {
-                    mov = mov + 1
                     continue
                 }
 
@@ -395,9 +372,7 @@ fun generarJugadas (
                     destinoY
                 ))
             }
-            i = i + 1
         }
-        c = c + 1
     }
     return jugadas
 }
@@ -423,13 +398,14 @@ fun aplicarJugada(
 
     // Mover
     e.board[posTo] = pzFrom
-    e.board[from.Idx] = 0
+    e.board[fromIdx] = 0
 
     // Zobrist Update: Añadir pieza al nuevo destino
     e.hash = e.hash xor ZOBRIST_PIECES[pzFrom][posTo]
 
     // Rotar cartas 
-    var equipoCartas
+    var equipoCartas: MutableList<Carta>
+
 
     if (eq == 1){
         equipoCartas = e.cEq1
@@ -514,7 +490,7 @@ fun compruebaTrono (
 
 fun esMovimientoGanadorInmediato (
     e: EstadoSim,
-    j: JugadaSim
+    j: JugadaSim,
     eq: Int
 ) : Boolean {
     val fromPiece = e.board[toIndex(j.origenX, j.origenY)]
@@ -569,15 +545,12 @@ fun generaJugadasTacticas (
     val jugadas = generarJugadas(e, eq, false)
     val tacticas = mutableListOf<JugadaSim>()
 
-    var jugada = 0
 
-    while (jugada < jugadas.size) {
-        val j = jugadas[jugada]
-        val destPiece = e.board[toIndex(j.dx, j.dy)]
+    for (j in jugadas) {
+        val destPiece = e.board[toIndex(j.destinoX, j.destinoY)]
         
-        if (destPiece !== 0 || esMovimientoGanadorInmediato(e, j, eq)) {
+        if (destPiece != 0 || esMovimientoGanadorInmediato(e, j, eq)) {
             tacticas.add(j)
-            jugada = jugada + 1
             continue
         }
 
@@ -585,11 +558,9 @@ fun generaJugadasTacticas (
         // Esto ayuda a que quiescence no corte justo antes del golpe táctico.
         val child = cloneSim(e)
         aplicarJugada(child, j, eq)
-        if (compruebaTrono(child) === 0 && tieneVictoriaEnUno(child, eq)) {
+        if (compruebaTrono(child) == 0 && tieneVictoriaEnUno(child, eq)) {
             tacticas.add(j)
         }
-
-        jugada = jugada + 1
     }
 
     return tacticas
@@ -601,8 +572,8 @@ fun evaluate (
 ) : Int {
     val estadoTrono = compruebaTrono(e)
 
-    if (estadoTrono !== 0) {
-        if (estadoTrono === eqTurno)  {
+    if (estadoTrono != 0) {
+        if (estadoTrono == eqTurno)  {
             return MATE_SCORE
         } 
         else { 
@@ -743,27 +714,27 @@ fun scoreMove (
     }
 
     var score = 0
-    val destPiece = e.board[toIndex(m.dx, m.dy)]
+    val destPiece = e.board[toIndex(m.destinoX, m.destinoY)]
 
     // Prioridad a capturas (MVV-LVA approx)
-    if (destPiece !== 0) {
+    if (destPiece != 0) {
         score += 10000
-        if (destPiece === 3 || destPiece === 4) {
+        if (destPiece == 3 || destPiece == 4) {
             score += 50000 // Capturar rey!
         }
     }
 
     // Prioridad a ganar por trono
-    if (e.board[toIndex(m.ox, m.oy)] === 3 && m.dx === CENTRO && m.dy === DIM - 1) {
+    if (e.board[toIndex(m.origenX, m.origenY)] == 3 && m.destinoX == CENTRO && m.destinoY == DIM - 1) {
         score += 90000
     }
 
-    if (e.board[toIndex(m.ox, m.oy)] === 4 && m.dx === CENTRO && m.dy === 0) {
+    if (e.board[toIndex(m.origenX, m.origenY)] == 4 && m.destinoX == CENTRO && m.destinoY == 0) {
         score += 90000
     }
 
     // Prioridad posicional (ir hacia el centro)
-    var pst 
+    var pst : IntArray
     if (eq == 1) {
         pst = PST_P1
     }
@@ -771,7 +742,7 @@ fun scoreMove (
         pst = PST_P2
     }
 
-    score += pst[toIndex(m.dx, m.dy)] - pst[toIndex(m.ox, m.oy)]
+    score += pst[toIndex(m.destinoX, m.destinoY)] - pst[toIndex(m.origenX, m.origenY)]
 
     return score
 }
@@ -805,7 +776,7 @@ fun quiescence (
     // Ahora extendemos capturas + amenazas inmediatas al rey/templo.
     val tacticalMoves = generaJugadasTacticas(e, eqTurno)
     
-    val sortedMove = tacticalMoves.sortedByDescending { scoreMove(e, it, eqTurno, null) }
+    val sortedMoves = tacticalMoves.sortedByDescending { scoreMove(e, it, eqTurno, null) }
     var jugada = 0
 
     while (jugada < sortedMoves.size) {
@@ -845,7 +816,7 @@ fun quiescence (
 fun minimaxAB (
     e: EstadoSim,
     depth: Int,
-    alpha: Int, 
+    alpha: Int,
     beta: Int,
     eqTurno: Int
 ) : Int {
@@ -854,21 +825,22 @@ fun minimaxAB (
         return 0
     }
 
+    //Creamos una variable local y mutable para el Alpha
+    var currentAlpha = alpha
     val originalAlpha = alpha
+
     val hash = e.hash
 
     // Transposition Table lookup
-    val ttEntry = TT(hash)
-    if (ttEntry && ttEntry.depth >= depth) {
-        if (ttEntry.flag === TTFlag.EXACT) {
+    val ttEntry = TT[hash]
+    if (ttEntry != null && ttEntry.depth >= depth) {
+        if (ttEntry.flag == TTFlag.EXACT) {
             return ttEntry.score
         }
-
-        if (ttEntry.flag === TTFlag.ALPHA && ttEntry.score <= alpha) {
-            return alpha
-        } 
-
-        if (ttEntry.flag === TTFlag.BETA && ttEntry.score >= beta) {
+        if (ttEntry.flag == TTFlag.ALPHA && ttEntry.score <= currentAlpha) {
+            return currentAlpha
+        }
+        if (ttEntry.flag == TTFlag.BETA && ttEntry.score >= beta) {
             return beta
         }
     }
@@ -877,19 +849,18 @@ fun minimaxAB (
     if (estadoGameOver != 0) {
         if (estadoGameOver == eqTurno) {
             return MATE_SCORE + depth
-        }
-        else {
+        } else {
             return -(MATE_SCORE + depth)
         }
     }
 
     if (depth <= 0) {
-        return quiescence(e, alpha, beta, eqTurno)
+        return quiescence(e, currentAlpha, beta, eqTurno)
     }
 
     val jugadas = generarJugadas(e, eqTurno, false)
     if (jugadas.isEmpty()) {
-        return evaluate(e, eqTurno) // Ahogado? No deberia pasar
+        return evaluate(e, eqTurno)
     }
 
     // Move Ordering
@@ -898,24 +869,14 @@ fun minimaxAB (
     var bestMove: JugadaSim? = null
     var bScore = Int.MIN_VALUE
 
-    var jugada = 0
-
-    while (jugada < sortedJugadas.size) {
-        val j = sortedJugadas[jugada]
+    for (j in sortedJugadas) {
         val child = cloneSim(e)
-
         aplicarJugada(child, j, eqTurno)
 
-        var equipo = 0
+        val equipo = if (eqTurno == 1) 2 else 1
 
-        if (eqTurno == 1) {
-            equipo = 2
-        }
-        else {
-            equipo = 1
-        }
-
-        val score = -minimaxAB(child, depth, -1, -beta, -alpha, equipo)
+        // 2. PASAMOS LA COPIA MUTABLE: -currentAlpha
+        val score = -minimaxAB(child, depth - 1, -beta, -currentAlpha, equipo)
 
         if (timeIsUp) {
             return 0 // abortar
@@ -923,35 +884,36 @@ fun minimaxAB (
 
         if (score > bScore) {
             bScore = score
-            bestMove = j 
-            if (score > alpha) {
-                alpha = score
+            bestMove = j
+
+            // 3. ACTUALIZAMOS LA VARIABLE LOCAL
+            if (score > currentAlpha) {
+                currentAlpha = score
             }
-            
-            if (alpha >= beta) {
-                break // Prune
+
+            // 4. CORTE BETA (Pruning)
+            if (currentAlpha >= beta) {
+                break
             }
         }
-
-        jugada = jugada + 1
     }
 
     if (!timeIsUp) {
         // Save to TT
-        val flag = TTFlag.EXACT
-        
+        var flag = TTFlag.EXACT
+
+        // Comparamos con originalAlpha
         if (bScore <= originalAlpha) {
             flag = TTFlag.ALPHA
-        } 
+        }
         else if (bScore >= beta) {
             flag = TTFlag.BETA
         }
-        TT[hash] = TTEntry(depth, bScore, flag, bestMove);
+        TT[hash] = TTEntry(depth, bScore, flag, bestMove)
     }
 
-    return bScore;
+    return bScore
 }
-
 // ─── API PÚBLICA (INTERFAZ EXPORTADA) ─────────────────────────────────────────
 
 fun calcularMejorMovimientoIA (
@@ -962,7 +924,7 @@ fun calcularMejorMovimientoIA (
 ) : JugadaIA? {
    println("\n[Iron Bot] Motor GRANDMASTER iniciado. Nivel: ${dificultad.name}")
 
-    val rootSim = crearEstadoSim(estado, equipoLocal)
+    val rootSim = crearEstadoSim(estado, equipoLocal.id)
 
     // Clear TT to prevent memory leak and stale collision across moves
     clearTT()
@@ -970,18 +932,10 @@ fun calcularMejorMovimientoIA (
     timeIsUp = false
     endTime = System.currentTimeMillis() + TIME_LIMIT_MS[dificultad]!!
 
-    val globalBestMove: JugadaSim? = null
-    val maxDepthReached = 0
+    var globalBestMove: JugadaSim? = null
+    var maxDepthReached = 0
 
-    var equipo = 0
-    if (equipoIA == 1){
-        equipo = 2
-    }
-    else {
-        equipo = 1
-    }
-
-    val rivalEq: EquipoID = equipo
+    val rivalEq = if (equipoIA.id == 1) EquipoID.ABAZUL else EquipoID.ARROJO
 
     // ITERATIVE DEEPENING
     // Limitamos a Profundidad Maxima 15 para evitar loops infinitos teóricos, pero el tiempo cortará antes
@@ -995,7 +949,7 @@ fun calcularMejorMovimientoIA (
         }
 
         // Start search for this depth
-        val jugadas = generarJugadas(rootSim, equipoIA)
+        val jugadas = generarJugadas(rootSim, equipoIA.id)
         
         if (jugadas.isEmpty()) {
             break
@@ -1003,7 +957,7 @@ fun calcularMejorMovimientoIA (
 
         // Ordenamos las jugadas raiz basandonos en el TT (el mejor mov de la prof anterior)
         val rootTT = TT[rootSim.hash]
-        val sortedJugadas = jugadas.sortedByDescending { scoreMove(rootSim, it, equipoIA, rootTT?.bestMove) }
+        val sortedJugadas = jugadas.sortedByDescending { scoreMove(rootSim, it, equipoIA.id, rootTT?.bestMove) }
 
         var currentDepthBest: JugadaSim? = null
         var alpha = Int.MIN_VALUE;
@@ -1015,11 +969,11 @@ fun calcularMejorMovimientoIA (
             val j = sortedJugadas[jugada]
             val child = cloneSim(rootSim)
 
-            aplicarJugada(child, j, equipoIA)
+            aplicarJugada(child, j, equipoIA.id)
 
             var equipo = 0
 
-            if (equipoIA == 1) {
+            if (equipoIA.id == 1) {
                 equipo = 2
             }
             else {
@@ -1036,7 +990,7 @@ fun calcularMejorMovimientoIA (
             // Cinturón de seguridad: si esta jugada deja al rival ganar en 1,
             // la hundimos en score aunque minimax no haya llegado a verlo.
             
-            if (compruebaTrono(child) === 0 && tieneVictoriaEnUno(child, rivalEq)) {
+            if (compruebaTrono(child) == 0 && tieneVictoriaEnUno(child, rivalEq.id)) {
                 adjustedScore -= 75000
             }
         
@@ -1066,14 +1020,14 @@ fun calcularMejorMovimientoIA (
             }
         }
 
-        currentDepth = currentDepth + 1
+        currentDepth += 1
     }
 
     println("Jugada completada. Profundidad real máxima alcanzada: ${maxDepthReached}. TT Size: ${TT.size} nodos.")
 
     if (globalBestMove == null) {
         // Fallback absoluto por si algo raro pasa en T=0
-        val fallbacks = generarJugadas(rootSim, equipoIA)
+        val fallbacks = generarJugadas(rootSim, equipoIA.id)
 
         if (fallbacks.isEmpty()) {
             return null
@@ -1082,12 +1036,14 @@ fun calcularMejorMovimientoIA (
         globalBestMove = fallbacks.random()
     }
 
-    return JugadaIA{
+    return JugadaIA(
         origenFila = globalBestMove.origenY,
         origenCol = globalBestMove.origenX,
         destinoFila = globalBestMove.destinoY,
         destinoCol = globalBestMove.destinoX,
-        carta = globalBestMove.carta,
-    };
+        carta = globalBestMove.carta
+    )
+
+
 }
 

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
@@ -290,6 +291,24 @@ class PartidaActivity: AppCompatActivity() {
                         estado = estado,
                         onCasillaClick = { pos -> viewModel.tocarCelda(pos) }
                     )
+                    if (estado.ganador != null) {
+                        AlertDialog(
+                            onDismissRequest = { /* No dejamos que lo cierre tocando fuera */ },
+                            title = { Text(text = "¡Partida Finalizada!") },
+                            text = {
+                                val mensaje = if (estado.ganador == EquipoID.ABAZUL) "¡Has ganado!" else "Ha ganado el Bot"
+                                Text(text = mensaje)
+                            },
+                            confirmButton = {
+                                Button(onClick = {
+                                    // Aquí deberías salir de la activity o reiniciar el ViewModel
+                                    (context as? Activity)?.finish()
+                                }) {
+                                    Text("Salir")
+                                }
+                            }
+                        )
+                    }
                 }
                 Row(
                     verticalAlignment = Alignment.Companion.Top,
@@ -352,7 +371,7 @@ class PartidaActivity: AppCompatActivity() {
 
     fun cambiarEstadoCarta(carta: Carta, estado: EstadoJuego){
         if(estado.cartaSeleccionada == carta) {
-            viewModel.desSeleccionarCarta(carta)
+            viewModel.desSeleccionarCarta()
         }
         else{
             viewModel.seleccionarCarta(carta)
