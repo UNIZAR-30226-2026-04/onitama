@@ -376,6 +376,19 @@ public class Servidor extends WebSocketServer {
                         }
                         pj.partida.actualizarBD();
                     }
+
+                    // Partida terminada por victoria: quitar la pareja para que ABANDONAR/MOVER
+                    // no coincidan con una partida antigua si el mismo jugador empieza otra después.
+                    if (estado == 1 || estado == 2) {
+                        try {
+                            mutexParejas.acquire();
+                            parejas.remove(pj);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        } finally {
+                            mutexParejas.release();
+                        }
+                    }
                     
                     // Enviamos el mensaje AL OPOONENTE
                     oponente.ws.send(msg.toString());
