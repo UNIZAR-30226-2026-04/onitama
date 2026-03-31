@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import { obtenerJugadorActivo, guardarSesion, cerrarSesion, type DatosSesion } from "@/lib/sesion";
 import { obtenerPerfil } from "@/api/auth";
 import { activarSkin, comprarSkin, obtenerTiendaSkins, type SkinEstado } from "@/api/skins";
+import { obtenerCartas, type CartaEstado } from "@/api/cartas";
 import {
   leerNotificaciones,
   eliminarNotificacion,
@@ -44,6 +45,7 @@ import {
 } from "@/api/social";
 import * as WS from "@/api/ws";
 import { getSkinNombre, getPiezaSrc, getSkinPrecio, normalizarSkinId, type SkinId } from "@/lib/skins";
+import { getImagenCarta } from "@/lib/cartas";
 import { AvatarCircle } from "@/lib/avatar";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -153,6 +155,10 @@ export default function PartidasPage() {
   const [accionSkinEnCurso, setAccionSkinEnCurso] = useState<string | null>(null);
   const [confirmacionSkin, setConfirmacionSkin] = useState<{ tipo: "comprar" | "usar"; skinId: SkinId } | null>(null);
 
+  const [cartas, setCartas] = useState<CartaEstado[]>([]);
+  const [cargandoCartas, setCargandoCartas] = useState(false);
+
+
   // ── Efectos ─────────────────────────────────────────────────────────────────
 
   /** Cargar notificaciones del sessionStorage y suscribirse a nuevas por WS. */
@@ -217,7 +223,7 @@ export default function PartidasPage() {
         guardarSesion(datos);
         setJugador(datos);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   /** Panel Mi cuenta: refrescar perfil e historial de partidas públicas. */
@@ -229,7 +235,7 @@ export default function PartidasPage() {
         guardarSesion(datos);
         setJugador(datos);
       })
-      .catch(() => {});
+      .catch(() => { });
     obtenerPartidasPublicas(jugador.nombre)
       .then((lista) => setPartidasPublicas(lista))
       .catch(() => setPartidasPublicas([]))
@@ -250,9 +256,21 @@ export default function PartidasPage() {
           return siguiente;
         });
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setCargandoSkins(false));
   }, [panelActivo, jugador.nombre]);
+
+  /** Cargar cartas desde el backend / mock al abrir el panel Mis cartas */
+  useEffect(() => {
+    if (panelActivo !== "cartas") return;
+    setCargandoCartas(true);
+    obtenerCartas()
+      .then((res) => {
+        setCartas(res.cartas);
+      })
+      .catch(() => {})
+      .finally(() => setCargandoCartas(false));
+  }, [panelActivo]);
 
   /** Cargar amigos desde backend al abrir el panel de amigos. */
   useEffect(() => {
@@ -534,11 +552,10 @@ export default function PartidasPage() {
           <button
             type="button"
             onClick={() => handleMenuClick("cuenta")}
-            className={`w-11 h-11 shrink-0 rounded-full border-2 flex items-center justify-center overflow-hidden transition-colors ${
-              panelActivo === "cuenta"
+            className={`w-11 h-11 shrink-0 rounded-full border-2 flex items-center justify-center overflow-hidden transition-colors ${panelActivo === "cuenta"
                 ? "bg-white/20 border-white/60"
                 : "bg-[#2a4a6a] border-white/30 hover:bg-white/10"
-            }`}
+              }`}
             title="Mi cuenta"
             aria-label="Abrir Mi cuenta"
           >
@@ -703,13 +720,11 @@ export default function PartidasPage() {
           )}
 
           {panelActivo === "cartas" && (
-            <div className="flex items-center justify-center min-h-full">
-              <div className="text-center text-stone-400">
-                <p className="text-5xl mb-4">🚧</p>
-                <p className="text-xl font-semibold uppercase tracking-widest">Próximamente</p>
-                <p className="text-sm mt-2">Esta sección está en desarrollo.</p>
-              </div>
-            </div>
+            <PanelMisCartas
+              jugador={jugador}
+              cartas={cartas}
+              cargando={cargandoCartas}
+            />
           )}
 
           {panelActivo === "tableros" && (
@@ -805,22 +820,20 @@ export default function PartidasPage() {
               <button
                 type="button"
                 onClick={() => setTabPartidaPrivada("crear")}
-                className={`px-5 py-3 text-sm font-semibold uppercase tracking-wider ${
-                  tabPartidaPrivada === "crear"
+                className={`px-5 py-3 text-sm font-semibold uppercase tracking-wider ${tabPartidaPrivada === "crear"
                     ? "border-b-2 border-[#1a2d4a] text-[#1a2d4a]"
                     : "text-stone-500 hover:text-stone-700"
-                }`}
+                  }`}
               >
                 Crear nueva partida
               </button>
               <button
                 type="button"
                 onClick={() => setTabPartidaPrivada("reanudar")}
-                className={`px-5 py-3 text-sm font-semibold uppercase tracking-wider ${
-                  tabPartidaPrivada === "reanudar"
+                className={`px-5 py-3 text-sm font-semibold uppercase tracking-wider ${tabPartidaPrivada === "reanudar"
                     ? "border-b-2 border-[#1a2d4a] text-[#1a2d4a]"
                     : "text-stone-500 hover:text-stone-700"
-                }`}
+                  }`}
               >
                 Reanudar partida
               </button>
@@ -1388,11 +1401,10 @@ function PanelAmigos({
                 {amigos.map((amigo) => (
                   <li
                     key={amigo.nombre}
-                    className={`flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm border ${
-                      amigoSeleccionado?.nombre === amigo.nombre
+                    className={`flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm border ${amigoSeleccionado?.nombre === amigo.nombre
                         ? "border-[#1a2d4a]"
                         : "border-transparent"
-                    }`}
+                      }`}
                   >
                     <button
                       type="button"
@@ -1448,45 +1460,45 @@ function PanelAmigos({
           {!buscando && resultados.length > 0 && (
             <ul className="space-y-2">
               {resultados.map((j) => {
-                    const esMismoUsuario = j.nombre === jugador.nombre;
-                    const esAmigo = amigos.some((a) => a.nombre === j.nombre);
-                    const yaEnviado = solicitudesEnviadas.has(j.nombre);
+                const esMismoUsuario = j.nombre === jugador.nombre;
+                const esAmigo = amigos.some((a) => a.nombre === j.nombre);
+                const yaEnviado = solicitudesEnviadas.has(j.nombre);
 
-                    return (
-                      <li
-                        key={j.nombre}
-                        className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm"
-                      >
-                        <AvatarCircle nombre={j.nombre} avatarId={j.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" bgClass="bg-[#7b8fa8]" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-stone-800 truncate">{j.nombre}</p>
-                          <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
-                            <Image src="/katanas.png" alt="Katanas" width={12} height={12} className="h-3 w-auto" />
-                            <span>{j.puntos}</span>
-                          </p>
-                        </div>
-                        {!esMismoUsuario && (
-                          esAmigo ? (
-                            <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-100 text-green-700">
-                              Ya sois amigos
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => onEnviarSolicitud(j.nombre)}
-                              disabled={yaEnviado}
-                              className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors
+                return (
+                  <li
+                    key={j.nombre}
+                    className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm"
+                  >
+                    <AvatarCircle nombre={j.nombre} avatarId={j.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" bgClass="bg-[#7b8fa8]" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-stone-800 truncate">{j.nombre}</p>
+                      <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
+                        <Image src="/katanas.png" alt="Katanas" width={12} height={12} className="h-3 w-auto" />
+                        <span>{j.puntos}</span>
+                      </p>
+                    </div>
+                    {!esMismoUsuario && (
+                      esAmigo ? (
+                        <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-100 text-green-700">
+                          Ya sois amigos
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onEnviarSolicitud(j.nombre)}
+                          disabled={yaEnviado}
+                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors
                                 ${yaEnviado
-                                  ? "bg-stone-200 text-stone-400 cursor-default"
-                                  : "bg-[#1a2d4a] text-white hover:bg-[#203a60]"
-                                }`}
-                            >
-                              {yaEnviado ? "Enviada ✓" : "Solicitar"}
-                            </button>
-                          )
-                        )}
-                      </li>
-                    );
+                              ? "bg-stone-200 text-stone-400 cursor-default"
+                              : "bg-[#1a2d4a] text-white hover:bg-[#203a60]"
+                            }`}
+                        >
+                          {yaEnviado ? "Enviada ✓" : "Solicitar"}
+                        </button>
+                      )
+                    )}
+                  </li>
+                );
               })}
             </ul>
           )}
@@ -1640,6 +1652,105 @@ function PanelNotificaciones({
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface PanelMisCartasProps {
+  jugador: DatosSesion;
+  cartas: CartaEstado[];
+  cargando: boolean;
+}
+
+function PanelMisCartas({
+  jugador,
+  cartas,
+  cargando,
+}: PanelMisCartasProps) {
+  // Las cartas disponibles en partida son aquellas donde puntos jugador >= puntos necesarios
+  const desbloqueadas = cartas.filter((c) => jugador.puntos >= c.puntos_necesarios);
+  const bloqueadas = cartas.filter((c) => jugador.puntos < c.puntos_necesarios);
+
+  return (
+    <div className="max-w-5xl mx-auto px-6 py-8">
+      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2">Mis cartas</h2>
+      <p className="text-stone-500 text-sm mb-6 flex items-center gap-2">
+        <span>Cartas que pueden aparecer en tus partidas según tu ELO actual (</span>
+        <Image src="/katanas.png" alt="Katanas" width={16} height={16} className="object-contain" />
+        <span className="font-semibold">{jugador.puntos.toLocaleString()}</span>
+        <span>):</span>
+      </p>
+      
+      {cargando ? (
+        <p className="text-stone-500 animate-pulse">Cargando catálogo...</p>
+      ) : (
+        <div className="space-y-10">
+          
+          {/* Cartas Desbloqueadas */}
+          <div>
+            <h3 className="text-lg font-bold text-stone-700 uppercase tracking-wider mb-4 border-b border-stone-300 pb-2">
+              Disponibles ({desbloqueadas.length})
+            </h3>
+            {desbloqueadas.length === 0 ? (
+              <p className="text-stone-500 text-sm">Aún no tienes cartas disponibles.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {desbloqueadas.map((c) => (
+                  <div key={c.nombre} className="rounded-2xl border border-emerald-200 bg-emerald-50/30 p-4 shadow-sm flex flex-col items-center">
+                    <p className="text-sm font-bold text-stone-800 uppercase tracking-wider mb-2">{c.nombre}</p>
+                    <div className="bg-white rounded-lg p-2 shadow-inner w-full flex justify-center">
+                      <Image 
+                        src={getImagenCarta(c.nombre)} 
+                        alt={c.nombre} 
+                        width={80} 
+                        height={80} 
+                        className="object-contain hover:scale-105 transition-transform" 
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Cartas Bloqueadas */}
+          {bloqueadas.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-stone-700 uppercase tracking-wider mb-4 border-b border-stone-300 pb-2">
+                Bloqueadas ({bloqueadas.length})
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {bloqueadas.map((c) => (
+                  <div key={c.nombre} className="rounded-2xl border border-stone-200 bg-stone-100 p-4 shadow-sm flex flex-col items-center opacity-80 grayscale">
+                    <p className="text-sm font-bold text-stone-600 uppercase tracking-wider mb-2">{c.nombre}</p>
+                    <div className="bg-stone-200 rounded-lg p-2 shadow-inner mb-4 w-full flex justify-center relative">
+                      <Image 
+                        src={getImagenCarta(c.nombre)} 
+                        alt={c.nombre} 
+                        width={80} 
+                        height={80} 
+                        className="object-contain opacity-50" 
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-3xl" aria-label="Bloqueada">🔒</span>
+                      </div>
+                    </div>
+                    <div className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-stone-200 text-stone-500 text-center flex flex-col items-center justify-center gap-1">
+                      <span className="text-[10px] uppercase font-bold tracking-widest leading-none">Requiere ELO</span>
+                      <span className="text-xs font-bold flex items-center gap-1">
+                        {c.puntos_necesarios.toLocaleString()} pts
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
       )}
     </div>
   );

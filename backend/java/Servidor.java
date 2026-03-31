@@ -43,50 +43,50 @@ import java.util.Comparator;
 // -> Reanudar/Pausar una partida privada: PRIORIDAD MEDIA (Antes hay que hacer lo anterior)
 // -> Cartas de Accion: PRIORIDAD BAJA (No lo necesitamos para la primera entrega)
 
-class InfoJugador{
+class InfoJugador {
     WebSocket ws;
     String nombre;
     int puntos;
 
-    public InfoJugador(WebSocket w, String nom, int pt){
+    public InfoJugador(WebSocket w, String nom, int pt) {
         ws = w;
         nombre = nom;
         puntos = pt;
     }
 }
 
-class Pareja{
+class Pareja {
     InfoJugador p1, p2;
     Partida partida;
 
-    public Pareja(InfoJugador _p1, InfoJugador _p2, String tipo){
+    public Pareja(InfoJugador _p1, InfoJugador _p2, String tipo) {
         p1 = _p1;
         p2 = _p2;
-        //De momento solo existe partidas Publicas
+        // De momento solo existe partidas Publicas
         partida = new Partida(0, "JUGANDOSE", 0, tipo, null, null, 0, 0, _p1.nombre, _p2.nombre, false, false, 0);
         partida.registrarPartida();
-        partida.asignarCartas(); //Genera las cartas aleatorias
-        partida.repartirCartas(); //Repartimos a los equipos sus cartas
+        partida.asignarCartas(); // Genera las cartas aleatorias
+        partida.repartirCartas(); // Repartimos a los equipos sus cartas
     }
 
-    public boolean buscar(WebSocket _p1){
+    public boolean buscar(WebSocket _p1) {
         return p1.ws == _p1 || p2.ws == _p1;
     }
 
     // PREVIAMENTE if p1.ws return p1, pero eso devolvía el mismo jugador,
     // entonces lo he cambiado para que devuelva el oponente.
-    public InfoJugador getOponente(WebSocket _p1){
-        if(p1.ws == _p1){
+    public InfoJugador getOponente(WebSocket _p1) {
+        if (p1.ws == _p1) {
             return p2;
-        }else if(p2.ws == _p1){
+        } else if (p2.ws == _p1) {
             return p1;
-        }else{
+        } else {
             return null;
         }
     }
 }
 
-//BORRO PARTIDA
+// BORRO PARTIDA
 
 public class Servidor extends WebSocketServer {
     private List<InfoJugador> conectados;
@@ -97,16 +97,21 @@ public class Servidor extends WebSocketServer {
     private Semaphore mutexParejas = new Semaphore(1);
     private Semaphore mutexConectados = new Semaphore(1);
     private ScheduledExecutorService temporizador = Executors.newScheduledThreadPool(10);
-    // para mapear idNotificacion → timer activo y poder cancelarlo cuando el amigo acepta o rechaza
-    // concurrenthashmap y no hashmap porque el servidor es multihilo --> varios mensajes pueden
+    // para mapear idNotificacion → timer activo y poder cancelarlo cuando el amigo
+    // acepta o rechaza
+    // concurrenthashmap y no hashmap porque el servidor es multihilo --> varios
+    // mensajes pueden
     // llegar a la vez y HashMap no es seguro cuando se usan concurrencias.
 
-    // ScheduledFuture<?> es el handle que devuelve temporizador.schedule() al programar una tarea,
-    // se guarda aquí únicamente para poder llamar a cancel() si B responde antes de que expire,
+    // ScheduledFuture<?> es el handle que devuelve temporizador.schedule() al
+    // programar una tarea,
+    // se guarda aquí únicamente para poder llamar a cancel() si B responde antes de
+    // que expire,
     // evitando que se mande ERROR_NO_UNIDO cuando ya no hace falta.
-    // El <?> indica que no nos importa el tipo de retorno de la tarea, porque solo vamos a cancelarla.
+    // El <?> indica que no nos importa el tipo de retorno de la tarea, porque solo
+    // vamos a cancelarla.
     private Map<Integer, ScheduledFuture<?>> timersInvitacion = new ConcurrentHashMap<>();
-    
+
     private void cartasPartida(Pareja pj, JSONArray mazoJ1, JSONArray mazoJ2, JSONArray cola) {
         List<CartaMov> cartas = pj.partida.getCartasMovimiento();
 
@@ -136,7 +141,7 @@ public class Servidor extends WebSocketServer {
     }
 
     // Con 'iniciar' construimos los JSON de tipo PARTIDA_ENCONTRADA
-    public void iniciar(Pareja pj, String msgTipoPartida){
+    public void iniciar(Pareja pj, String msgTipoPartida) {
 
         JSONArray mazoJ1 = new JSONArray();
         JSONArray mazoJ2 = new JSONArray();
@@ -153,7 +158,7 @@ public class Servidor extends WebSocketServer {
         msg1.put("cartas_oponente", mazoJ2);
         msg1.put("carta_siguiente", cola);
 
-        JSONObject msg2= new JSONObject(); // al que le emparejan a j1
+        JSONObject msg2 = new JSONObject(); // al que le emparejan a j1
         msg2.put("tipo", msgTipoPartida);
         msg2.put("partida_id", pj.partida.getIDPartida());
         msg2.put("equipo", 2);
@@ -165,16 +170,20 @@ public class Servidor extends WebSocketServer {
 
         pj.p1.ws.send(msg1.toString());
         pj.p2.ws.send(msg2.toString());
-        System.out.println("Partida "+ pj.partida.getIDPartida() +" iniciada.");
+        System.out.println("Partida " + pj.partida.getIDPartida() + " iniciada.");
 
-        // Envío las 3 cartas de la cola para que el frontend gestione la rotación por su cuenta,
-        // porque si solo enviáramos la carta visible, el servidor tendría que guardar las demás 
-        // en memoria y el frontend tendría que pedirle la siguiente cada vez que gasta una, 
-        // que acumularía bastante petición y respuesta. Con esto evitamos mensajes extra.
+        // Envío las 3 cartas de la cola para que el frontend gestione la rotación por
+        // su cuenta,
+        // porque si solo enviáramos la carta visible, el servidor tendría que guardar
+        // las demás
+        // en memoria y el frontend tendría que pedirle la siguiente cada vez que gasta
+        // una,
+        // que acumularía bastante petición y respuesta. Con esto evitamos mensajes
+        // extra.
 
     }
 
-    private void gestionarBusquedaPartida(WebSocket conn, JSONObject obj){
+    private void gestionarBusquedaPartida(WebSocket conn, JSONObject obj) {
 
         String nombre = obj.getString("nombre");
         int puntos = obj.getInt("puntos");
@@ -182,32 +191,32 @@ public class Servidor extends WebSocketServer {
         InfoJugador oponente = null;
         Pareja pj = null;
 
-        try{
-            mutex.acquire(); //WAIT
+        try {
+            mutex.acquire(); // WAIT
 
             for (InfoJugador j : buscando_partida) {
-                int dif = Math.abs(j.puntos - puntos); 
-                if (dif <= 100 && !j.nombre.equals(nombre)) { 
+                int dif = Math.abs(j.puntos - puntos);
+                if (dif <= 100 && !j.nombre.equals(nombre)) {
                     oponente = j;
-                    break; 
+                    break;
                 }
             }
-            
+
             // if gestiona caso de match y else si no ha habido match
-            if (oponente != null){
+            if (oponente != null) {
                 buscando_partida.remove(oponente);
                 InfoJugador nuevoJugador = new InfoJugador(conn, nombre, puntos);
                 pj = new Pareja(oponente, nuevoJugador, "PUBLICA");
 
-                try{
-                    mutexParejas.acquire();//WAIT
+                try {
+                    mutexParejas.acquire();// WAIT
                     parejas.add(pj);
-                }catch (InterruptedException e) {
+                } catch (InterruptedException e) {
                     e.printStackTrace();
                 } finally {
-                    mutexParejas.release(); //SIGNAL
+                    mutexParejas.release(); // SIGNAL
                 }
-                
+
             } else {
                 InfoJugador jugador = new InfoJugador(conn, nombre, puntos);
                 buscando_partida.add(jugador);
@@ -219,10 +228,10 @@ public class Servidor extends WebSocketServer {
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
-            mutex.release(); //SIGNAL
+            mutex.release(); // SIGNAL
         }
 
-        if(oponente != null){
+        if (oponente != null) {
             iniciar(pj, "PARTIDA_ENCONTRADA");
             System.out.println("Partida creada: " + nombre + " VS " + oponente.nombre);
         }
@@ -231,17 +240,19 @@ public class Servidor extends WebSocketServer {
     private void volverABuscar(WebSocket conn, InfoJugador jug) {
         AtomicInteger segBuscando = new AtomicInteger(0);
         ScheduledFuture<?>[] tareaLoop = new ScheduledFuture<?>[1];
-        
+
         tareaLoop[0] = temporizador.scheduleAtFixedRate(() -> {
-            
+
             InfoJugador oponenteEncontrado = null;
             Pareja pj = null;
-            int tiempoActual = segBuscando.addAndGet(10); //Sumamos 10 segundos atomicamente debido a que dentro del temporizador no se puede modificar variables primitivas de java
+            int tiempoActual = segBuscando.addAndGet(10); // Sumamos 10 segundos atomicamente debido a que dentro del
+                                                          // temporizador no se puede modificar variables primitivas de
+                                                          // java
 
             try {
                 mutex.acquire(); // WAIT
-                
-                //Si no estamos en la lista, es que ya nos han cogido como pareja
+
+                // Si no estamos en la lista, es que ya nos han cogido como pareja
                 if (!buscando_partida.contains(jug)) {
                     tareaLoop[0].cancel(false);
                     return; // Salimos de la ejecución
@@ -251,16 +262,18 @@ public class Servidor extends WebSocketServer {
                 boolean prioridad = tiempoActual > 20 && hayGente;
 
                 if (prioridad) {
-                    // Sacamos al primero que no sea él mismo (el que ha estado más tiempo esperando)
+                    // Sacamos al primero que no sea él mismo (el que ha estado más tiempo
+                    // esperando)
                     oponenteEncontrado = buscando_partida.get(0);
                     if (jug.equals(oponenteEncontrado) && buscando_partida.size() > 1) {
                         oponenteEncontrado = buscando_partida.get(1);
                     }
                 } else {
                     for (InfoJugador j : buscando_partida) {
-                        if (jug.equals(j)) continue; // No emparejarse consigo mismo
+                        if (jug.equals(j))
+                            continue; // No emparejarse consigo mismo
                         int dif = Math.abs(j.puntos - jug.puntos);
-                        if (dif <= 100 && !j.nombre.equals(jug.nombre)) { 
+                        if (dif <= 100 && !j.nombre.equals(jug.nombre)) {
                             oponenteEncontrado = j;
                             break;
                         }
@@ -272,52 +285,54 @@ public class Servidor extends WebSocketServer {
                     buscando_partida.remove(jug);
                     buscando_partida.remove(oponenteEncontrado);
                     pj = new Pareja(oponenteEncontrado, jug, "PUBLICA");
-                    try{
-                        mutexParejas.acquire();//WAIT
+                    try {
+                        mutexParejas.acquire();// WAIT
                         parejas.add(pj);
-                    }catch (InterruptedException e) {
+                    } catch (InterruptedException e) {
                         e.printStackTrace();
                     } finally {
-                        mutexParejas.release(); //SIGNAL
+                        mutexParejas.release(); // SIGNAL
                     }
                 }
 
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } finally {
-                mutex.release(); // SIGNAL 
+                mutex.release(); // SIGNAL
             }
 
             if (oponenteEncontrado != null) {
                 System.out.println("Partida creada tardía: " + jug.nombre + " VS " + oponenteEncontrado.nombre);
                 iniciar(pj, "PARTIDA_ENCONTRADA");
-                
-                tareaLoop[0].cancel(false); 
+
+                tareaLoop[0].cancel(false);
             } else {
                 System.out.println(jug.nombre + " sigue buscando... (" + tiempoActual + "s)");
             }
 
-        }, 5, 5, TimeUnit.SECONDS); //Se repite cada 5 segundos
+        }, 5, 5, TimeUnit.SECONDS); // Se repite cada 5 segundos
     }
 
     private void gestionarPartida(WebSocket conn, JSONObject obj) {
         // buscamos partida en la que esta el jugador
         Pareja pj = null;
-        try{
+        try {
             mutexParejas.acquire();
             for (Pareja pareja : parejas) {
-                // Usamos el método 'buscar' de la clase Pareja para ver si este jugador está aquí
+                // Usamos el método 'buscar' de la clase Pareja para ver si este jugador está
+                // aquí
                 if (pareja.buscar(conn)) {
-                    // una vez encontremos el jugador, actualizamos el valor de p para trabajar con él y con el movimiento
+                    // una vez encontremos el jugador, actualizamos el valor de p para trabajar con
+                    // él y con el movimiento
                     // que tiene que hacer
                     pj = pareja;
                     break;
                 }
             }
-        }catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
-            mutexParejas.release(); //SIGNAL
+            mutexParejas.release(); // SIGNAL
         }
 
         if (pj != null) {
@@ -331,8 +346,8 @@ public class Servidor extends WebSocketServer {
                 int YD = obj.getInt("fila_destino");
                 int XD = obj.getInt("col_destino");
                 int equipo = obj.getInt("equipo");
-                
-                //El que te pase el mensaje te dira su equipo
+
+                // El que te pase el mensaje te dira su equipo
                 // 0 -> Movimiento realizado con exito
                 // 1 -> equipo 1 gana
                 // 2 -> equipo 2 gana
@@ -340,36 +355,36 @@ public class Servidor extends WebSocketServer {
                 // -2 -> movimiento no valido
                 int estado = -2;
 
-                if(XO > -1 && YO > -1 && XD > -1 && YD > -1){
+                if (XO > -1 && YO > -1 && XD > -1 && YD > -1) {
                     Tablero tb = pj.partida.getTablero();
-                    estado = pj.partida.moverFicha(equipo, tb.getPosicion(XO,YO), tb.getPosicion(XD,YD), carta);
+                    estado = pj.partida.moverFicha(equipo, tb.getPosicion(XO, YO), tb.getPosicion(XD, YD), carta);
                     // rotarCartas se llama internamente en moverFicha (solo en movimientos válidos)
-                    //pj.partida.rotarCartas(carta, equipo);
+                    // pj.partida.rotarCartas(carta, equipo);
                 }
-                
+
                 JSONObject msg = new JSONObject();
 
-                if(estado >= 0){    
-                    if(estado == 0){
+                if (estado >= 0) {
+                    if (estado == 0) {
                         msg.put("tipo", "MOVER");
                         msg.put("col_origen", XO);
                         msg.put("fila_origen", YO);
                         msg.put("col_destino", XD);
                         msg.put("fila_destino", YD);
                         msg.put("carta", carta);
-                    }else if(estado == 1){
-                        if(equipo == 1){
+                    } else if (estado == 1) {
+                        if (equipo == 1) {
                             msg.put("tipo", "DERROTA");
-                        }else{
+                        } else {
                             msg.put("tipo", "VICTORIA");
                             msg.put("motivo", "FIN_PARTIDA");
                             msg.put("equipo_responsable", equipo);
                         }
-                        pj.partida.actualizarBD(); //Si se termina la partida -> actualizo la base de datos
-                    }else if(estado == 2){
-                        if(equipo == 2){
+                        pj.partida.actualizarBD(); // Si se termina la partida -> actualizo la base de datos
+                    } else if (estado == 2) {
+                        if (equipo == 2) {
                             msg.put("tipo", "DERROTA");
-                        }else{
+                        } else {
                             msg.put("tipo", "VICTORIA");
                             msg.put("motivo", "FIN_PARTIDA");
                             msg.put("equipo_responsable", equipo);
@@ -378,7 +393,8 @@ public class Servidor extends WebSocketServer {
                     }
 
                     // Partida terminada por victoria: quitar la pareja para que ABANDONAR/MOVER
-                    // no coincidan con una partida antigua si el mismo jugador empieza otra después.
+                    // no coincidan con una partida antigua si el mismo jugador empieza otra
+                    // después.
                     if (estado == 1 || estado == 2) {
                         try {
                             mutexParejas.acquire();
@@ -389,32 +405,34 @@ public class Servidor extends WebSocketServer {
                             mutexParejas.release();
                         }
                     }
-                    
+
                     // Enviamos el mensaje AL OPOONENTE
                     oponente.ws.send(msg.toString());
                     System.out.println("Movimiento reenviado en la partida " + pj.partida.getIDPartida());
-                }else{
-                    if(estado == -2){
+                } else {
+                    if (estado == -2) {
                         msg.put("tipo", "MOVIMIENTO_INVALIDO");
                         System.out.println("Movimiento invalido en la partida " + pj.partida.getIDPartida());
-                    }else{
+                    } else {
                         msg.put("tipo", "CARTA_INVALIDA");
-                        System.out.println("Carta no presente en la partida en la partida " + pj.partida.getIDPartida());
+                        System.out
+                                .println("Carta no presente en la partida en la partida " + pj.partida.getIDPartida());
                     }
 
                     conn.send(msg.toString());
                 }
             }
         } else {
-            // Si no encontramos partida, es un error (el jugador intentó mover sin estar emparejado)
+            // Si no encontramos partida, es un error (el jugador intentó mover sin estar
+            // emparejado)
             System.out.println("Error: Movimiento recibido de un jugador sin partida activa.");
         }
     }
 
-    public void abandonarPartida(WebSocket conn, JSONObject obj){
+    public void abandonarPartida(WebSocket conn, JSONObject obj) {
         int equipoAbandona = obj.getInt("equipo");
         Pareja pj = null;
-        try{
+        try {
             mutexParejas.acquire();
             for (Pareja pareja : parejas) {
                 if (pareja.buscar(conn)) {
@@ -422,13 +440,13 @@ public class Servidor extends WebSocketServer {
                     break;
                 }
             }
-        }catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
-            mutexParejas.release(); //SIGNAL
+            mutexParejas.release(); // SIGNAL
         }
 
-        if(pj != null){
+        if (pj != null) {
             InfoJugador oponente = pj.getOponente(conn);
             JSONObject msg = new JSONObject();
 
@@ -439,34 +457,36 @@ public class Servidor extends WebSocketServer {
                 oponente.ws.send(msg.toString());
             }
 
-            pj.partida.abandonarPartida(equipoAbandona); //Actualizamos la partida en la BD con el abandono
+            pj.partida.abandonarPartida(equipoAbandona); // Actualizamos la partida en la BD con el abandono
 
-            try{
+            try {
                 mutexParejas.acquire();
                 parejas.remove(pj);
-            }catch (InterruptedException e) {
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             } finally {
-                mutexParejas.release(); //SIGNAL
+                mutexParejas.release(); // SIGNAL
             }
         }
     }
 
-    public void iniciarSesion(WebSocket conn, JSONObject obj){
+    public void iniciarSesion(WebSocket conn, JSONObject obj) {
         JugadorJDBC jdbc = new JugadorJDBC();
         String nombre = obj.getString("nombre");
         try {
             Jugador j = jdbc.buscarJugador(nombre);
-            
-            if(j == null || estaConectado(nombre)){
+
+            if (j == null || estaConectado(nombre)) {
                 conn.send(new JSONObject().put("tipo", "ERROR_SESION_USS").toString());
-            }else if(!Autenticacion.verificarPassword(obj.getString("password"), j.getContrasenya())){
+            } else if (!Autenticacion.verificarPassword(obj.getString("password"), j.getContrasenya())) {
                 conn.send(new JSONObject().put("tipo", "ERROR_SESION_PSSWD").toString());
-            }else{
+            } else {
                 try {
                     mutexConectados.acquire();
-                    // Inicialmente sí se registra con 0 puntos, pero si inicia sesión, tienen que ser j.getPuntos(), no?
-                    conectados.add(new InfoJugador(conn, nombre, j.getPuntos())); //Inicialmente el jugador se registra con 0 puntos
+                    // Inicialmente sí se registra con 0 puntos, pero si inicia sesión, tienen que
+                    // ser j.getPuntos(), no?
+                    conectados.add(new InfoJugador(conn, nombre, j.getPuntos())); // Inicialmente el jugador se registra
+                                                                                  // con 0 puntos
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 } finally {
@@ -482,12 +502,16 @@ public class Servidor extends WebSocketServer {
                 msg.put("cores", j.getCores());
                 conn.send(msg.toString());
 
-                // no hemos considerado que mientras el jugador esté desconectado, no le llegan las notifs (ya que
+                // no hemos considerado que mientras el jugador esté desconectado, no le llegan
+                // las notifs (ya que
                 // el ws en el frontend se cierra después de hacer registro, login, jugar)
-                // las notifs pendientes se envían aquí porque el frontend usa ws de manera puntual->
+                // las notifs pendientes se envían aquí porque el frontend usa ws de manera
+                // puntual->
                 // abre el WS para login y lo cierra nada más recibir INICIO_SESION_EXITOSO.
-                // No hay ningún momento en que el servidor tenga conexión abierta con el jugador
-                // fuera de una búsqueda o partida activa, así que aprovechamos el login para volcar
+                // No hay ningún momento en que el servidor tenga conexión abierta con el
+                // jugador
+                // fuera de una búsqueda o partida activa, así que aprovechamos el login para
+                // volcar
                 // todo lo que se perdió mientras estaba desconectado.
                 NotificacionJDBC notificacionJDBC = new NotificacionJDBC();
                 try {
@@ -505,7 +529,7 @@ public class Servidor extends WebSocketServer {
                     System.err.println("Error al obtener notificaciones pendientes: " + e.getMessage());
                 }
             }
-            
+
         } catch (java.sql.SQLException e) {
             System.err.println("Error de Base de Datos al iniciar sesión: " + e.getMessage());
             JSONObject errorInfo = new JSONObject();
@@ -514,12 +538,12 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    private boolean estaConectado(String nombre){
+    private boolean estaConectado(String nombre) {
         boolean encontrado = false;
         try {
             mutexConectados.acquire();
-            for(InfoJugador j : conectados){
-                if(j.nombre.equals(nombre)){
+            for (InfoJugador j : conectados) {
+                if (j.nombre.equals(nombre)) {
                     encontrado = true;
                     break;
                 }
@@ -532,12 +556,12 @@ public class Servidor extends WebSocketServer {
         return encontrado;
     }
 
-    private InfoJugador buscarJugadorConectado(String nombre){
+    private InfoJugador buscarJugadorConectado(String nombre) {
         InfoJugador encontrado = null;
         try {
             mutexConectados.acquire();
-            for(InfoJugador j : conectados){
-                if(j.nombre.equals(nombre)){
+            for (InfoJugador j : conectados) {
+                if (j.nombre.equals(nombre)) {
                     encontrado = j;
                     break;
                 }
@@ -550,12 +574,12 @@ public class Servidor extends WebSocketServer {
         return encontrado;
     }
 
-    private WebSocket buscarConexion(String nombre){
+    private WebSocket buscarConexion(String nombre) {
         WebSocket ws = null;
         try {
             mutexConectados.acquire();
-            for(InfoJugador j : conectados){
-                if(j.nombre.equals(nombre)){
+            for (InfoJugador j : conectados) {
+                if (j.nombre.equals(nombre)) {
                     ws = j.ws;
                     break;
                 }
@@ -567,17 +591,18 @@ public class Servidor extends WebSocketServer {
         }
         return ws;
     }
-    
-    private void notificarAmistad(WebSocket conn, JSONObject obj){
+
+    private void notificarAmistad(WebSocket conn, JSONObject obj) {
         String remitente = obj.getString("remitente");
         String destinatario = obj.getString("destinatario");
         JSONObject msg = new JSONObject();
         Instant ahora = Instant.now();
         Instant expiracion = ahora.plus(10, ChronoUnit.DAYS); // La solicitud de amistad expira en 10 días
         Timestamp fecha_ini = Timestamp.from(ahora);
-        Timestamp fecha_fin = Timestamp.from(expiracion); 
+        Timestamp fecha_fin = Timestamp.from(expiracion);
 
-        Notificacion n = new Notificacion(0, Notificacion.TIPO_SOLICITUD_AMISTAD, remitente, destinatario, Notificacion.ESTADO_PENDIENTE, fecha_ini, fecha_fin, null);
+        Notificacion n = new Notificacion(0, Notificacion.TIPO_SOLICITUD_AMISTAD, remitente, destinatario,
+                Notificacion.ESTADO_PENDIENTE, fecha_ini, fecha_fin, null);
         if (n.registrarNotificacion()) {
             System.out.println("Solicitud de amistad registrada: " + remitente + " -> " + destinatario);
             WebSocket ws = buscarConexion(destinatario);
@@ -597,13 +622,14 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    private void aceptarAmistad(WebSocket conn, JSONObject obj){
+    private void aceptarAmistad(WebSocket conn, JSONObject obj) {
         NotificacionJDBC notificacionJDBC = new NotificacionJDBC();
         try {
-            notificacionJDBC.borrar(obj.getInt("idNotificacion")); //DUDA, ARREGLAR
+            notificacionJDBC.borrar(obj.getInt("idNotificacion")); // DUDA, ARREGLAR
             JugadorJDBC jugadorJDBC = new JugadorJDBC();
-            if(jugadorJDBC.insertarAmistad(obj.getString("remitente"), obj.getString("destinatario"))){
-                System.out.println("Amistad registrada entre " + obj.getString("remitente") + " y " + obj.getString("destinatario"));
+            if (jugadorJDBC.insertarAmistad(obj.getString("remitente"), obj.getString("destinatario"))) {
+                System.out.println("Amistad registrada entre " + obj.getString("remitente") + " y "
+                        + obj.getString("destinatario"));
                 WebSocket ws = buscarConexion(obj.getString("remitente"));
                 if (ws != null && ws.isOpen()) {
                     JSONObject msg = new JSONObject();
@@ -679,12 +705,16 @@ public class Servidor extends WebSocketServer {
         }
 
         // enviamos la invitación a B
-        // !!!!!!!!!! este mensaje solo llega si el destinatario tiene el ws abierto en este momento
-        // (buscando partida o jugando, inicio sesión/registro). Si está desconectado o simplemente 
-        // navegando por la app, el ws está cerrado y el mensaje se pierde. 
-        // Las notifs pendientes se recuperan al hacer login, pero los mensajes de error 
-        // (ERROR_NO_UNIDO, INVITACION_RECHAZADA) como no se guardan en BD, se pierden si el WS no está abierto.
-        // lo mismo pasa cuando queramos enviar notif a wsA en rechazarInvitacion() y aceptarInvitacion()
+        // !!!!!!!!!! este mensaje solo llega si el destinatario tiene el ws abierto en
+        // este momento
+        // (buscando partida o jugando, inicio sesión/registro). Si está desconectado o
+        // simplemente
+        // navegando por la app, el ws está cerrado y el mensaje se pierde.
+        // Las notifs pendientes se recuperan al hacer login, pero los mensajes de error
+        // (ERROR_NO_UNIDO, INVITACION_RECHAZADA) como no se guardan en BD, se pierden
+        // si el WS no está abierto.
+        // lo mismo pasa cuando queramos enviar notif a wsA en rechazarInvitacion() y
+        // aceptarInvitacion()
         JSONObject msg = new JSONObject();
         msg.put("tipo", "INVITACION_PARTIDA");
         msg.put("remitente", remitente);
@@ -704,7 +734,8 @@ public class Servidor extends WebSocketServer {
         }, 2, TimeUnit.MINUTES);
 
         timersInvitacion.put(idNotificacion, timer[0]);
-        System.out.println("Invitación privada: " + remitente + " -> " + destinatario + " (notif " + idNotificacion + ")");
+        System.out.println(
+                "Invitación privada: " + remitente + " -> " + destinatario + " (notif " + idNotificacion + ")");
     }
 
     // nuevo: invitación a partida privada aceptada
@@ -723,7 +754,8 @@ public class Servidor extends WebSocketServer {
             // obtenemos la notificación para saber quién es el remitente y el destinatario
             NotificacionJDBC notifJdbc = new NotificacionJDBC();
             Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
-            System.err.println("NOTIFICACION CON LOS SIGUIENTES: " + notif.getRemitente() + ", " + notif.getDestinatario());
+            System.err.println(
+                    "NOTIFICACION CON LOS SIGUIENTES: " + notif.getRemitente() + ", " + notif.getDestinatario());
 
             InfoJugador j1 = buscarJugadorConectado(notif.getRemitente());
             InfoJugador j2 = buscarJugadorConectado(notif.getDestinatario());
@@ -774,16 +806,16 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    public void registrarJugador(WebSocket conn, JSONObject obj){
+    public void registrarJugador(WebSocket conn, JSONObject obj) {
         String correo = obj.getString("correo");
         String nombre = obj.getString("nombre");
         String contrasena = obj.getString("password");
         Jugador prueba = new Jugador(correo, nombre, contrasena); // El constructor ya hashea la contraseña internamente
-        if(prueba.registrarse() && !estaConectado(nombre)){
+        if (prueba.registrarse() && !estaConectado(nombre)) {
             System.out.println("Jugador registrado");
             try {
                 mutexConectados.acquire();
-                conectados.add(new InfoJugador(conn, nombre, 0)); //Inicialmente el jugador se registra con 0 puntos
+                conectados.add(new InfoJugador(conn, nombre, 0)); // Inicialmente el jugador se registra con 0 puntos
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } finally {
@@ -796,27 +828,27 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    public void cancelarBusqueda(WebSocket conn){
-        try{
-            mutex.acquire(); //WAIT
+    public void cancelarBusqueda(WebSocket conn) {
+        try {
+            mutex.acquire(); // WAIT
             InfoJugador jugadorBorrar = null;
-            for(InfoJugador j : buscando_partida){
-                if(j.ws == conn){
+            for (InfoJugador j : buscando_partida) {
+                if (j.ws == conn) {
                     jugadorBorrar = j;
                 }
             }
-            if(jugadorBorrar != null){
+            if (jugadorBorrar != null) {
                 buscando_partida.remove(jugadorBorrar);
                 conn.send(new JSONObject().put("tipo", "CANCELAR_EXITO").toString());
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
-            mutex.release(); //SIGNAL
+            mutex.release(); // SIGNAL
         }
     }
 
-    public void buscarJugadores(WebSocket conn, JSONObject obj){
+    public void buscarJugadores(WebSocket conn, JSONObject obj) {
         String raiz = obj.getString("raiz");
         try {
             JugadorJDBC jdbc = new JugadorJDBC();
@@ -837,7 +869,7 @@ public class Servidor extends WebSocketServer {
             msg.put("tipo", "INFORMACION_JUGADORES");
             msg.put("info", infoJugadores);
             conn.send(msg.toString());
-                
+
         } catch (SQLException e) {
             e.printStackTrace();
             System.err.println("SQL State: " + e.getSQLState());
@@ -846,7 +878,7 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    public void buscarAmigos(WebSocket conn, JSONObject obj){
+    public void buscarAmigos(WebSocket conn, JSONObject obj) {
         String usuario = obj.getString("usuario");
         try {
             JugadorJDBC jdbc = new JugadorJDBC();
@@ -867,7 +899,7 @@ public class Servidor extends WebSocketServer {
             msg.put("tipo", "INFORMACION_AMIGOS");
             msg.put("info", infoJugadores);
             conn.send(msg.toString());
-                
+
         } catch (SQLException e) {
             e.printStackTrace();
             System.err.println("SQL State: " + e.getSQLState());
@@ -876,16 +908,16 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    public void borrarAmigo(WebSocket conn, JSONObject obj){
+    public void borrarAmigo(WebSocket conn, JSONObject obj) {
         String usuario = obj.getString("usuario");
         String amigo = obj.getString("amigo");
         try {
             JugadorJDBC jdbc = new JugadorJDBC();
             JSONObject msg = new JSONObject();
-            if(jdbc.borrarAmigo(usuario, amigo)){
+            if (jdbc.borrarAmigo(usuario, amigo)) {
                 msg.put("tipo", "AMIGO_BORRADO");
                 conn.send(msg.toString());
-            }else{
+            } else {
                 msg.put("tipo", "ERROR_AL_BORRAR_AMIGO");
                 conn.send(msg.toString());
             }
@@ -897,7 +929,7 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    public void solicitarPartidas(WebSocket conn, JSONObject obj, String tipo){
+    public void solicitarPartidas(WebSocket conn, JSONObject obj, String tipo) {
         String usuario = obj.getString("usuario");
         PartidaJDBC jdbc = new PartidaJDBC();
         JSONObject msg = new JSONObject();
@@ -934,7 +966,7 @@ public class Servidor extends WebSocketServer {
                 System.err.println("Error al buscar partidas privadas: " + e.getMessage());
                 conn.send(new JSONObject().put("tipo", "ERROR_AL_BUSCAR_PARTIDAS_PRIV").toString());
             }
-        } else if (tipo.equals("PUBLICA")){
+        } else if (tipo.equals("PUBLICA")) {
             try {
                 List<Partida> partidas = jdbc.buscarPartidasJugadorPublicas(usuario);
                 msg.put("tipo", "PARTIDAS_PUBLICAS");
@@ -990,15 +1022,16 @@ public class Servidor extends WebSocketServer {
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         System.out.println("Jugador desconectado -> " + conn.getRemoteSocketAddress());
         try {
-            mutex.acquire(); //WAIT
+            mutex.acquire(); // WAIT
             buscando_partida.removeIf(jugador -> jugador.ws == conn);
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
-            mutex.release(); //SIGNAL
+            mutex.release(); // SIGNAL
         }
 
-        // elimnamos al jugador de conectados para que pueda volver a iniciar sesión, porque
+        // elimnamos al jugador de conectados para que pueda volver a iniciar sesión,
+        // porque
         // sin esto, al cerrar el WS de login el jugador queda como ausente,
         // estaConectado() seguiría devolviendo true y el login fallaría
         try {
@@ -1018,43 +1051,45 @@ public class Servidor extends WebSocketServer {
         hilos.submit(() -> {
             JSONObject obj = new JSONObject(message);
             String tipoMSG = obj.getString("tipo");
-            if(tipoMSG.equals("BUSCAR_PARTIDA")){
+            if (tipoMSG.equals("BUSCAR_PARTIDA")) {
                 gestionarBusquedaPartida(conn, obj);
             } else if (tipoMSG.equals("MOVER")) {
                 gestionarPartida(conn, obj);
-            } else if (tipoMSG.equals("INICIAR_SESION")){
+            } else if (tipoMSG.equals("INICIAR_SESION")) {
                 iniciarSesion(conn, obj);
-            } else if (tipoMSG.equals("REGISTRARSE")){
+            } else if (tipoMSG.equals("REGISTRARSE")) {
                 registrarJugador(conn, obj);
-            } else if (tipoMSG.equals("ABANDONAR")){
+            } else if (tipoMSG.equals("ABANDONAR")) {
                 abandonarPartida(conn, obj);
-            } else if (tipoMSG.equals("CANCELAR")){
+            } else if (tipoMSG.equals("CANCELAR")) {
                 cancelarBusqueda(conn);
                 // PREVIAMENTE INVITACION_AMISTAD, NO ERA COHERENTE CON EL README
-            } else if (tipoMSG.equals("SOLICITUD_AMISTAD")){
+            } else if (tipoMSG.equals("SOLICITUD_AMISTAD")) {
                 notificarAmistad(conn, obj);
-            } else if (tipoMSG.equals("ACEPTAR_AMISTAD")){
+            } else if (tipoMSG.equals("ACEPTAR_AMISTAD")) {
                 aceptarAmistad(conn, obj);
-            } else if (tipoMSG.equals("RECHAZAR_AMISTAD")){
+            } else if (tipoMSG.equals("RECHAZAR_AMISTAD")) {
                 rechazarAmistad(conn, obj);
-            } else if (tipoMSG.equals("INVITACION_PARTIDA")){
+            } else if (tipoMSG.equals("INVITACION_PARTIDA")) {
                 gestionarInvitacionPartida(conn, obj);
-            } else if (tipoMSG.equals("ACEPTAR_INVITACION")){
+            } else if (tipoMSG.equals("ACEPTAR_INVITACION")) {
                 aceptarInvitacion(conn, obj);
-            } else if (tipoMSG.equals("RECHAZAR_INVITACION")){
+            } else if (tipoMSG.equals("RECHAZAR_INVITACION")) {
                 rechazarInvitacion(conn, obj);
-            } else if (tipoMSG.equals("OBTENER_PERFIL")){
+            } else if (tipoMSG.equals("OBTENER_PERFIL")) {
                 obtenerPerfil(conn, obj);
-            } else if (tipoMSG.equals("BUSCAR_JUGADORES")){
+            } else if (tipoMSG.equals("BUSCAR_JUGADORES")) {
                 buscarJugadores(conn, obj);
-            } else if (tipoMSG.equals("OBTENER_AMIGOS")){
+            } else if (tipoMSG.equals("OBTENER_AMIGOS")) {
                 buscarAmigos(conn, obj);
-            } else if (tipoMSG.equals("BORRAR_AMIGO")){
+            } else if (tipoMSG.equals("BORRAR_AMIGO")) {
                 borrarAmigo(conn, obj);
-            } else if (tipoMSG.equals("SOLICITAR_PARTIDAS_PUB")){
+            } else if (tipoMSG.equals("SOLICITAR_PARTIDAS_PUB")) {
                 solicitarPartidas(conn, obj, "PUBLICA");
-            } else if (tipoMSG.equals("SOLICITAR_PARTIDAS_PRIV")){
+            } else if (tipoMSG.equals("SOLICITAR_PARTIDAS_PRIV")) {
                 solicitarPartidas(conn, obj, "PRIVADA");
+            } else if (tipoMSG.equals("OBTENER_CARTAS")) {
+                obtenerCartas(conn, obj);
             }
         });
     }
@@ -1086,13 +1121,34 @@ public class Servidor extends WebSocketServer {
             msg.put("partidas_jugadas", j.getPartidasJugadas());
             msg.put("cores", j.getCores());
             System.out.println("PERFIL_ACTUALIZADO enviado -> " + nombre
-                + " | puntos=" + j.getPuntos()
-                + " | cores=" + j.getCores()
-                + " | ganadas=" + j.getPartidasGanadas()
-                + " | jugadas=" + j.getPartidasJugadas());
+                    + " | puntos=" + j.getPuntos()
+                    + " | cores=" + j.getCores()
+                    + " | ganadas=" + j.getPartidasGanadas()
+                    + " | jugadas=" + j.getPartidasJugadas());
             conn.send(msg.toString());
         } catch (Exception e) {
             System.err.println("Error al obtener perfil: " + e.getMessage());
+        }
+    }
+
+    private void obtenerCartas(WebSocket conn, JSONObject obj) {
+        try {
+            CartasMovJDBC jdbc = new CartasMovJDBC();
+            List<CartaMov> cartasData = jdbc.sacarCartas();
+            JSONArray arregloCartas = new JSONArray();
+            for (CartaMov c : cartasData) {
+                JSONObject cJson = new JSONObject();
+                cJson.put("nombre", c.getNombre());
+                cJson.put("puntos_necesarios", c.getPuntosMin());
+                arregloCartas.put(cJson);
+            }
+            JSONObject msg = new JSONObject();
+            msg.put("tipo", "LISTA_CARTAS");
+            msg.put("cartas", arregloCartas);
+            conn.send(msg.toString());
+        } catch (SQLException e) {
+            System.err.println("Error al obtener cartas: " + e.getMessage());
+            conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
         }
     }
 

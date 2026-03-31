@@ -1156,4 +1156,29 @@ Definidos en: `src/lib/cartas.ts` → array `TODAS_LAS_CARTAS`
              -> npm run dev  
              (es necesario tener npm instalado)
 
+---
 
+## 7. Contrato Mis Cartas (Fase 1)
+
+Permitir que el cliente consulte su catálogo completo de cartas y los puntos necesarios para desbloquear cada una. Las cartas disponibles para salir aleatoriamente en una partida serán aquellas que requieran puntos <= a los puntos (elo) actuales del jugador.
+
+### `OBTENER_CARTAS` (cliente -> servidor)
+El cliente solicita el estado de su catálogo de cartas.
+```json
+{
+  "tipo": "OBTENER_CARTAS"
+}
+```
+
+### `LISTA_CARTAS` (servidor -> cliente)
+El servidor envía el catálogo de las 16 cartas indicando cuántos puntos se requieren para que el jugador pueda verlas en sus partidas.
+```json
+{
+  "tipo": "LISTA_CARTAS",
+  "cartas": [
+    { "nombre": "Tigre", "puntos_necesarios": 0 },
+    { "nombre": "Dragon", "puntos_necesarios": 0 },
+    { "nombre": "Mantis", "puntos_necesarios": 500 }
+  ]
+}
+```
