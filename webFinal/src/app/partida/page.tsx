@@ -44,6 +44,7 @@ import { obtenerJugadorActivo, guardarSesion } from "@/lib/sesion";
 import { obtenerPerfil } from "@/api/auth";
 import { calcularMejorMovimientoIA, type Dificultad } from "@/lib/ia";
 import { getBoardStyle, getColorMovimiento, getEquipoNombre, getPiezaSrc, normalizarSkinId } from "@/lib/skins";
+import { AvatarCircle } from "@/lib/avatar";
 import { usarServidor } from "@/api/ws";
 import {
   conectarPartida,
@@ -67,7 +68,11 @@ const NOMBRE_DIFICULTAD: Record<Dificultad, string> = {
 };
 
 function getMockOponente(dificultad: Dificultad) {
-  return { nombre: `Iron Bot (${NOMBRE_DIFICULTAD[dificultad]})`, puntos: dificultad === "facil" ? 800 : dificultad === "medio" ? 1200 : 1600 };
+  return {
+    nombre: `Iron Bot (${NOMBRE_DIFICULTAD[dificultad]})`,
+    puntos: dificultad === "facil" ? 800 : dificultad === "medio" ? 1200 : 1600,
+    avatar_id: null,
+  };
 }
 
 // ─── Mini cuadrícula de la carta ─────────────────────────────────────────────
@@ -380,8 +385,8 @@ function PartidaInterna({
   const nombreJugador = jugadorActual.nombre;
   const skinActiva = normalizarSkinId(jugadorActual.skin_activa);
   const nombreEquipoJugador = getEquipoNombre(skinActiva, miEquipoActual);
-  const infoOponente = useRef<{ nombre: string; puntos: number }>(getMockOponente(dificultad));
-  const [infoOponenteUI, setInfoOponenteUI] = useState<{ nombre: string; puntos: number }>(
+  const infoOponente = useRef<{ nombre: string; puntos: number; avatar_id: string | null }>(getMockOponente(dificultad));
+  const [infoOponenteUI, setInfoOponenteUI] = useState<{ nombre: string; puntos: number; avatar_id: string | null }>(
     getMockOponente(dificultad)
   );
 
@@ -417,8 +422,16 @@ function PartidaInterna({
         setEstado(crearEstadoDesdeServidor(datos as RespuestaPartidaEncontrada));
         equipoJugadorRef.current = datos.equipo;
         setMiEquipoActual(datos.equipo);
-        infoOponente.current = { nombre: datos.oponente, puntos: datos.oponentePt };
-        setInfoOponenteUI({ nombre: datos.oponente, puntos: datos.oponentePt });
+        infoOponente.current = {
+          nombre: datos.oponente,
+          puntos: datos.oponentePt,
+          avatar_id: datos.oponente_avatar_id ?? null,
+        };
+        setInfoOponenteUI({
+          nombre: datos.oponente,
+          puntos: datos.oponentePt,
+          avatar_id: datos.oponente_avatar_id ?? null,
+        });
         setAguardandoInicio(datos.equipo === 2);
         setTipoPartida(
           datos.tipo === "PARTIDA_PRIVADA_ENCONTRADA" ? "PRIVADA" : "PUBLICA"
@@ -819,8 +832,8 @@ function PartidaInterna({
             <Image src="/core.png" alt="Cores" width={18} height={18} className="h-4 w-auto" />
             <span className="text-white font-semibold text-xs">{jugadorActual.cores.toLocaleString()}</span>
           </div>
-          <div className="w-8 h-8 rounded-full bg-[#2a4a6a] border-2 border-white/30 flex items-center justify-center">
-            <span className="text-white/50 text-xs">{jugadorActual.nombre.charAt(0).toUpperCase()}</span>
+          <div className="w-8 h-8 rounded-full bg-[#2a4a6a] border-2 border-white/30 overflow-hidden">
+            <AvatarCircle nombre={jugadorActual.nombre} avatarId={jugadorActual.avatar_id} sizeClass="w-full h-full" textClass="text-xs" />
           </div>
         </div>
       </header>
@@ -944,11 +957,17 @@ function PartidaInterna({
         {/* Equipo 1 = Azul, Equipo 2 = Rojo */}
         <aside className="w-64 shrink-0 flex flex-col gap-3 px-3 pt-3 pb-2 bg-[#162235] border-r border-white/10 overflow-hidden min-h-0">
           <div className="flex flex-col items-center gap-1">
-            <div className={`w-11 h-11 rounded-full border-2 flex items-center justify-center shrink-0 ${miEquipoActual === 2
+            <div className={`w-11 h-11 rounded-full border-2 overflow-hidden shrink-0 ${miEquipoActual === 2
               ? "bg-blue-900/60 border-blue-400/40"   // oponente es equipo 1 (azul)
               : "bg-red-900/60 border-red-400/40"     // oponente es equipo 2 (rojo)
               }`}>
-              <span className="text-white/60 text-base">{nombreOponente.charAt(0).toUpperCase()}</span>
+              <AvatarCircle
+                nombre={nombreOponente}
+                avatarId={infoOponenteUI.avatar_id}
+                sizeClass="w-full h-full"
+                textClass="text-base"
+                bgClass="bg-transparent"
+              />
             </div>
             <span className="text-white/80 text-[11px] font-semibold">@{nombreOponente}</span>
             <span className="text-white/30 text-[9px]">{infoOponenteUI.puntos} pts</span>
@@ -1146,11 +1165,17 @@ function PartidaInterna({
               }`}>
               {aguardandoInicio ? "Esperando inicio…" : esTurnoJugador ? "¡Es tu turno!" : "Esperando…"}
             </p>
-            <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center ${miEquipoActual === 1
+            <div className={`w-9 h-9 rounded-full border-2 overflow-hidden ${miEquipoActual === 1
               ? "bg-blue-900/60 border-blue-400/40"
               : "bg-red-900/60 border-red-400/40"
               }`}>
-              <span className="text-white/60 text-xs">{jugadorActual.nombre.charAt(0).toUpperCase()}</span>
+              <AvatarCircle
+                nombre={jugadorActual.nombre}
+                avatarId={jugadorActual.avatar_id}
+                sizeClass="w-full h-full"
+                textClass="text-xs"
+                bgClass="bg-transparent"
+              />
             </div>
             <span className="text-white/60 text-[10px]">@{jugadorActual.nombre}</span>
             <span className="text-white/30 text-[9px]">{jugadorActual.puntos} pts</span>

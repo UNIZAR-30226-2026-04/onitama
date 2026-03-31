@@ -840,6 +840,135 @@ Codigos de error acordados:
 
 ---
 
+### 2.5 Contrato avatar de perfil (Fase 1)
+
+> Objetivo: cerrar las modificaciones de mensajes para que el frontend web/movil pueda mostrar foto de perfil en lugar de inicial.
+> Nota: en esta fase no se define ningun mensaje nuevo para cambiar avatar; solo se amplian mensajes existentes.
+
+#### 2.5.1 Cambios sobre mensajes del cliente al servidor
+
+##### `REGISTRARSE` (cliente -> servidor)
+Se añade `avatar_id` al registro de usuario:
+```json
+{
+  "tipo": "REGISTRARSE",
+  "password": "1234",
+  "nombre": "Iron",
+  "correo": "taisen@irontaisen.com",
+  "avatar_id": "avatar_03"
+}
+```
+
+---
+
+#### 2.5.2 Cambios sobre respuestas de sesion/perfil
+
+##### `INICIO_SESION_EXITOSO` (servidor -> cliente)
+Se añade `avatar_id`:
+```json
+{
+  "tipo": "INICIO_SESION_EXITOSO",
+  "nombre": "Iron",
+  "puntos": 1000,
+  "correo": "itor@as.com",
+  "partidas_ganadas": 2,
+  "partidas_jugadas": 2,
+  "cores": 221,
+  "skin_activa": "Skin0",
+  "avatar_id": "avatar_03"
+}
+```
+
+##### `PERFIL_ACTUALIZADO` (servidor -> cliente)
+Se añade `avatar_id`:
+```json
+{
+  "tipo": "PERFIL_ACTUALIZADO",
+  "nombre": "Iron",
+  "puntos": 1000,
+  "correo": "itor@as.com",
+  "partidas_ganadas": 2,
+  "partidas_jugadas": 2,
+  "cores": 221,
+  "skin_activa": "Skin0",
+  "avatar_id": "avatar_03"
+}
+```
+
+---
+
+#### 2.5.3 Cambios sobre listados de jugadores
+
+##### `INFORMACION_AMIGOS` (servidor -> cliente)
+Cada jugador de `info` debe incluir `avatar_id`:
+```json
+{
+  "tipo": "INFORMACION_AMIGOS",
+  "info": [
+    { "nombre": "Iron", "puntos": 10, "avatar_id": "avatar_03" },
+    { "nombre": "Iron1", "puntos": 25, "avatar_id": "avatar_07" }
+  ]
+}
+```
+
+##### `INFORMACION_JUGADORES` (servidor -> cliente)
+Cada jugador de `info` debe incluir `avatar_id`:
+```json
+{
+  "tipo": "INFORMACION_JUGADORES",
+  "info": [
+    { "nombre": "Iron", "puntos": 10, "avatar_id": "avatar_03" },
+    { "nombre": "Iron1", "puntos": 25, "avatar_id": "avatar_07" }
+  ]
+}
+```
+
+---
+
+#### 2.5.4 Cambios sobre mensajes de emparejamiento/partida
+
+##### `PARTIDA_ENCONTRADA` (servidor -> cliente)
+Se añade `oponente_avatar_id`:
+```json
+{
+  "tipo": "PARTIDA_ENCONTRADA",
+  "partida_id": "123",
+  "equipo": 2,
+  "oponente": "granluchador",
+  "oponentePt": 1000,
+  "oponente_avatar_id": "avatar_07",
+  "cartas_jugador": [],
+  "cartas_oponente": [],
+  "carta_siguiente": []
+}
+```
+
+##### `PARTIDA_PRIVADA_ENCONTRADA` (servidor -> cliente)
+Se añade `oponente_avatar_id`:
+```json
+{
+  "tipo": "PARTIDA_PRIVADA_ENCONTRADA",
+  "partida_id": "123",
+  "equipo": 1,
+  "oponente": "Taisen",
+  "oponentePt": 980,
+  "oponente_avatar_id": "avatar_04",
+  "cartas_jugador": [],
+  "cartas_oponente": [],
+  "carta_siguiente": []
+}
+```
+
+---
+
+#### 2.5.5 Identificador de avatar (convencion acordada)
+
+- Formato recomendado: `avatar_XX` (por ejemplo `avatar_01`, `avatar_02`, ...).
+- El frontend resuelve la imagen desde `public` usando ese identificador.
+- Si por cualquier motivo no llega `avatar_id`, el frontend debe usar fallback visual (inicial o avatar por defecto).
+
+---
+
 ## 3. Cambios exactos en el frontend al conectar el servidor
 
 ### 3.1 `src/app/buscar/page.tsx`

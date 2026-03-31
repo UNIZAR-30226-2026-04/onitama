@@ -20,6 +20,7 @@ export interface DatosSesion {
   partidas_jugadas: number;
   cores: number;
   skin_activa: string;
+  avatar_id: string | null;
 }
 
 /** Guarda los datos del jugador en sessionStorage tras el login. */
@@ -62,6 +63,7 @@ export function obtenerJugadorActivo(): DatosSesion {
       partidas_jugadas: 10,
       cores: 430,
       skin_activa: "Skin0",
+      avatar_id: null,
     }
   );
 }

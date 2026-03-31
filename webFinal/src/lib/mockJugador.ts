@@ -12,4 +12,5 @@ export const mockJugador = {
   correo: "jugador@onitama.com",
   puntos: 1372,
   cores: 430,
+  avatar_id: null,
 };

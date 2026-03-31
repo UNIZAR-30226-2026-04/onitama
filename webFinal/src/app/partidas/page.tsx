@@ -44,6 +44,7 @@ import {
 } from "@/api/social";
 import * as WS from "@/api/ws";
 import { getSkinNombre, getPiezaSrc, getSkinPrecio, normalizarSkinId, type SkinId } from "@/lib/skins";
+import { AvatarCircle } from "@/lib/avatar";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -164,6 +165,7 @@ export default function PartidasPage() {
         idNotificacion: msg.idNotificacion as number,
         tipo: "SOLICITUD_AMISTAD",
         remitente: msg.remitente as string,
+        avatar_id: (msg.avatar_id as string | undefined) ?? null,
         fecha_ini: msg.fecha_ini as string | undefined,
         fecha_fin: msg.fecha_fin as string | undefined,
       };
@@ -179,6 +181,7 @@ export default function PartidasPage() {
         idNotificacion: msg.idNotificacion as number,
         tipo: "INVITACION_PARTIDA",
         remitente: msg.remitente as string,
+        avatar_id: (msg.avatar_id as string | undefined) ?? null,
       };
       setNotificaciones((prev) =>
         prev.find((n) => n.idNotificacion === nueva.idNotificacion)
@@ -190,8 +193,11 @@ export default function PartidasPage() {
     // Cuando se acepta una amistad, añadirla a la lista local
     const unsubAmistad = WS.suscribir("AMISTAD_ACEPTADA", (msg) => {
       const amigo = msg.amigo as string;
+      const avatarId = (msg.avatar_id as string | undefined) ?? null;
       setAmigos((prev) =>
-        prev.some((a) => a.nombre === amigo) ? prev : [...prev, { nombre: amigo, puntos: 0 }]
+        prev.some((a) => a.nombre === amigo)
+          ? prev
+          : [...prev, { nombre: amigo, puntos: 0, avatar_id: avatarId }]
       );
     });
 
@@ -317,7 +323,7 @@ export default function PartidasPage() {
   /** Debounce: enviar búsqueda al servidor 400 ms después de que el usuario deje de escribir. */
   useEffect(() => {
     const texto = textoBusqueda.trim();
-    if (texto.length < 2) {
+    if (texto.length < 1) {
       setResultados([]);
       return;
     }
@@ -536,9 +542,7 @@ export default function PartidasPage() {
             title="Mi cuenta"
             aria-label="Abrir Mi cuenta"
           >
-            <span className="text-white/90 text-sm font-semibold select-none">
-              {jugador.nombre.charAt(0).toUpperCase()}
-            </span>
+            <AvatarCircle nombre={jugador.nombre} avatarId={jugador.avatar_id} sizeClass="w-full h-full" textClass="text-sm" />
           </button>
           <div className="flex items-center gap-2">
             <Image src="/katanas.png" alt="Katanas" width={22} height={22} className="h-5 w-auto shrink-0" />
@@ -830,9 +834,7 @@ export default function PartidasPage() {
                   <ul className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
                     {amigos.map((amigo) => (
                       <li key={amigo.nombre} className="flex items-center gap-3 bg-stone-50 rounded-xl px-4 py-3">
-                        <div className="w-9 h-9 rounded-full bg-[#1a2d4a] text-white flex items-center justify-center font-bold text-sm">
-                          {amigo.nombre.charAt(0).toUpperCase()}
-                        </div>
+                        <AvatarCircle nombre={amigo.nombre} avatarId={amigo.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" />
                         <div className="flex-1">
                           <p className="font-semibold text-stone-800">{amigo.nombre}</p>
                           <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
@@ -1103,9 +1105,7 @@ function PanelMiCuenta({
 
       <div className="rounded-2xl border border-stone-200 bg-white shadow-sm p-6 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-[#1a2d4a] text-white flex items-center justify-center text-2xl font-bold shrink-0">
-            {jugador.nombre.charAt(0).toUpperCase()}
-          </div>
+          <AvatarCircle nombre={jugador.nombre} avatarId={jugador.avatar_id} sizeClass="w-16 h-16 shrink-0" textClass="text-2xl" />
           <div>
             <p className="text-lg font-semibold text-stone-900">@{jugador.nombre}</p>
             <p className="text-sm text-stone-500">{jugador.correo}</p>
@@ -1399,9 +1399,7 @@ function PanelAmigos({
                       className="flex items-center gap-3 flex-1 text-left"
                       onClick={() => onSeleccionarAmigo(amigo)}
                     >
-                      <div className="w-9 h-9 rounded-full bg-[#1a2d4a] flex items-center justify-center text-white font-bold text-sm">
-                        {amigo.nombre.charAt(0).toUpperCase()}
-                      </div>
+                      <AvatarCircle nombre={amigo.nombre} avatarId={amigo.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" />
                       <div>
                         <p className="font-medium text-stone-800">{amigo.nombre}</p>
                         <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
@@ -1441,7 +1439,7 @@ function PanelAmigos({
             <p className="text-sm text-stone-400 text-center py-4">Buscando…</p>
           )}
 
-          {!buscando && textoBusqueda.trim().length >= 2 && resultados.length === 0 && (
+          {!buscando && textoBusqueda.trim().length >= 1 && resultados.length === 0 && (
             <p className="text-sm text-stone-400 text-center py-4">
               No se encontraron jugadores.
             </p>
@@ -1459,9 +1457,7 @@ function PanelAmigos({
                         key={j.nombre}
                         className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm"
                       >
-                        <div className="w-9 h-9 rounded-full bg-[#7b8fa8] flex items-center justify-center text-white font-bold text-sm">
-                          {j.nombre.charAt(0).toUpperCase()}
-                        </div>
+                        <AvatarCircle nombre={j.nombre} avatarId={j.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" bgClass="bg-[#7b8fa8]" />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-stone-800 truncate">{j.nombre}</p>
                           <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
@@ -1495,11 +1491,6 @@ function PanelAmigos({
             </ul>
           )}
 
-          {textoBusqueda.trim().length > 0 && textoBusqueda.trim().length < 2 && (
-            <p className="text-xs text-stone-400 text-center">
-              Escribe al menos 2 caracteres para buscar.
-            </p>
-          )}
         </div>
       )}
 
@@ -1518,9 +1509,13 @@ function PanelAmigos({
 
             <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 items-start">
               <div className="flex flex-col items-center">
-                <div className="w-28 h-28 rounded-full bg-stone-200 flex items-center justify-center text-3xl text-stone-500">
-                  {amigoSeleccionado.nombre.charAt(0).toUpperCase()}
-                </div>
+                <AvatarCircle
+                  nombre={amigoSeleccionado.nombre}
+                  avatarId={amigoSeleccionado.avatar_id}
+                  sizeClass="w-28 h-28"
+                  textClass="text-3xl text-stone-500"
+                  bgClass="bg-stone-200"
+                />
                 <p className="mt-3 text-xl font-semibold text-stone-800">@{amigoSeleccionado.nombre}</p>
                 <p className="mt-2 text-sm text-stone-600 flex items-center gap-1">
                   <Image src="/katanas.png" alt="Katanas" width={16} height={16} className="h-4 w-auto" />
@@ -1603,9 +1598,7 @@ function PanelNotificaciones({
               className="bg-white rounded-xl px-4 py-4 shadow-sm flex items-center gap-3"
             >
               {/* Avatar */}
-              <div className="w-10 h-10 rounded-full bg-[#1a2d4a] flex items-center justify-center text-white font-bold text-sm shrink-0">
-                {notif.remitente.charAt(0).toUpperCase()}
-              </div>
+              <AvatarCircle nombre={notif.remitente} avatarId={notif.avatar_id} sizeClass="w-10 h-10 shrink-0" textClass="text-sm" />
 
               {/* Texto */}
               <div className="flex-1 min-w-0">

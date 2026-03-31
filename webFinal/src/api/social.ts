@@ -28,11 +28,13 @@ import * as WS from "./ws";
 export interface InfoJugadorBusqueda {
   nombre: string;
   puntos: number;
+  avatar_id?: string | null;
 }
 
 export interface InfoAmigo {
   nombre: string;
   puntos: number;
+  avatar_id?: string | null;
 }
 
 export interface ResumenPartidaAmigo {
@@ -62,7 +64,7 @@ export interface ResumenPartidaPublica {
 export async function buscarJugadores(
   raiz: string
 ): Promise<InfoJugadorBusqueda[]> {
-  if (!WS.usarServidor || !WS.estaConectado() || raiz.trim().length < 2) {
+  if (!WS.usarServidor || !WS.estaConectado() || raiz.trim().length < 1) {
     return [];
   }
 
