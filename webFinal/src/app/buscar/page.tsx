@@ -19,6 +19,13 @@ import HeaderLogo from "@/components/HeaderLogo";
 import FondoPantalla from "@/components/FondoPantalla";
 import { buscarPartida, type RespuestaBuscarPartida } from "@/api/buscarpartida";
 import { obtenerJugadorActivo } from "@/lib/sesion";
+import {
+  getEquipoClaseTexto,
+  getEquipoGlow,
+  getEquipoNombre,
+  getPiezaSrc,
+  normalizarSkinId,
+} from "@/lib/skins";
 
 type EstadoUI = "buscando" | "error" | "timeout" | "presentacion";
 
@@ -96,20 +103,23 @@ export default function BuscarPartidaPage() {
 
     const esAzul = equipoLocal === 1; // Equipo 1 = Azul, Equipo 2 = Rojo
     const jugador = obtenerJugadorActivo();
+    const skinActiva = normalizarSkinId(jugador.skin_activa);
 
-    // Imágenes de luchadores según equipo y posición (Iz = izquierda, Dr = derecha)
-    const imgJugadorDr  = esAzul ? "/luchadorAzulDr.PNG" : "/luchadorRojoDr.PNG";
-    const imgOponenteIz = esAzul ? "/luchadorRojoIz.PNG" : "/luchadorAzulIz.PNG";
+    const imgJugadorDr = getPiezaSrc("rey", esAzul ? 1 : 2, skinActiva);
+    const imgOponenteIz = getPiezaSrc("rey", esAzul ? 2 : 1, skinActiva);
+    const nombreEquipoLocal = getEquipoNombre(skinActiva, esAzul ? 1 : 2);
+    const nombreEquipoInicial = getEquipoNombre(skinActiva, 1);
+    const claseEquipoLocal = getEquipoClaseTexto(skinActiva, esAzul ? 1 : 2);
+    const claseJugadorPuntos = getEquipoClaseTexto(skinActiva, esAzul ? 1 : 2);
+    const claseOponentePuntos = getEquipoClaseTexto(skinActiva, esAzul ? 2 : 1);
 
     // Colores del panel del jugador y del oponente
     const borderJugador  = esAzul ? "border-blue-500/40"  : "border-red-500/40";
-    const textJugador    = esAzul ? "text-blue-200"        : "text-red-200";
-    const glowJugador    = esAzul ? "rgba(59,130,246,0.4)" : "rgba(239,68,68,0.4)";
-    const shadowJugador  = esAzul ? "rgba(59,130,246,0.2)" : "rgba(239,68,68,0.2)";
+    const glowJugador = getEquipoGlow(skinActiva, esAzul ? 1 : 2);
+    const shadowJugador = getEquipoGlow(skinActiva, esAzul ? 1 : 2).replace("0.45", "0.2");
     const borderOponente = esAzul ? "border-red-500/40"   : "border-blue-500/40";
-    const textOponente   = esAzul ? "text-red-200"         : "text-blue-200";
-    const glowOponente   = esAzul ? "rgba(239,68,68,0.4)"  : "rgba(59,130,246,0.4)";
-    const shadowOponente = esAzul ? "rgba(239,68,68,0.2)"  : "rgba(59,130,246,0.2)";
+    const glowOponente = getEquipoGlow(skinActiva, esAzul ? 2 : 1);
+    const shadowOponente = getEquipoGlow(skinActiva, esAzul ? 2 : 1).replace("0.45", "0.2");
 
     return (
       <div className="min-h-screen flex flex-col relative overflow-hidden bg-[#111d2c]">
@@ -126,11 +136,11 @@ export default function BuscarPartidaPage() {
             ${esAzul
               ? "border-blue-400/60 bg-blue-900/30 shadow-[0_0_20px_rgba(59,130,246,0.3)]"
               : "border-red-400/60 bg-red-900/30 shadow-[0_0_20px_rgba(239,68,68,0.3)]"}`}>
-            <span className={`font-bold text-lg uppercase tracking-widest ${esAzul ? "text-blue-300" : "text-red-300"}`}>
-              ⚔ Eres el Equipo {esAzul ? "Azul" : "Rojo"}
+            <span className={`font-bold text-lg uppercase tracking-widest ${claseEquipoLocal}`}>
+              ⚔ Eres el Equipo {nombreEquipoLocal}
             </span>
             <span className="text-white/60 text-sm tracking-wide">
-              {esAzul ? "¡Tú comienzas la partida!" : "El equipo Azul comienza"}
+              {esAzul ? "¡Tú comienzas la partida!" : `El equipo ${nombreEquipoInicial} comienza`}
             </span>
           </div>
         </div>
@@ -154,7 +164,7 @@ export default function BuscarPartidaPage() {
                 <span className="text-white font-bold text-lg tracking-wider">@{respuesta.oponente ?? "Oponente"}</span>
                 <div className="flex items-center gap-2 mt-1">
                   <Image src="/katanas.png" alt="Katanas" width={24} height={24} className="h-5 w-auto" />
-                  <span className={`${textOponente} font-mono font-bold text-base`}>
+                  <span className={`${claseOponentePuntos} font-mono font-bold text-base`}>
                     {(respuesta.oponentePt ?? 0).toLocaleString()}
                   </span>
                 </div>
@@ -183,7 +193,7 @@ export default function BuscarPartidaPage() {
                 <span className="text-white font-bold text-lg tracking-wider">@{jugador.nombre}</span>
                 <div className="flex items-center gap-2 mt-1">
                   <Image src="/katanas.png" alt="Katanas" width={24} height={24} className="h-5 w-auto" />
-                  <span className={`${textJugador} font-mono font-bold text-base`}>
+                  <span className={`${claseJugadorPuntos} font-mono font-bold text-base`}>
                     {jugador.puntos.toLocaleString()}
                   </span>
                 </div>

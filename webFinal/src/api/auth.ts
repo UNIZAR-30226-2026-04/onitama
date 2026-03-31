@@ -10,11 +10,11 @@
  *
  * Mensajes enviados:
  *   INICIAR_SESION  { tipo, nombre, password }
- *   REGISTRARSE     { tipo, correo, nombre, password }
+ *   REGISTRARSE     { tipo, correo, nombre, password, avatar_id }
  *   OBTENER_PERFIL  { tipo, nombre }
  *
  * Respuestas del servidor:
- *   INICIO_SESION_EXITOSO  { tipo, nombre, correo, puntos, partidas_ganadas, partidas_jugadas, cores }
+ *   INICIO_SESION_EXITOSO  { tipo, nombre, correo, puntos, partidas_ganadas, partidas_jugadas, cores, skin_activa, avatar_id }
  *   ERROR_SESION_USS       { tipo }  ← usuario no encontrado
  *   ERROR_SESION_PSSWD     { tipo }  ← contraseña incorrecta
  *   REGISTRO_EXITOSO       { tipo }
@@ -48,6 +48,7 @@ function configurarListenerNotificaciones(): void {
       idNotificacion: msg.idNotificacion as number,
       tipo: "SOLICITUD_AMISTAD",
       remitente: msg.remitente as string,
+      avatar_id: (msg.avatar_id as string | undefined) ?? null,
       fecha_ini: msg.fecha_ini as string | undefined,
       fecha_fin: msg.fecha_fin as string | undefined,
     });
@@ -58,6 +59,7 @@ function configurarListenerNotificaciones(): void {
       idNotificacion: msg.idNotificacion as number,
       tipo: "INVITACION_PARTIDA",
       remitente: msg.remitente as string,
+      avatar_id: (msg.avatar_id as string | undefined) ?? null,
     });
   });
 }
@@ -73,6 +75,8 @@ const MOCK_USUARIOS: Record<string, DatosSesion & { password: string }> = {
     partidas_ganadas: 5,
     partidas_jugadas: 10,
     cores: 430,
+    skin_activa: "Skin0",
+    avatar_id: null,
   },
 };
 
@@ -155,7 +159,8 @@ export async function iniciarSesion(
 export async function registrarUsuario(
   correo: string,
   nombre: string,
-  password: string
+  password: string,
+  avatarId: string | null
 ): Promise<DatosSesion> {
   if (!usarServidor) {
     return {
@@ -165,6 +170,8 @@ export async function registrarUsuario(
       partidas_ganadas: 0,
       partidas_jugadas: 0,
       cores: 0,
+      skin_activa: "Skin0",
+      avatar_id: avatarId,
     };
   }
 
@@ -193,6 +200,8 @@ export async function registrarUsuario(
           partidas_ganadas: 0,
           partidas_jugadas: 0,
           cores: 0,
+          skin_activa: "Skin0",
+          avatar_id: avatarId,
         });
       } else {
         WS.desconectar();
@@ -202,7 +211,7 @@ export async function registrarUsuario(
       }
     });
 
-    WS.enviar({ tipo: "REGISTRARSE", correo, nombre, password });
+    WS.enviar({ tipo: "REGISTRARSE", correo, nombre, password, avatar_id: avatarId });
   });
 }
 

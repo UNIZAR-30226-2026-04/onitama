@@ -3,9 +3,10 @@
 /**
  * Pantalla de Registro de nuevo usuario.
  *
- * Flujo en 2 pasos:
+ * Flujo en 3 pasos:
  *   Paso 1: Rellenar correo, nombre de usuario y contraseña.
  *   Paso 2: Confirmación de datos antes de enviar.
+ *   Paso 3: Selección de avatar antes de registrar.
  *
  * Mensaje enviado al servidor:
  *   { tipo: "REGISTRARSE", correo: string, nombre: string, password: string }
@@ -16,6 +17,7 @@
  */
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import HeaderLogo from "@/components/HeaderLogo";
 import FondoPantalla from "@/components/FondoPantalla";
@@ -23,7 +25,10 @@ import { validarContrasena, HINT_CONTRASENA } from "@/lib/validacion";
 import { registrarUsuario } from "@/api/auth";
 import { guardarSesion } from "@/lib/sesion";
 
-type Paso = 1 | 2;
+type Paso = 1 | 2 | 3;
+const AVATARES = Array.from({ length: 12 }, (_, i) =>
+  `avatar_${String(i + 1).padStart(2, "0")}`
+);
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -37,6 +42,7 @@ export default function RegistroPage() {
   const [errorRegistro, setErrorRegistro] = useState("");
   const [cargando, setCargando] = useState(false);
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
+  const [avatarSeleccionado, setAvatarSeleccionado] = useState<string | null>(null);
 
   // ─── Paso 1: validar datos y pasar a confirmación ─────────────────────────
   const handleContinuar = (e: React.FormEvent) => {
@@ -68,7 +74,7 @@ export default function RegistroPage() {
     setPaso(2);
   };
 
-  // ─── Paso 2: enviar al servidor ───────────────────────────────────────────
+  // ─── Paso 3: enviar al servidor ───────────────────────────────────────────
   const handleFinalizar = async () => {
     setErrorRegistro("");
     setCargando(true);
@@ -76,7 +82,8 @@ export default function RegistroPage() {
       const datos = await registrarUsuario(
         correo.trim(),
         nombre.trim().replace(/^@/, ""),
-        contrasena
+        contrasena,
+        avatarSeleccionado
       );
       guardarSesion(datos);
       router.push("/partidas");
@@ -94,8 +101,8 @@ export default function RegistroPage() {
       <FondoPantalla />
       <HeaderLogo />
 
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+      <main className="flex-1 flex items-center justify-center px-4 py-6 md:py-8">
+        <div className={`w-full bg-white rounded-2xl shadow-xl p-6 md:p-8 ${paso === 3 ? "max-w-3xl" : "max-w-md"}`}>
           <h1 className="text-2xl font-bold text-center text-gray-900 uppercase mb-6">
             Regístrate
           </h1>
@@ -192,7 +199,7 @@ export default function RegistroPage() {
 
           {/* ─── Paso 2: confirmación ─────────────────────────────────────── */}
           {paso === 2 && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <p className="text-gray-600 text-sm">
                 Revisa que tus datos sean correctos antes de registrarte.
               </p>
@@ -237,12 +244,6 @@ export default function RegistroPage() {
                 </p>
               </div>
 
-              {errorRegistro && (
-                <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                  {errorRegistro}
-                </p>
-              )}
-
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -254,11 +255,89 @@ export default function RegistroPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setPaso(3)}
+                  disabled={cargando}
+                  className="flex-1 py-3 rounded-xl font-semibold uppercase bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ─── Paso 3: selección de avatar y registro final ─────────────── */}
+          {paso === 3 && (
+            <div className="space-y-6">
+              <p className="text-gray-600 text-sm text-center">
+                Último paso: elige tu foto de perfil para completar el registro.
+              </p>
+
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setAvatarSeleccionado(null)}
+                  className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
+                    avatarSeleccionado === null
+                      ? "border-[#1a2d4a] bg-[#1a2d4a]/10 text-[#1a2d4a]"
+                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  No elegir foto (usar inicial del nombre)
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-4 md:gap-5 justify-items-center">
+                {AVATARES.map((avatarId) => {
+                  const activo = avatarSeleccionado === avatarId;
+                  return (
+                    <button
+                      key={avatarId}
+                      type="button"
+                      onClick={() => setAvatarSeleccionado(avatarId)}
+                      className={`rounded-full p-1 transition-all ${
+                        activo
+                          ? "ring-4 ring-[#1a2d4a] ring-offset-2"
+                          : "hover:scale-105"
+                      }`}
+                      title={`Elegir ${avatarId}`}
+                      aria-label={`Elegir ${avatarId}`}
+                    >
+                      <span className="block w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden">
+                        <Image
+                          src={`/${avatarId}.png`}
+                          alt={avatarId}
+                          width={224}
+                          height={224}
+                          className="w-full h-full object-cover"
+                        />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {errorRegistro && (
+                <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                  {errorRegistro}
+                </p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPaso(2)}
+                  disabled={cargando}
+                  className="flex-1 py-3 rounded-xl font-semibold uppercase bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  Atrás
+                </button>
+                <button
+                  type="button"
                   onClick={handleFinalizar}
                   disabled={cargando}
                   className="flex-1 py-3 rounded-xl font-semibold uppercase bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-50 transition-colors"
                 >
-                  {cargando ? "Registrando…" : "Confirmar"}
+                  {cargando ? "Registrando…" : "Confirmar registro"}
                 </button>
               </div>
             </div>

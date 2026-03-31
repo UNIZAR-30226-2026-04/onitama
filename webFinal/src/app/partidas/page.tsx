@@ -18,6 +18,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { obtenerJugadorActivo, guardarSesion, cerrarSesion, type DatosSesion } from "@/lib/sesion";
 import { obtenerPerfil } from "@/api/auth";
+import { activarSkin, comprarSkin, obtenerTiendaSkins, type SkinEstado } from "@/api/skins";
 import {
   leerNotificaciones,
   eliminarNotificacion,
@@ -42,6 +43,8 @@ import {
   type ResumenPartidaPublica,
 } from "@/api/social";
 import * as WS from "@/api/ws";
+import { getSkinNombre, getPiezaSrc, getSkinPrecio, normalizarSkinId, type SkinId } from "@/lib/skins";
+import { AvatarCircle } from "@/lib/avatar";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -145,6 +148,10 @@ export default function PartidasPage() {
   const [mostrarModalCerrarSesion, setMostrarModalCerrarSesion] = useState(false);
   const [partidasPublicas, setPartidasPublicas] = useState<ResumenPartidaPublica[]>([]);
   const [cargandoPartidasPublicas, setCargandoPartidasPublicas] = useState(false);
+  const [skins, setSkins] = useState<SkinEstado[]>([]);
+  const [cargandoSkins, setCargandoSkins] = useState(false);
+  const [accionSkinEnCurso, setAccionSkinEnCurso] = useState<string | null>(null);
+  const [confirmacionSkin, setConfirmacionSkin] = useState<{ tipo: "comprar" | "usar"; skinId: SkinId } | null>(null);
 
   // ── Efectos ─────────────────────────────────────────────────────────────────
 
@@ -158,6 +165,7 @@ export default function PartidasPage() {
         idNotificacion: msg.idNotificacion as number,
         tipo: "SOLICITUD_AMISTAD",
         remitente: msg.remitente as string,
+        avatar_id: (msg.avatar_id as string | undefined) ?? null,
         fecha_ini: msg.fecha_ini as string | undefined,
         fecha_fin: msg.fecha_fin as string | undefined,
       };
@@ -173,6 +181,7 @@ export default function PartidasPage() {
         idNotificacion: msg.idNotificacion as number,
         tipo: "INVITACION_PARTIDA",
         remitente: msg.remitente as string,
+        avatar_id: (msg.avatar_id as string | undefined) ?? null,
       };
       setNotificaciones((prev) =>
         prev.find((n) => n.idNotificacion === nueva.idNotificacion)
@@ -184,8 +193,11 @@ export default function PartidasPage() {
     // Cuando se acepta una amistad, añadirla a la lista local
     const unsubAmistad = WS.suscribir("AMISTAD_ACEPTADA", (msg) => {
       const amigo = msg.amigo as string;
+      const avatarId = (msg.avatar_id as string | undefined) ?? null;
       setAmigos((prev) =>
-        prev.some((a) => a.nombre === amigo) ? prev : [...prev, { nombre: amigo, puntos: 0 }]
+        prev.some((a) => a.nombre === amigo)
+          ? prev
+          : [...prev, { nombre: amigo, puntos: 0, avatar_id: avatarId }]
       );
     });
 
@@ -222,6 +234,24 @@ export default function PartidasPage() {
       .then((lista) => setPartidasPublicas(lista))
       .catch(() => setPartidasPublicas([]))
       .finally(() => setCargandoPartidasPublicas(false));
+  }, [panelActivo, jugador.nombre]);
+
+  /** Paneles de skins: tienda y mis tableros comparten la misma carga. */
+  useEffect(() => {
+    if ((panelActivo !== "tableros" && panelActivo !== "tienda") || !jugador.nombre) return;
+    setCargandoSkins(true);
+    obtenerTiendaSkins(jugador.nombre)
+      .then((res) => {
+        setSkins(res.skins);
+        const skinActiva = normalizarSkinId(res.skin_activa);
+        setJugador((prev) => {
+          const siguiente: DatosSesion = { ...prev, cores: res.cores, skin_activa: skinActiva };
+          guardarSesion(siguiente);
+          return siguiente;
+        });
+      })
+      .catch(() => {})
+      .finally(() => setCargandoSkins(false));
   }, [panelActivo, jugador.nombre]);
 
   /** Cargar amigos desde backend al abrir el panel de amigos. */
@@ -293,7 +323,7 @@ export default function PartidasPage() {
   /** Debounce: enviar búsqueda al servidor 400 ms después de que el usuario deje de escribir. */
   useEffect(() => {
     const texto = textoBusqueda.trim();
-    if (texto.length < 2) {
+    if (texto.length < 1) {
       setResultados([]);
       return;
     }
@@ -427,6 +457,60 @@ export default function PartidasPage() {
     [jugador.nombre]
   );
 
+  const confirmarComprarSkin = useCallback(async (skinId: SkinId) => {
+    setAccionSkinEnCurso(`comprar-${skinId}`);
+    const res = await comprarSkin(jugador.nombre, skinId);
+    setAccionSkinEnCurso(null);
+    if (!res.ok) {
+      if (res.codigo === "CORES_INSUFICIENTES") setMensajePrivada("No tienes suficientes cores para comprar esta skin.");
+      else if (res.codigo === "YA_COMPRADA") setMensajePrivada("Esta skin ya está comprada.");
+      else setMensajePrivada("No se pudo completar la compra de la skin.");
+      return;
+    }
+    setJugador((prev) => {
+      const siguiente = { ...prev, cores: res.cores };
+      guardarSesion(siguiente);
+      return siguiente;
+    });
+    setSkins((prev) => prev.map((s) => (s.skin_id === skinId ? { ...s, owned: true } : s)));
+    setMensajePrivada("Skin comprada correctamente.");
+  }, [jugador.nombre]);
+
+  const confirmarUsarSkin = useCallback(async (skinId: SkinId) => {
+    setAccionSkinEnCurso(`usar-${skinId}`);
+    const res = await activarSkin(jugador.nombre, skinId);
+    setAccionSkinEnCurso(null);
+    if (!res.ok) {
+      setMensajePrivada("No se pudo activar esta skin.");
+      return;
+    }
+    setJugador((prev) => {
+      const siguiente = { ...prev, skin_activa: res.skin_activa };
+      guardarSesion(siguiente);
+      return siguiente;
+    });
+    setSkins((prev) => prev.map((s) => ({ ...s, es_activa: s.skin_id === res.skin_activa })));
+  }, [jugador.nombre]);
+
+  const handleComprarSkin = useCallback((skinId: SkinId) => {
+    setConfirmacionSkin({ tipo: "comprar", skinId });
+  }, []);
+
+  const handleUsarSkin = useCallback((skinId: SkinId) => {
+    setConfirmacionSkin({ tipo: "usar", skinId });
+  }, []);
+
+  const handleConfirmarAccionSkin = useCallback(async () => {
+    if (!confirmacionSkin) return;
+    const actual = confirmacionSkin;
+    setConfirmacionSkin(null);
+    if (actual.tipo === "comprar") {
+      await confirmarComprarSkin(actual.skinId);
+      return;
+    }
+    await confirmarUsarSkin(actual.skinId);
+  }, [confirmacionSkin, confirmarComprarSkin, confirmarUsarSkin]);
+
   // ── Render ───────────────────────────────────────────────────────────────────
 
   const notifPendientes = notificaciones.length;
@@ -458,9 +542,7 @@ export default function PartidasPage() {
             title="Mi cuenta"
             aria-label="Abrir Mi cuenta"
           >
-            <span className="text-white/90 text-sm font-semibold select-none">
-              {jugador.nombre.charAt(0).toUpperCase()}
-            </span>
+            <AvatarCircle nombre={jugador.nombre} avatarId={jugador.avatar_id} sizeClass="w-full h-full" textClass="text-sm" />
           </button>
           <div className="flex items-center gap-2">
             <Image src="/katanas.png" alt="Katanas" width={22} height={22} className="h-5 w-auto shrink-0" />
@@ -620,19 +702,34 @@ export default function PartidasPage() {
             />
           )}
 
-          {/* Paneles pendientes de implementar */}
-          {(panelActivo === "cartas" ||
-            panelActivo === "tableros" ||
-            panelActivo === "tienda") && (
+          {panelActivo === "cartas" && (
             <div className="flex items-center justify-center min-h-full">
               <div className="text-center text-stone-400">
                 <p className="text-5xl mb-4">🚧</p>
-                <p className="text-xl font-semibold uppercase tracking-widest">
-                  Próximamente
-                </p>
+                <p className="text-xl font-semibold uppercase tracking-widest">Próximamente</p>
                 <p className="text-sm mt-2">Esta sección está en desarrollo.</p>
               </div>
             </div>
+          )}
+
+          {panelActivo === "tableros" && (
+            <PanelMisTableros
+              jugador={jugador}
+              skins={skins}
+              cargando={cargandoSkins}
+              accionSkinEnCurso={accionSkinEnCurso}
+              onUsarSkin={handleUsarSkin}
+            />
+          )}
+
+          {panelActivo === "tienda" && (
+            <PanelTiendaSkins
+              jugador={jugador}
+              skins={skins}
+              cargando={cargandoSkins}
+              accionSkinEnCurso={accionSkinEnCurso}
+              onComprarSkin={handleComprarSkin}
+            />
           )}
         </main>
       </div>
@@ -737,9 +834,7 @@ export default function PartidasPage() {
                   <ul className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
                     {amigos.map((amigo) => (
                       <li key={amigo.nombre} className="flex items-center gap-3 bg-stone-50 rounded-xl px-4 py-3">
-                        <div className="w-9 h-9 rounded-full bg-[#1a2d4a] text-white flex items-center justify-center font-bold text-sm">
-                          {amigo.nombre.charAt(0).toUpperCase()}
-                        </div>
+                        <AvatarCircle nombre={amigo.nombre} avatarId={amigo.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" />
                         <div className="flex-1">
                           <p className="font-semibold text-stone-800">{amigo.nombre}</p>
                           <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
@@ -804,6 +899,51 @@ export default function PartidasPage() {
                 className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-red-700 text-white hover:bg-red-600 transition-colors"
               >
                 Salir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmacionSkin && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-white border border-stone-200 rounded-2xl p-6 flex flex-col items-center gap-4 shadow-2xl max-w-sm w-full">
+            <h3 className="text-lg font-bold text-stone-800 uppercase tracking-widest text-center">
+              {confirmacionSkin.tipo === "comprar" ? "Confirmar compra" : "Confirmar selección"}
+            </h3>
+            <p className="text-sm text-stone-600 text-center">
+              {confirmacionSkin.tipo === "comprar"
+                ? `¿Quieres comprar la skin ${getSkinNombre(confirmacionSkin.skinId)}?`
+                : `¿Quieres activar la skin ${getSkinNombre(confirmacionSkin.skinId)}?`}
+            </p>
+            {confirmacionSkin.tipo === "comprar" && (
+              <div className="flex flex-col items-center gap-1.5 text-sm text-stone-700">
+                <div className="flex items-center gap-2">
+                  <span>Tus cores:</span>
+                  <Image src="/core.png" alt="Cores" width={16} height={16} />
+                  <span className="font-semibold">{jugador.cores.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>Coste:</span>
+                  <Image src="/core.png" alt="Cores" width={16} height={16} />
+                  <span className="font-semibold">{getSkinPrecio(confirmacionSkin.skinId)}</span>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setConfirmacionSkin(null)}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm border border-stone-300 text-stone-600 hover:bg-stone-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarAccionSkin}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-[#1a2d4a] text-white hover:bg-[#203a60]"
+              >
+                Confirmar
               </button>
             </div>
           </div>
@@ -965,9 +1105,7 @@ function PanelMiCuenta({
 
       <div className="rounded-2xl border border-stone-200 bg-white shadow-sm p-6 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-[#1a2d4a] text-white flex items-center justify-center text-2xl font-bold shrink-0">
-            {jugador.nombre.charAt(0).toUpperCase()}
-          </div>
+          <AvatarCircle nombre={jugador.nombre} avatarId={jugador.avatar_id} sizeClass="w-16 h-16 shrink-0" textClass="text-2xl" />
           <div>
             <p className="text-lg font-semibold text-stone-900">@{jugador.nombre}</p>
             <p className="text-sm text-stone-500">{jugador.correo}</p>
@@ -1025,6 +1163,147 @@ function PanelMiCuenta({
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+function CardPreviewSkin({ skinId }: { skinId: SkinId }) {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+        <p className="text-xs font-bold uppercase tracking-wider text-stone-600 mb-2">Equipo rojo</p>
+        <div className="flex items-center gap-2">
+          <Image src={getPiezaSrc("peon", 2, skinId)} alt="Peón rojo" width={36} height={36} />
+          <Image src={getPiezaSrc("rey", 2, skinId)} alt="Rey rojo" width={36} height={36} />
+          <Image src={getPiezaSrc("templo", 2, skinId)} alt="Templo rojo" width={36} height={36} />
+        </div>
+      </div>
+      <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+        <p className="text-xs font-bold uppercase tracking-wider text-stone-600 mb-2">Equipo azul</p>
+        <div className="flex items-center gap-2">
+          <Image src={getPiezaSrc("peon", 1, skinId)} alt="Peón azul" width={36} height={36} />
+          <Image src={getPiezaSrc("rey", 1, skinId)} alt="Rey azul" width={36} height={36} />
+          <Image src={getPiezaSrc("templo", 1, skinId)} alt="Templo azul" width={36} height={36} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelMisTableros({
+  jugador,
+  skins,
+  cargando,
+  accionSkinEnCurso,
+  onUsarSkin,
+}: {
+  jugador: DatosSesion;
+  skins: SkinEstado[];
+  cargando: boolean;
+  accionSkinEnCurso: string | null;
+  onUsarSkin: (skinId: SkinId) => void;
+}) {
+  const compradas = skins.filter((s) => s.owned);
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-8">
+      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2">Mis tableros</h2>
+      <p className="text-stone-500 text-sm mb-6">Skin activa actual: <span className="font-semibold">{getSkinNombre(normalizarSkinId(jugador.skin_activa))}</span></p>
+      {cargando ? (
+        <p className="text-stone-500 animate-pulse">Cargando skins...</p>
+      ) : compradas.length === 0 ? (
+        <p className="text-stone-500">Aún no tienes skins compradas.</p>
+      ) : (
+        <div className="space-y-4">
+          {compradas.map((s) => (
+            <div key={s.skin_id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-lg font-bold text-stone-800">{getSkinNombre(s.skin_id)}</p>
+                </div>
+                {s.es_activa ? (
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">Activa</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onUsarSkin(s.skin_id)}
+                    disabled={accionSkinEnCurso === `usar-${s.skin_id}`}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#1a2d4a] text-white hover:bg-[#203a60] disabled:opacity-50"
+                  >
+                    {accionSkinEnCurso === `usar-${s.skin_id}` ? "Aplicando..." : "Usar"}
+                  </button>
+                )}
+              </div>
+              <CardPreviewSkin skinId={s.skin_id} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PanelTiendaSkins({
+  jugador,
+  skins,
+  cargando,
+  accionSkinEnCurso,
+  onComprarSkin,
+}: {
+  jugador: DatosSesion;
+  skins: SkinEstado[];
+  cargando: boolean;
+  accionSkinEnCurso: string | null;
+  onComprarSkin: (skinId: SkinId) => void;
+}) {
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-8">
+      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2">Tienda</h2>
+      <p className="text-stone-500 text-sm mb-6 flex items-center gap-2">
+        <span>Tus cores:</span>
+        <Image src="/core.png" alt="Cores" width={16} height={16} />
+        <span className="font-semibold">{jugador.cores.toLocaleString()}</span>
+      </p>
+      {cargando ? (
+        <p className="text-stone-500 animate-pulse">Cargando catálogo...</p>
+      ) : (
+        <div className="space-y-4">
+          {skins
+            .filter((s) => s.skin_id !== "Skin0")
+            .map((s) => {
+              const sinCores = jugador.cores < s.precio;
+              return (
+                <div key={s.skin_id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="text-lg font-bold text-stone-800">{getSkinNombre(s.skin_id)}</p>
+                      <p className="text-xs text-stone-500 uppercase tracking-wider flex items-center gap-1">
+                        <Image src="/core.png" alt="Cores" width={12} height={12} />
+                        <span>{s.precio} cores</span>
+                      </p>
+                    </div>
+                    {s.es_activa ? (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">Activa</span>
+                    ) : s.owned ? (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-stone-200 text-stone-600">
+                        Ya adquirida
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onComprarSkin(s.skin_id)}
+                        disabled={sinCores || accionSkinEnCurso === `comprar-${s.skin_id}`}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-500 disabled:opacity-50"
+                      >
+                        {accionSkinEnCurso === `comprar-${s.skin_id}` ? "Comprando..." : sinCores ? "Sin cores" : "Comprar"}
+                      </button>
+                    )}
+                  </div>
+                  <CardPreviewSkin skinId={s.skin_id} />
+                </div>
+              );
+            })}
+        </div>
+      )}
     </div>
   );
 }
@@ -1120,9 +1399,7 @@ function PanelAmigos({
                       className="flex items-center gap-3 flex-1 text-left"
                       onClick={() => onSeleccionarAmigo(amigo)}
                     >
-                      <div className="w-9 h-9 rounded-full bg-[#1a2d4a] flex items-center justify-center text-white font-bold text-sm">
-                        {amigo.nombre.charAt(0).toUpperCase()}
-                      </div>
+                      <AvatarCircle nombre={amigo.nombre} avatarId={amigo.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" />
                       <div>
                         <p className="font-medium text-stone-800">{amigo.nombre}</p>
                         <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
@@ -1162,7 +1439,7 @@ function PanelAmigos({
             <p className="text-sm text-stone-400 text-center py-4">Buscando…</p>
           )}
 
-          {!buscando && textoBusqueda.trim().length >= 2 && resultados.length === 0 && (
+          {!buscando && textoBusqueda.trim().length >= 1 && resultados.length === 0 && (
             <p className="text-sm text-stone-400 text-center py-4">
               No se encontraron jugadores.
             </p>
@@ -1180,9 +1457,7 @@ function PanelAmigos({
                         key={j.nombre}
                         className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm"
                       >
-                        <div className="w-9 h-9 rounded-full bg-[#7b8fa8] flex items-center justify-center text-white font-bold text-sm">
-                          {j.nombre.charAt(0).toUpperCase()}
-                        </div>
+                        <AvatarCircle nombre={j.nombre} avatarId={j.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" bgClass="bg-[#7b8fa8]" />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-stone-800 truncate">{j.nombre}</p>
                           <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
@@ -1216,11 +1491,6 @@ function PanelAmigos({
             </ul>
           )}
 
-          {textoBusqueda.trim().length > 0 && textoBusqueda.trim().length < 2 && (
-            <p className="text-xs text-stone-400 text-center">
-              Escribe al menos 2 caracteres para buscar.
-            </p>
-          )}
         </div>
       )}
 
@@ -1239,9 +1509,13 @@ function PanelAmigos({
 
             <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 items-start">
               <div className="flex flex-col items-center">
-                <div className="w-28 h-28 rounded-full bg-stone-200 flex items-center justify-center text-3xl text-stone-500">
-                  {amigoSeleccionado.nombre.charAt(0).toUpperCase()}
-                </div>
+                <AvatarCircle
+                  nombre={amigoSeleccionado.nombre}
+                  avatarId={amigoSeleccionado.avatar_id}
+                  sizeClass="w-28 h-28"
+                  textClass="text-3xl text-stone-500"
+                  bgClass="bg-stone-200"
+                />
                 <p className="mt-3 text-xl font-semibold text-stone-800">@{amigoSeleccionado.nombre}</p>
                 <p className="mt-2 text-sm text-stone-600 flex items-center gap-1">
                   <Image src="/katanas.png" alt="Katanas" width={16} height={16} className="h-4 w-auto" />
@@ -1324,9 +1598,7 @@ function PanelNotificaciones({
               className="bg-white rounded-xl px-4 py-4 shadow-sm flex items-center gap-3"
             >
               {/* Avatar */}
-              <div className="w-10 h-10 rounded-full bg-[#1a2d4a] flex items-center justify-center text-white font-bold text-sm shrink-0">
-                {notif.remitente.charAt(0).toUpperCase()}
-              </div>
+              <AvatarCircle nombre={notif.remitente} avatarId={notif.avatar_id} sizeClass="w-10 h-10 shrink-0" textClass="text-sm" />
 
               {/* Texto */}
               <div className="flex-1 min-w-0">

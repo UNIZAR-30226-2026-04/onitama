@@ -53,6 +53,7 @@ export interface RespuestaPartidaEncontrada {
   /** Equipo asignado a este cliente: 1 = arriba (rojo), 2 = abajo (azul) */
   equipo: 1 | 2;
   oponente: string;
+  oponente_avatar_id?: string | null;
   oponentePt: number;
   cartas_jugador: string[];
   cartas_oponente: string[];

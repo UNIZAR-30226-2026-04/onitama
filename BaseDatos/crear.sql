@@ -1,13 +1,3 @@
-CREATE TABLE Jugador (
-    Correo VARCHAR(255) UNIQUE,
-    Nombre_US VARCHAR(100) PRIMARY KEY,
-    Contrasena_Hash VARCHAR(255),
-    Puntos INTEGER DEFAULT 0,
-    Cores INTEGER DEFAULT 0,
-    Partidas_Ganadas INTEGER DEFAULT 0,
-    Partidas_Jugadas INTEGER DEFAULT 0
-);
-
 CREATE TABLE Skin (
     Nombre VARCHAR(50) PRIMARY KEY,
     Precio INTEGER,
@@ -15,6 +5,21 @@ CREATE TABLE Skin (
     Color_Fichas_Aliadas VARCHAR(20),
     Color_Fichas_Enemigas VARCHAR(20)
 );
+
+CREATE TABLE Jugador (
+    Correo VARCHAR(255) UNIQUE,
+    Nombre_US VARCHAR(100) PRIMARY KEY,
+    Contrasena_Hash VARCHAR(255),
+    Puntos INTEGER DEFAULT 0,
+    Cores INTEGER DEFAULT 0,
+    Partidas_Ganadas INTEGER DEFAULT 0,
+    Partidas_Jugadas INTEGER DEFAULT 0,
+    Avatar_id VARCHAR(50),
+    Skin_Activa VARCHAR(50) NOT NULL DEFAULT 'Skin0'
+    FOREIGN KEY (Skin_Activa) REFERENCES Skin(Nombre);
+);
+
+
 
 CREATE TABLE Cartas_Mov (
     Nombre VARCHAR(50) PRIMARY KEY,

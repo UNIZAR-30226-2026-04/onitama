@@ -13,6 +13,7 @@ export interface Notificacion {
   idNotificacion: number;
   tipo: "SOLICITUD_AMISTAD" | "INVITACION_PARTIDA";
   remitente: string;
+  avatar_id?: string | null;
   fecha_ini?: string;
   fecha_fin?: string;
 }
