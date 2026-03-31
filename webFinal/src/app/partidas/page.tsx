@@ -18,6 +18,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { obtenerJugadorActivo, guardarSesion, cerrarSesion, type DatosSesion } from "@/lib/sesion";
 import { obtenerPerfil } from "@/api/auth";
+import { activarSkin, comprarSkin, obtenerTiendaSkins, type SkinEstado } from "@/api/skins";
 import {
   leerNotificaciones,
   eliminarNotificacion,
@@ -42,6 +43,7 @@ import {
   type ResumenPartidaPublica,
 } from "@/api/social";
 import * as WS from "@/api/ws";
+import { getSkinNombre, getPiezaSrc, getSkinPrecio, normalizarSkinId, type SkinId } from "@/lib/skins";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -145,6 +147,10 @@ export default function PartidasPage() {
   const [mostrarModalCerrarSesion, setMostrarModalCerrarSesion] = useState(false);
   const [partidasPublicas, setPartidasPublicas] = useState<ResumenPartidaPublica[]>([]);
   const [cargandoPartidasPublicas, setCargandoPartidasPublicas] = useState(false);
+  const [skins, setSkins] = useState<SkinEstado[]>([]);
+  const [cargandoSkins, setCargandoSkins] = useState(false);
+  const [accionSkinEnCurso, setAccionSkinEnCurso] = useState<string | null>(null);
+  const [confirmacionSkin, setConfirmacionSkin] = useState<{ tipo: "comprar" | "usar"; skinId: SkinId } | null>(null);
 
   // ── Efectos ─────────────────────────────────────────────────────────────────
 
@@ -222,6 +228,24 @@ export default function PartidasPage() {
       .then((lista) => setPartidasPublicas(lista))
       .catch(() => setPartidasPublicas([]))
       .finally(() => setCargandoPartidasPublicas(false));
+  }, [panelActivo, jugador.nombre]);
+
+  /** Paneles de skins: tienda y mis tableros comparten la misma carga. */
+  useEffect(() => {
+    if ((panelActivo !== "tableros" && panelActivo !== "tienda") || !jugador.nombre) return;
+    setCargandoSkins(true);
+    obtenerTiendaSkins(jugador.nombre)
+      .then((res) => {
+        setSkins(res.skins);
+        const skinActiva = normalizarSkinId(res.skin_activa);
+        setJugador((prev) => {
+          const siguiente: DatosSesion = { ...prev, cores: res.cores, skin_activa: skinActiva };
+          guardarSesion(siguiente);
+          return siguiente;
+        });
+      })
+      .catch(() => {})
+      .finally(() => setCargandoSkins(false));
   }, [panelActivo, jugador.nombre]);
 
   /** Cargar amigos desde backend al abrir el panel de amigos. */
@@ -427,6 +451,60 @@ export default function PartidasPage() {
     [jugador.nombre]
   );
 
+  const confirmarComprarSkin = useCallback(async (skinId: SkinId) => {
+    setAccionSkinEnCurso(`comprar-${skinId}`);
+    const res = await comprarSkin(jugador.nombre, skinId);
+    setAccionSkinEnCurso(null);
+    if (!res.ok) {
+      if (res.codigo === "CORES_INSUFICIENTES") setMensajePrivada("No tienes suficientes cores para comprar esta skin.");
+      else if (res.codigo === "YA_COMPRADA") setMensajePrivada("Esta skin ya está comprada.");
+      else setMensajePrivada("No se pudo completar la compra de la skin.");
+      return;
+    }
+    setJugador((prev) => {
+      const siguiente = { ...prev, cores: res.cores };
+      guardarSesion(siguiente);
+      return siguiente;
+    });
+    setSkins((prev) => prev.map((s) => (s.skin_id === skinId ? { ...s, owned: true } : s)));
+    setMensajePrivada("Skin comprada correctamente.");
+  }, [jugador.nombre]);
+
+  const confirmarUsarSkin = useCallback(async (skinId: SkinId) => {
+    setAccionSkinEnCurso(`usar-${skinId}`);
+    const res = await activarSkin(jugador.nombre, skinId);
+    setAccionSkinEnCurso(null);
+    if (!res.ok) {
+      setMensajePrivada("No se pudo activar esta skin.");
+      return;
+    }
+    setJugador((prev) => {
+      const siguiente = { ...prev, skin_activa: res.skin_activa };
+      guardarSesion(siguiente);
+      return siguiente;
+    });
+    setSkins((prev) => prev.map((s) => ({ ...s, es_activa: s.skin_id === res.skin_activa })));
+  }, [jugador.nombre]);
+
+  const handleComprarSkin = useCallback((skinId: SkinId) => {
+    setConfirmacionSkin({ tipo: "comprar", skinId });
+  }, []);
+
+  const handleUsarSkin = useCallback((skinId: SkinId) => {
+    setConfirmacionSkin({ tipo: "usar", skinId });
+  }, []);
+
+  const handleConfirmarAccionSkin = useCallback(async () => {
+    if (!confirmacionSkin) return;
+    const actual = confirmacionSkin;
+    setConfirmacionSkin(null);
+    if (actual.tipo === "comprar") {
+      await confirmarComprarSkin(actual.skinId);
+      return;
+    }
+    await confirmarUsarSkin(actual.skinId);
+  }, [confirmacionSkin, confirmarComprarSkin, confirmarUsarSkin]);
+
   // ── Render ───────────────────────────────────────────────────────────────────
 
   const notifPendientes = notificaciones.length;
@@ -620,19 +698,34 @@ export default function PartidasPage() {
             />
           )}
 
-          {/* Paneles pendientes de implementar */}
-          {(panelActivo === "cartas" ||
-            panelActivo === "tableros" ||
-            panelActivo === "tienda") && (
+          {panelActivo === "cartas" && (
             <div className="flex items-center justify-center min-h-full">
               <div className="text-center text-stone-400">
                 <p className="text-5xl mb-4">🚧</p>
-                <p className="text-xl font-semibold uppercase tracking-widest">
-                  Próximamente
-                </p>
+                <p className="text-xl font-semibold uppercase tracking-widest">Próximamente</p>
                 <p className="text-sm mt-2">Esta sección está en desarrollo.</p>
               </div>
             </div>
+          )}
+
+          {panelActivo === "tableros" && (
+            <PanelMisTableros
+              jugador={jugador}
+              skins={skins}
+              cargando={cargandoSkins}
+              accionSkinEnCurso={accionSkinEnCurso}
+              onUsarSkin={handleUsarSkin}
+            />
+          )}
+
+          {panelActivo === "tienda" && (
+            <PanelTiendaSkins
+              jugador={jugador}
+              skins={skins}
+              cargando={cargandoSkins}
+              accionSkinEnCurso={accionSkinEnCurso}
+              onComprarSkin={handleComprarSkin}
+            />
           )}
         </main>
       </div>
@@ -804,6 +897,51 @@ export default function PartidasPage() {
                 className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-red-700 text-white hover:bg-red-600 transition-colors"
               >
                 Salir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmacionSkin && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-white border border-stone-200 rounded-2xl p-6 flex flex-col items-center gap-4 shadow-2xl max-w-sm w-full">
+            <h3 className="text-lg font-bold text-stone-800 uppercase tracking-widest text-center">
+              {confirmacionSkin.tipo === "comprar" ? "Confirmar compra" : "Confirmar selección"}
+            </h3>
+            <p className="text-sm text-stone-600 text-center">
+              {confirmacionSkin.tipo === "comprar"
+                ? `¿Quieres comprar la skin ${getSkinNombre(confirmacionSkin.skinId)}?`
+                : `¿Quieres activar la skin ${getSkinNombre(confirmacionSkin.skinId)}?`}
+            </p>
+            {confirmacionSkin.tipo === "comprar" && (
+              <div className="flex flex-col items-center gap-1.5 text-sm text-stone-700">
+                <div className="flex items-center gap-2">
+                  <span>Tus cores:</span>
+                  <Image src="/core.png" alt="Cores" width={16} height={16} />
+                  <span className="font-semibold">{jugador.cores.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>Coste:</span>
+                  <Image src="/core.png" alt="Cores" width={16} height={16} />
+                  <span className="font-semibold">{getSkinPrecio(confirmacionSkin.skinId)}</span>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setConfirmacionSkin(null)}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm border border-stone-300 text-stone-600 hover:bg-stone-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarAccionSkin}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-[#1a2d4a] text-white hover:bg-[#203a60]"
+              >
+                Confirmar
               </button>
             </div>
           </div>
@@ -1025,6 +1163,147 @@ function PanelMiCuenta({
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+function CardPreviewSkin({ skinId }: { skinId: SkinId }) {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+        <p className="text-xs font-bold uppercase tracking-wider text-stone-600 mb-2">Equipo rojo</p>
+        <div className="flex items-center gap-2">
+          <Image src={getPiezaSrc("peon", 2, skinId)} alt="Peón rojo" width={36} height={36} />
+          <Image src={getPiezaSrc("rey", 2, skinId)} alt="Rey rojo" width={36} height={36} />
+          <Image src={getPiezaSrc("templo", 2, skinId)} alt="Templo rojo" width={36} height={36} />
+        </div>
+      </div>
+      <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+        <p className="text-xs font-bold uppercase tracking-wider text-stone-600 mb-2">Equipo azul</p>
+        <div className="flex items-center gap-2">
+          <Image src={getPiezaSrc("peon", 1, skinId)} alt="Peón azul" width={36} height={36} />
+          <Image src={getPiezaSrc("rey", 1, skinId)} alt="Rey azul" width={36} height={36} />
+          <Image src={getPiezaSrc("templo", 1, skinId)} alt="Templo azul" width={36} height={36} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelMisTableros({
+  jugador,
+  skins,
+  cargando,
+  accionSkinEnCurso,
+  onUsarSkin,
+}: {
+  jugador: DatosSesion;
+  skins: SkinEstado[];
+  cargando: boolean;
+  accionSkinEnCurso: string | null;
+  onUsarSkin: (skinId: SkinId) => void;
+}) {
+  const compradas = skins.filter((s) => s.owned);
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-8">
+      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2">Mis tableros</h2>
+      <p className="text-stone-500 text-sm mb-6">Skin activa actual: <span className="font-semibold">{getSkinNombre(normalizarSkinId(jugador.skin_activa))}</span></p>
+      {cargando ? (
+        <p className="text-stone-500 animate-pulse">Cargando skins...</p>
+      ) : compradas.length === 0 ? (
+        <p className="text-stone-500">Aún no tienes skins compradas.</p>
+      ) : (
+        <div className="space-y-4">
+          {compradas.map((s) => (
+            <div key={s.skin_id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-lg font-bold text-stone-800">{getSkinNombre(s.skin_id)}</p>
+                </div>
+                {s.es_activa ? (
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">Activa</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onUsarSkin(s.skin_id)}
+                    disabled={accionSkinEnCurso === `usar-${s.skin_id}`}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#1a2d4a] text-white hover:bg-[#203a60] disabled:opacity-50"
+                  >
+                    {accionSkinEnCurso === `usar-${s.skin_id}` ? "Aplicando..." : "Usar"}
+                  </button>
+                )}
+              </div>
+              <CardPreviewSkin skinId={s.skin_id} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PanelTiendaSkins({
+  jugador,
+  skins,
+  cargando,
+  accionSkinEnCurso,
+  onComprarSkin,
+}: {
+  jugador: DatosSesion;
+  skins: SkinEstado[];
+  cargando: boolean;
+  accionSkinEnCurso: string | null;
+  onComprarSkin: (skinId: SkinId) => void;
+}) {
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-8">
+      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2">Tienda</h2>
+      <p className="text-stone-500 text-sm mb-6 flex items-center gap-2">
+        <span>Tus cores:</span>
+        <Image src="/core.png" alt="Cores" width={16} height={16} />
+        <span className="font-semibold">{jugador.cores.toLocaleString()}</span>
+      </p>
+      {cargando ? (
+        <p className="text-stone-500 animate-pulse">Cargando catálogo...</p>
+      ) : (
+        <div className="space-y-4">
+          {skins
+            .filter((s) => s.skin_id !== "Skin0")
+            .map((s) => {
+              const sinCores = jugador.cores < s.precio;
+              return (
+                <div key={s.skin_id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="text-lg font-bold text-stone-800">{getSkinNombre(s.skin_id)}</p>
+                      <p className="text-xs text-stone-500 uppercase tracking-wider flex items-center gap-1">
+                        <Image src="/core.png" alt="Cores" width={12} height={12} />
+                        <span>{s.precio} cores</span>
+                      </p>
+                    </div>
+                    {s.es_activa ? (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">Activa</span>
+                    ) : s.owned ? (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-stone-200 text-stone-600">
+                        Ya adquirida
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onComprarSkin(s.skin_id)}
+                        disabled={sinCores || accionSkinEnCurso === `comprar-${s.skin_id}`}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-500 disabled:opacity-50"
+                      >
+                        {accionSkinEnCurso === `comprar-${s.skin_id}` ? "Comprando..." : sinCores ? "Sin cores" : "Comprar"}
+                      </button>
+                    )}
+                  </div>
+                  <CardPreviewSkin skinId={s.skin_id} />
+                </div>
+              );
+            })}
+        </div>
+      )}
     </div>
   );
 }

@@ -14,7 +14,7 @@
  *   OBTENER_PERFIL  { tipo, nombre }
  *
  * Respuestas del servidor:
- *   INICIO_SESION_EXITOSO  { tipo, nombre, correo, puntos, partidas_ganadas, partidas_jugadas, cores }
+ *   INICIO_SESION_EXITOSO  { tipo, nombre, correo, puntos, partidas_ganadas, partidas_jugadas, cores, skin_activa }
  *   ERROR_SESION_USS       { tipo }  ← usuario no encontrado
  *   ERROR_SESION_PSSWD     { tipo }  ← contraseña incorrecta
  *   REGISTRO_EXITOSO       { tipo }
@@ -73,6 +73,7 @@ const MOCK_USUARIOS: Record<string, DatosSesion & { password: string }> = {
     partidas_ganadas: 5,
     partidas_jugadas: 10,
     cores: 430,
+    skin_activa: "Skin0",
   },
 };
 
@@ -165,6 +166,7 @@ export async function registrarUsuario(
       partidas_ganadas: 0,
       partidas_jugadas: 0,
       cores: 0,
+      skin_activa: "Skin0",
     };
   }
 
@@ -193,6 +195,7 @@ export async function registrarUsuario(
           partidas_ganadas: 0,
           partidas_jugadas: 0,
           cores: 0,
+          skin_activa: "Skin0",
         });
       } else {
         WS.desconectar();

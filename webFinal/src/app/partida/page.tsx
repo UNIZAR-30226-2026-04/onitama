@@ -43,6 +43,7 @@ import { TODAS_LAS_CARTAS, getImagenCarta, type CartaMovDef } from "@/lib/cartas
 import { obtenerJugadorActivo, guardarSesion } from "@/lib/sesion";
 import { obtenerPerfil } from "@/api/auth";
 import { calcularMejorMovimientoIA, type Dificultad } from "@/lib/ia";
+import { getBoardStyle, getColorMovimiento, getEquipoNombre, getPiezaSrc, normalizarSkinId } from "@/lib/skins";
 import { usarServidor } from "@/api/ws";
 import {
   conectarPartida,
@@ -75,11 +76,11 @@ function getMockOponente(dificultad: Dificultad) {
  * equipo:     determina la orientación (signo) de los movimientos.
  *             2 = perspectiva del jugador local (hacia arriba)
  *             1 = perspectiva del rival (invertido)
- * colorDots:  clase Tailwind para los puntos activos (movimientos posibles).
- *             Por defecto azul; se sobreescribe según posición/equipo.
+ * colorDots:  color CSS de los puntos activos (movimientos posibles).
+ *             Se adapta según skin + equipo.
  */
 function MiniGrid({
-  carta, equipo, colorDots = "bg-blue-500", size = 5,
+  carta, equipo, colorDots = "#3b82f6", size = 5,
 }: {
   carta: CartaMovDef; equipo: EquipoID; colorDots?: string; size?: number;
 }) {
@@ -109,9 +110,20 @@ function MiniGrid({
           return (
             <div
               key={`${f}-${c}`}
-              className={`rounded-[1px] ${esC ? "bg-[#9a8a72]" : esA ? colorDots : "bg-[#c8bba8]"
-                }`}
-              style={{ width: size, height: size }}
+              className={`rounded-[1px] ${esC ? "bg-[#9a8a72]" : "bg-[#c8bba8]"}`}
+              style={{
+                width: size,
+                height: size,
+                ...(esA
+                  ? {
+                      background: colorDots,
+                      boxShadow:
+                        colorDots === "#f8fafc"
+                          ? "inset 0 0 0 1px rgba(15,23,42,0.45)"
+                          : undefined,
+                    }
+                  : {}),
+              }}
             />
           );
         })
@@ -209,13 +221,16 @@ function CartaCola({
 // ─── Celda del tablero ────────────────────────────────────────────────────────
 
 function Celda({
-  ficha, esTrono, equipoTrono, esSeleccionada, esMovimientoValido, esUltimoMov, onClick,
+  ficha, esTrono, equipoTrono, esSeleccionada, esMovimientoValido, esUltimoMov, onClick, skinActiva, baseClase, bordeClase,
 }: {
   ficha: { equipo: EquipoID; esRey: boolean } | null;
   esTrono: boolean; equipoTrono: EquipoID | null; esSeleccionada: boolean;
   esMovimientoValido: boolean; esUltimoMov: boolean; onClick: () => void;
+  skinActiva: string;
+  baseClase: string;
+  bordeClase: string;
 }) {
-  let bg = "bg-gray-100 hover:bg-gray-200";
+  let bg = baseClase;
   if (esSeleccionada) bg = "bg-yellow-300";
   else if (esMovimientoValido) bg = "bg-[#93c5fd] cursor-pointer hover:bg-blue-300";
   else if (esUltimoMov) bg = "bg-yellow-100";
@@ -224,18 +239,33 @@ function Celda({
     <button
       type="button"
       onClick={onClick}
-      className={`aspect-square flex items-center justify-center relative border border-gray-300 transition-colors duration-100 ${bg} overflow-hidden`}
+      className={`aspect-square flex items-center justify-center relative border transition-colors duration-100 ${bordeClase} ${bg} overflow-hidden`}
     >
       {/* Fondo del Templo */}
       {esTrono && equipoTrono && (
-        <div className="absolute inset-0 opacity-40">
+        <div
+          className={`absolute inset-0 ${
+            normalizarSkinId(skinActiva) === "Skin1" ? "opacity-75" : "opacity-40"
+          }`}
+        >
+          {(() => {
+            const skin = normalizarSkinId(skinActiva);
+            const templeClass =
+              skin === "Skin1"
+                ? "object-contain p-0 contrast-200 saturate-200 brightness-75"
+                : skin === "Skin2"
+                  ? "object-contain p-[2px]"
+                  : "object-contain p-[1px]";
+            return (
           <Image
-            src={equipoTrono === 1 ? "/temploAzul.png" : "/temploRojo.png"}
+            src={getPiezaSrc("templo", equipoTrono, normalizarSkinId(skinActiva))}
             alt="Templo"
             fill
             sizes="(max-width: 768px) 100vw, 100px"
-            className="object-cover"
+            className={templeClass}
           />
+            );
+          })()}
         </div>
       )}
 
@@ -245,8 +275,8 @@ function Celda({
           <Image
             src={
               ficha.esRey
-                ? (ficha.equipo === 1 ? "/reyAzul.png" : "/reyRojo.png")
-                : (ficha.equipo === 1 ? "/peonAzul.png" : "/peonRojo.PNG")
+                ? getPiezaSrc("rey", ficha.equipo, normalizarSkinId(skinActiva))
+                : getPiezaSrc("peon", ficha.equipo, normalizarSkinId(skinActiva))
             }
             alt={ficha.esRey ? "Rey" : "Peón"}
             fill
@@ -308,7 +338,7 @@ function UltimoMovimientoGhost({
             <MiniGrid
               carta={mov.carta}
               equipo={mov.equipo}
-              colorDots={mov.equipo === 1 ? "bg-blue-500" : "bg-red-500"}
+              colorDots={getColorMovimiento(skinActiva, mov.equipo)}
               size={7}
             />
           </div>
@@ -347,6 +377,9 @@ function PartidaInterna({
   const equipoJugadorRef = useRef<1 | 2>(1);
   const [miEquipoActual, setMiEquipoActual] = useState<1 | 2>(1);
   const jugadorActual = obtenerJugadorActivo();
+  const nombreJugador = jugadorActual.nombre;
+  const skinActiva = normalizarSkinId(jugadorActual.skin_activa);
+  const nombreEquipoJugador = getEquipoNombre(skinActiva, miEquipoActual);
   const infoOponente = useRef<{ nombre: string; puntos: number }>(getMockOponente(dificultad));
   const [infoOponenteUI, setInfoOponenteUI] = useState<{ nombre: string; puntos: number }>(
     getMockOponente(dificultad)
@@ -671,20 +704,20 @@ function PartidaInterna({
    * Tras un breve delay, pide el perfil actualizado y vuelve a /partidas.
    * El delay evita leer la BD antes de que el backend termine de actualizar puntos/cores.
    */
-  const volverAPartidas = useCallback(() => {
+  const volverAPartidas = () => {
     if (tipoPartida !== "PUBLICA") {
       router.push("/partidas");
       return;
     }
     window.setTimeout(() => {
-      obtenerPerfil(jugadorActual.nombre)
+      obtenerPerfil(nombreJugador)
         .then((datos) => guardarSesion(datos))
         .catch(() => {
           /* si falla, /partidas reintenta en useEffect */
         })
         .finally(() => router.push("/partidas"));
     }, DELAY_PERFIL_MS);
-  }, [jugadorActual.nombre, router, tipoPartida]);
+  };
 
   /** El jugador confirma que quiere abandonar: notifica al servidor y vuelve */
   const handleConfirmarAbandonar = () => {
@@ -757,7 +790,7 @@ function PartidaInterna({
   let ayuda = "";
   if (aguardandoInicio) ayuda = "Esperando al servidor para comenzar…";
   else if (esTurnoJugador) {
-    if (!estado.fichaSeleccionada && !estado.cartaSeleccionada) ayuda = "Selecciona una de tus piezas (azules)";
+    if (!estado.fichaSeleccionada && !estado.cartaSeleccionada) ayuda = `Selecciona una de tus piezas (${nombreEquipoJugador.toLowerCase()})`;
     else if (estado.fichaSeleccionada && !estado.cartaSeleccionada) ayuda = "Ahora elige una carta del panel derecho";
     else if (estado.movimientosValidos.length === 0) ayuda = "Sin movimientos válidos. Prueba otra carta o pieza.";
     else ayuda = "Haz clic en una casilla blanca para mover";
@@ -766,6 +799,8 @@ function PartidaInterna({
       ? `Turno de @${nombreOponente}…`
       : `Turno de @${nombreOponente}…`;
   }
+
+  const boardStyle = getBoardStyle(skinActiva);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: "#111d2c" }}>
@@ -928,13 +963,18 @@ function PartidaInterna({
                 key={`${c.nombre}-oponente-${i}`}
                 carta={c}
                 equipo={1}
-                colorDots={miEquipoActual === 1 ? "bg-red-500" : "bg-blue-500"}
+                colorDots={getColorMovimiento(
+                  skinActiva,
+                  miEquipoActual === 1 ? 2 : 1
+                )}
                 desactivada
               />
             ))}
           </div>
 
+          {/* DEBUG: bloque oculto temporalmente. Descomentar si hace falta revisar movimientos del rival.
           <UltimoMovimientoGhost titulo="Ultimo movimiento rival" mov={ultimoMovOponente} />
+          */}
 
           <div className="flex-1 min-h-2" />
 
@@ -960,12 +1000,11 @@ function PartidaInterna({
 
         {/* ─── CENTRO: tablero + cola de cartas ───────────────────────────── */}
         <main className="flex-1 bg-[#dbeafe] flex flex-col items-center justify-center gap-2 px-3 min-h-0 min-w-0 overflow-hidden">
+          <div className="relative shrink-0" style={{ width: "min(min(52vh, 440px), calc(100vw - 520px))", aspectRatio: "1" }}>
           <div
-            className="grid border-2 border-[#1a2d4a]/30 shadow-2xl shrink-0 bg-white"
+            className="grid border-2 border-[#1a2d4a]/30 shadow-2xl bg-white w-full h-full"
             style={{
               gridTemplateColumns: `repeat(${DIM}, 1fr)`,
-              width: "min(min(52vh, 440px), calc(100vw - 520px))",
-              aspectRatio: "1",
             }}
           >
             {/*
@@ -986,6 +1025,14 @@ function PartidaInterna({
                   !!estado.ultimoMovimiento &&
                   ((estado.ultimoMovimiento.origen.fila === fila && estado.ultimoMovimiento.origen.col === col) ||
                     (estado.ultimoMovimiento.destino.fila === fila && estado.ultimoMovimiento.destino.col === col));
+                const esBlanca = (fila + col) % 2 === 0;
+                const baseClase =
+                  boardStyle === "ajedrez"
+                    ? (esBlanca ? "bg-stone-900 hover:bg-stone-800" : "bg-stone-100 hover:bg-stone-200")
+                    : boardStyle === "clasico-futbol"
+                      ? "bg-emerald-700/90 hover:bg-emerald-600/90"
+                      : "bg-gray-100 hover:bg-gray-200";
+                const bordeClase = boardStyle === "clasico-futbol" ? "border-white/35" : "border-gray-300";
                 return (
                   <Celda
                     key={`${fila}-${col}`}
@@ -996,10 +1043,26 @@ function PartidaInterna({
                     esMovimientoValido={esValido}
                     esUltimoMov={esUlt && !esSel && !esValido}
                     onClick={() => handleCelda(fila, col)}
+                    skinActiva={skinActiva}
+                    baseClase={baseClase}
+                    bordeClase={bordeClase}
                   />
                 );
               });
             })}
+          </div>
+          {boardStyle === "clasico-futbol" && (
+            <svg
+              className="pointer-events-none absolute inset-0"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              aria-hidden
+            >
+              <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,255,255,0.62)" strokeWidth="0.8" />
+              <circle cx="50" cy="50" r="9" fill="none" stroke="rgba(255,255,255,0.62)" strokeWidth="0.8" />
+              <circle cx="50" cy="50" r="0.9" fill="rgba(255,255,255,0.8)" />
+            </svg>
+          )}
           </div>
 
           <div className="flex items-center justify-center gap-2 shrink-0">
@@ -1010,13 +1073,13 @@ function PartidaInterna({
               const equipoRecibeCarta = (i % 2 === 0)
                 ? estado.turnoActual
                 : (estado.turnoActual === 1 ? 2 : 1);
-              const colorDots = equipoRecibeCarta === 1 ? "bg-blue-500" : "bg-red-500";
+              const colorDotsSkin = getColorMovimiento(skinActiva, equipoRecibeCarta as 1 | 2);
               return (
                 <CartaCola
                   key={`${carta.nombre}-${i}`}
                   carta={carta}
                   equipo={2}
-                  colorDots={colorDots}
+                  colorDots={colorDotsSkin}
                   esLaSiguiente={i === 0}
                 />
               );
@@ -1061,7 +1124,7 @@ function PartidaInterna({
                 key={`${carta.nombre}-jugador-${i}`}
                 carta={carta}
                 equipo={2}
-                colorDots={miEquipoActual === 1 ? "bg-blue-500" : "bg-red-500"}
+                colorDots={getColorMovimiento(skinActiva, miEquipoActual)}
                 seleccionada={estado.cartaSeleccionada?.nombre === carta.nombre}
                 onClick={() => handleCarta(carta)}
                 desactivada={!esTurnoJugador}
@@ -1069,7 +1132,9 @@ function PartidaInterna({
             ))}
           </div>
 
+          {/* DEBUG: bloque oculto temporalmente. Descomentar si hace falta revisar movimientos del jugador.
           <UltimoMovimientoGhost titulo="Tu ultimo movimiento" mov={ultimoMovJugador} />
+          */}
 
           <div className="flex-1 min-h-2" />
 
