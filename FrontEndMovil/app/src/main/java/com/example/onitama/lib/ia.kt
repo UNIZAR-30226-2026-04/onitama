@@ -220,7 +220,7 @@ fun crearEstadoSim (
 
             if (fi != null) {
                 if (fi.esRey){
-                    if (fi.equipo == EquipoID.ARROJO) {
+                    if (fi.equipo == EquipoID.ROJO) {
                         board[toIndex(c, f)] = 3
                     } 
                     else {
@@ -228,7 +228,7 @@ fun crearEstadoSim (
                     }
                 }
                 else {
-                    if (fi.equipo == EquipoID.ARROJO) {
+                    if (fi.equipo == EquipoID.ROJO) {
                         board[toIndex(c, f)] = 1 
                     }
                     else {
@@ -337,14 +337,14 @@ fun generarJugadas (
                 var destinoX: Int
                 var destinoY: Int
 
-                if (eq == 1) {
+                if (eq == EquipoID.ROJO.id) {
                     destinoX = origenX - movimiento.dc
                 }
                 else {
                     destinoX = origenX + movimiento.dc
                 }
 
-                if (eq == 1) { 
+                if (eq == EquipoID.ROJO.id) { 
                     destinoY = origenY + movimiento.df
                 }
                 else {
@@ -936,7 +936,7 @@ fun calcularMejorMovimientoIA (
     var globalBestMove: JugadaSim? = null
     var maxDepthReached = 0
 
-    val rivalEq = if (equipoIA.id == 1) EquipoID.ABAZUL else EquipoID.ARROJO
+    val rivalEq = if (equipoIA.id == 1) EquipoID.ROJO else EquipoID.AZUL
 
     // ITERATIVE DEEPENING
     // Limitamos a Profundidad Maxima 15 para evitar loops infinitos teóricos, pero el tiempo cortará antes

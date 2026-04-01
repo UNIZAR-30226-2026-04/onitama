@@ -73,12 +73,12 @@ class PartidaViewModel : ViewModel() {
                         _estado.value = _estado.value.copy(turnoActual = equipoPropio)
                     }
                     is Partida.RespuestaMover -> {
-                        val filaOrigen = 6 - mensaje.fila_origen
-                        val colOrigen = 6 - mensaje.col_origen
+                        val filaOrigen = mensaje.fila_origen
+                        val colOrigen = mensaje.col_origen
                         val origen = Posicion(filaOrigen, colOrigen)
 
-                        val filaDestino = 6 - mensaje.fila_destino
-                        val colDestino = 6 - mensaje.col_destino
+                        val filaDestino = mensaje.fila_destino
+                        val colDestino = mensaje.col_destino
                         val destino = Posicion(filaDestino, colDestino)
                         val carta = Cartas.getCarta(mensaje.carta)
                         val resultado = ejecutarMovimiento(_estado.value, origen, destino, carta)
@@ -126,10 +126,10 @@ class PartidaViewModel : ViewModel() {
                         partida.enviarMovimiento(
                             Partida.MensajeMover(
                                 equipo = equipoPropio.id,
-                                col_origen = 6 - actual.fichaSeleccionada.col ,
-                                fila_origen =   6 - actual.fichaSeleccionada.fila ,
-                                col_destino =  6 - pos.col,
-                                fila_destino =  6 - pos.fila,
+                                col_origen = actual.fichaSeleccionada.col ,
+                                fila_origen = actual.fichaSeleccionada.fila ,
+                                col_destino = pos.col,
+                                fila_destino = pos.fila,
                                 carta = actual.cartaSeleccionada.nombre
                             ))
                     }
@@ -186,7 +186,8 @@ class PartidaViewModel : ViewModel() {
         val estadoActual = _estado.value
 
         // Por seguridad, comprobamos que realmente es el turno del bot y no hay ganador
-        if (estadoActual.turnoActual != EquipoID.ROJO || estadoActual.ganador != null) return
+        val ia = if (equipoPropio == EquipoID.ROJO) EquipoID.AZUL else EquipoID.ROJO
+        if (estadoActual.turnoActual != ia || estadoActual.ganador != null) return
 
         // Lanzamos una corrutina en el hilo Default (optimizado para cálculos pesados de IA)
         viewModelScope.launch(Dispatchers.Default) {
@@ -196,12 +197,11 @@ class PartidaViewModel : ViewModel() {
             var jugada = calcularMejorMovimientoIA(
                 estado = estadoActual,
                 // De momento así luego ya si eso añadimos un menú similar al que tenían las partidas privadas para elegir dificultad y equipo que quieres jugar
-                equipoIA = EquipoID.ROJO,
+                equipoIA = ia,
                 equipoLocal = equipoPropio,
                 dificultad = Dificultad.DIFICIL
             )
 
-                jugada = jugada?.copy(origenCol = 6 - jugada.origenCol, destinoCol = 6 - jugada.destinoCol, origenFila = 6 - jugada.origenFila, destinoFila = 6 - jugada.destinoFila)
 
 
 
