@@ -115,9 +115,16 @@ class BuscarPartida(
                 val mensaje = MensajeBuscarPartida("BUSCAR_PARTIDA", nombre, puntos)
                 webSocket.send(Json.encodeToString(mensaje))
             }
-            override fun onMessage(webSocket: WebSocket, event: String) { //al recibir un mensaje del websocket
+            override fun onMessage(webSocket: WebSocket, event: String) {
+                Log.w("CHIVATO_WS", "El móvil (Capa de Red) acaba de recibir: $event")//al recibir un mensaje del websocket
                 if (promise.isCompleted) {
-                    PartidaActiva.onMensajeJuegoRecibido?.invoke(event) //si la partida ya ha empezado se le pasa el mensaje a la pantalla de juego usando el objeto PartidaActiva
+                    val receptor = PartidaActiva.onMensajeJuegoRecibido
+                    if(receptor == null){
+                        Log.e("CHIVATO_WS", "¡PELIGRO! Llegó un mensaje pero la PartidaActivity no está escuchando.")
+                    }else{
+                        receptor.invoke(event)
+                        return
+                    } //si la partida ya ha empezado se le pasa el mensaje a la pantalla de juego usando el objeto PartidaActiva
                     return
                 }
                 try {
@@ -177,6 +184,7 @@ class BuscarPartida(
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { //en caso de que la conexión esté cerrada (por timeout o por cancelar) da error
+                Log.e("CHIVATO_WS", "¡EL SOCKET SE HA CERRADO! Razón: $reason")
                 if (!promise.isCompleted ) {
                     timerJob.cancel()
                     promise.complete(

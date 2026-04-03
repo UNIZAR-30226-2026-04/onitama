@@ -108,8 +108,54 @@ class PartidaActivity: AppCompatActivity() {
         modo: ModoJuego
     ) {
 
-        val context = LocalContext.current
+
         val quattrocentoBold = FontFamily(Font(R.font.quattrocento_bold))
+
+        if (estado.ganador != null) {
+            val motivo = viewModel.razon
+            val equipo = viewModel.equipoPropio
+            val winner = estado.ganador
+            val victoria = winner == equipo
+            AlertDialog(
+                // Evita que el jugador cierre el popup pulsando fuera de él
+                onDismissRequest = { },
+                title = {
+                    Text(
+                        text = if(victoria) "VICTORIA" else "DERROTA",
+                        fontFamily = quattrocentoBold,
+                        fontSize = 24.sp
+                    )
+                },
+
+                /*image = {
+                    Image(
+                        painter = painterResource(id = R.drawable.emote_derrota),
+                        contentDescription = "Imagen de resultado",
+                        modifier = Modifier.size(100.dp)
+                    )
+                },*/
+
+                text = {
+                    Text(
+                        text = when(motivo) {
+                            "TRONO"-> if(victoria)"Colocaste tu rey en el trono del rival" else "Tu rival llevó su rey hasta tu trono"
+                            "REY CAPTURADO"-> if(victoria)"Capturaste el rey de tu rival" else "Tu rival ha capturado tu rey"
+                            else -> if(victoria)"Tu rival abandonó la partida" else "Derrota"
+
+                        },
+                        fontSize = 18.sp
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { finish() },
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.azulFondo))
+                    ) {
+                        Text("Volver al Menú", color = Color.White)
+                    }
+                }
+            )
+        }
 
 
 
@@ -254,9 +300,15 @@ class PartidaActivity: AppCompatActivity() {
 
                     Button(
                         onClick = {
-                            //se cierra y se vuelve a la pantalla anterior (cuando consiga la comunicación api, añado la función abandonar)
+                            when(modo){
+                                ModoJuego.BOT -> finish()
+                                ModoJuego.PUBLICA ->{
+                                    viewModel.botonAbandonar()
+                                    finish()
+                                }
+                                else -> finish()
+                            }
 
-                            (context as? Activity)?.finish()
                         },
                         modifier = Modifier.Companion
                             .size(width = 220.dp, height = 55.dp)
@@ -266,7 +318,7 @@ class PartidaActivity: AppCompatActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Companion.LightGray)
                     ) {
                         Text(
-                            "ABANDONAR",
+                            if(modo != ModoJuego.PRIVADA) "ABANDONAR" else "PAUSAR",
                             fontFamily = quattrocentoBold,
                             fontSize = 20.sp,
                             color = colorResource(R.color.azulFondo)

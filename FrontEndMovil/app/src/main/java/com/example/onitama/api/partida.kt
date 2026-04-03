@@ -122,7 +122,10 @@ class Partida(
 
     @Serializable
     @SerialName("VICTORIA")
-    object RespuestaVictoria : MensajeServidor() // Convertido a object
+    data class RespuestaVictoria(
+        val motivo: String,
+        val equipo_responsable: Int
+    ) : MensajeServidor() // Convertido a object
 
     @Serializable
     @SerialName("DERROTA")
@@ -158,12 +161,14 @@ class Partida(
 
             val wsFallback = client.newWebSocket(solicitud, object : WebSocketListener() {
                 override fun onMessage(webSocket: WebSocket, text: String) {
+                    Log.w("CHIVATO_WS", "El móvil acaba de recibir esto del servidor: $text")
                     receptor(text)
                 }
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
                     Log.e("Partida", "Error en el WebSocket (Fallback)", t)
                 }
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    Log.e("CHIVATO_WS", "¡EL SOCKET SE HA CERRADO! Razón: $reason")
                     PartidaActiva.wsActivo = null
                 }
             })

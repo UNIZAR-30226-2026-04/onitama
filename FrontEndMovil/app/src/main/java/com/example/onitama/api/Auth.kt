@@ -162,4 +162,15 @@ class Auth(
             else -> throw Exception("Respuesta inesperada del servidor.")
         }
     }
+
+    suspend fun obtenerPerfil(nombre: String) {
+        // ── Mock ──
+        if (!usarServidor) {
+            return // Simulamos éxito en modo desarrollo
+        }
+
+
+    }
+
+
 }

@@ -1,5 +1,6 @@
 package com.example.onitama.ui.activities.partida
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.onitama.PartidaActiva
@@ -27,17 +28,18 @@ import kotlinx.coroutines.withContext
 
 class PartidaViewModel : ViewModel() {
 
-
+    val END = 6;
     var modoJuegoActual: ModoJuego = ModoJuego.BOT
         private set
     private val _estado = MutableStateFlow(crearEstadoInicial())
+    var razon: String? = null
     val estado: StateFlow<EstadoJuego> = _estado.asStateFlow()
 
     var partida = Partida()
 
     var equipoPropio = EquipoID.AZUL //de momento el bot siempre es el rojo, ya si eso se mejorará más adelante
 
-
+    var limpiar: (() -> Unit)? = null
 
     fun iniciarPartida(modo: ModoJuego) {
         modoJuegoActual = modo
@@ -45,8 +47,9 @@ class PartidaViewModel : ViewModel() {
         val datos = PartidaActiva.datosPartida
 
         if (modo == ModoJuego.PUBLICA || modo == ModoJuego.PRIVADA) {
+            Log.i("INFORMACION PARTIDA INICIADA", "{s}")
             if (datos != null) {
-                equipoPropio = if(datos.equipo == 1) EquipoID.AZUL else EquipoID.ROJO
+                equipoPropio = if (datos.equipo == 1) EquipoID.AZUL else EquipoID.ROJO
 
                 // Primero construimos el tablero con las cartas del servidor
                 _estado.value = crearEstadoServidor(
@@ -66,33 +69,54 @@ class PartidaViewModel : ViewModel() {
     }
 
     private fun conectarAlServidor() {
-        if (partida.enviarEstoyListo()) {
-            partida.conectarPartida { mensaje ->
+        Log.w("CHIVATO_WS", "¿El socket está vivo al iniciar?: ${PartidaActiva.wsActivo != null}")
+
+        val sePudoEnviar = partida.enviarEstoyListo()
+        Log.w("CHIVATO_WS", "¿Se pudo enviar ESTOY_LISTO?: $sePudoEnviar")
+
+        if (sePudoEnviar) {
+            limpiar = partida.conectarPartida { mensaje ->
+                Log.w("CHIVATO_WS", "El ViewModel está procesando: $mensaje")
                 when (mensaje) {
                     is Partida.RespuestaTuTurno -> {
                         _estado.value = _estado.value.copy(turnoActual = equipoPropio)
                     }
                     is Partida.RespuestaMover -> {
-                        val filaOrigen = mensaje.fila_origen
-                        val colOrigen = mensaje.col_origen
+                        val filaOrigen = END - mensaje.fila_origen
+                        val colOrigen = END -mensaje.col_origen
                         val origen = Posicion(filaOrigen, colOrigen)
 
-                        val filaDestino = mensaje.fila_destino
-                        val colDestino = mensaje.col_destino
+                        val filaDestino = END - mensaje.fila_destino
+                        val colDestino = END - mensaje.col_destino
                         val destino = Posicion(filaDestino, colDestino)
                         val carta = Cartas.getCarta(mensaje.carta)
-                        val resultado = ejecutarMovimiento(_estado.value, origen, destino, carta)
+                        Log.i("conexion servidor", "Mensaje de movimiento recibido")
+                        val resultado = ejecutarMovimiento(_estado.value, origen, destino, carta, equipoPropio)
+                        if(resultado.victoriaPorTrono){
+                            razon = "TRONO"
+                        }
+                        if(resultado.esReyCapturado) {
+                            razon = "REY CAPTURADO"
+                        }
                         _estado.value = resultado.nuevoEstado
+
                     }
                     is Partida.RespuestaDerrota -> {
+                        _estado.value = _estado.value.copy(ganador = if (equipoPropio == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL)
 
                     }
                     is Partida.RespuestaVictoria -> {
-
+                        if(mensaje.motivo == "ABANDONO"){
+                            razon = "ABANDONO"
+                        }
+                        _estado.value = _estado.value.copy(ganador = if (equipoPropio == EquipoID.ROJO) EquipoID.ROJO else EquipoID.AZUL)
+                        Log.i("conexion servidor", "Mensaje de victoria recibido")
                     }
                     is Partida.RespuestaTerminarPartida ->{
+                       if (mensaje.razon == "ABANDONO"){ razon ="ABANDONO" }
+                        Log.i("conexion servidor", "Mensaje de terminar partida recibido")
                         _estado.value =
-                            _estado.value.copy(ganador = if (mensaje.ganador == "1") EquipoID.ROJO else EquipoID.AZUL)
+                            _estado.value.copy(ganador = if (mensaje.ganador == EquipoID.ROJO.id.toString()) EquipoID.ROJO else EquipoID.AZUL)
                     }
                     else -> {
                         println("LOG: Mensaje recibido no reconocido: $mensaje")
@@ -112,9 +136,18 @@ class PartidaViewModel : ViewModel() {
                     actual,
                     actual.fichaSeleccionada,
                     pos,
-                    actual.cartaSeleccionada
+                    actual.cartaSeleccionada,
+                    equipoPropio
                 )
+                if(resultado.victoriaPorTrono){
+                    razon = "TRONO"
+                }
+                if(resultado.esReyCapturado){
+                    razon = "REY CAPTURADO"
+                }
                 _estado.value = resultado.nuevoEstado
+
+
 
                 if (resultado.nuevoEstado.turnoActual != equipoPropio) {
                     if(modoJuegoActual == ModoJuego.BOT){
@@ -126,10 +159,10 @@ class PartidaViewModel : ViewModel() {
                         partida.enviarMovimiento(
                             Partida.MensajeMover(
                                 equipo = equipoPropio.id,
-                                col_origen = actual.fichaSeleccionada.col ,
-                                fila_origen = actual.fichaSeleccionada.fila ,
-                                col_destino = pos.col,
-                                fila_destino = pos.fila,
+                                col_origen = END - actual.fichaSeleccionada.col ,
+                                fila_origen = END - actual.fichaSeleccionada.fila ,
+                                col_destino = END - pos.col,
+                                fila_destino = END - pos.fila,
                                 carta = actual.cartaSeleccionada.nombre
                             ))
                     }
@@ -140,7 +173,7 @@ class PartidaViewModel : ViewModel() {
                 if (celda.ficha?.equipo == actual.turnoActual) {
                     _estado.value = actual.copy(
                         fichaSeleccionada = pos,
-                        movimientosValidos = calcularMovimientosValidos(actual.tablero, pos.fila, pos.col, actual.cartaSeleccionada!!, actual.turnoActual,actual.turnoActual)
+                        movimientosValidos = calcularMovimientosValidos(actual.tablero, pos.fila, pos.col, actual.cartaSeleccionada, actual.turnoActual)
                     )
                 }
             }
@@ -158,7 +191,6 @@ class PartidaViewModel : ViewModel() {
                 actual.fichaSeleccionada.fila,
                 actual.fichaSeleccionada.col,
                 carta,
-                actual.turnoActual,
                 actual.turnoActual
             )
 
@@ -202,9 +234,6 @@ class PartidaViewModel : ViewModel() {
                 dificultad = Dificultad.DIFICIL
             )
 
-
-
-
             // 3. Aplicamos la jugada en el hilo principal
             if (jugada != null) {
                 withContext(Dispatchers.Main) {
@@ -224,7 +253,8 @@ class PartidaViewModel : ViewModel() {
             estado = actual,
             origen = posicionOrigen,
             destino = posicionDestino,
-            carta = jugada.carta
+            carta = jugada.carta,
+            equipoPropio
         )
 
         _estado.value = resultado.nuevoEstado
@@ -233,8 +263,15 @@ class PartidaViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         // Ejecutamos la función de limpieza que nos devolvió conectarPartida()
-        //desconectarWs?.invoke()
+        limpiar?.invoke()
+        partida.desconectarPartida()
         println("LOG: ViewModel destruido, conexión WebSocket limpiada.")
+    }
+
+    fun botonAbandonar(){
+        partida.enviarAbandono(equipoPropio.id)
+        razon = "ABANDONO"
+        partida.desconectarPartida()
     }
 
 }

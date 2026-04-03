@@ -14,8 +14,8 @@ enum class ModoJuego {
 }
 
 enum class EquipoID (val id: Int){
-    ROJO(1),
-    AZUL(2);
+    ROJO(2),
+    AZUL(1);
 }
 
 data class Ficha(
@@ -130,16 +130,9 @@ fun calcularMovimientosValidos (
     fila: Int,
     col: Int,
     cartaMov: Carta,
-    equipoFicha: EquipoID,
-    equipoPropio: EquipoID
+    equipoFicha: EquipoID
 ): List<Posicion> {
-    var signo: Int
-    if (equipoFicha == equipoPropio){
-        signo = 1
-    }
-    else {
-        signo = -1
-    }
+    val signo = if(equipoFicha == EquipoID.AZUL) 1 else -1
 
     val validos = mutableListOf<Posicion>()
 
@@ -276,7 +269,7 @@ fun ejecutarMovimiento (
     origen: Posicion,
     destino: Posicion,
     carta: Carta,
-    equipoLocal: EquipoID = EquipoID.AZUL
+    equipoLocal: EquipoID
 ): ResultadoMovimiento {
     val tablero = estado.tablero.map { fila ->
         fila.toMutableList()

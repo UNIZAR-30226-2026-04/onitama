@@ -510,7 +510,7 @@ fun esMovimientoGanadorInmediato (
         return true
     }
 
-    // Habia un problema, solo se analizaba para un equipo
+
     if (eq == 2 && fromPiece == 4 && j.destinoX == CENTRO && j.destinoY == 0) {
         return true
     }
