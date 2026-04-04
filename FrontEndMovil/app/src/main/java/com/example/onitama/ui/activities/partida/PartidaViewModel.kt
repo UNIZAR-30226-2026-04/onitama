@@ -271,7 +271,6 @@ class PartidaViewModel : ViewModel() {
     fun botonAbandonar(){
         partida.enviarAbandono(equipoPropio.id)
         razon = "ABANDONO"
-        partida.desconectarPartida()
     }
 
 }

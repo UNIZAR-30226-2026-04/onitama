@@ -10,8 +10,9 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        if (autoLogin.yaHaIniciadoSesion(this)){
+        if (AutoLogin.yaHaIniciadoSesion(this)){
             // Creación del Intent
+            AutoLogin.cargarDatosAlIniciarApp(this)
             val intent = Intent(this, MenuPrincipalActivity::class.java)
 
             // Lo iniciamos

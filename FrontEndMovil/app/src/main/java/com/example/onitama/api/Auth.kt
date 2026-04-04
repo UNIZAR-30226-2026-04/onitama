@@ -2,6 +2,8 @@ package com.example.onitama.api
 
 import android.util.Log
 import com.example.onitama.Config
+import com.example.onitama.DatosPerfil
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.*
@@ -163,13 +165,34 @@ class Auth(
         }
     }
 
-    suspend fun obtenerPerfil(nombre: String) {
-        // ── Mock ──
+    suspend fun obtenerPerfil(nombre: String): DatosPerfil? {
         if (!usarServidor) {
-            return // Simulamos éxito en modo desarrollo
+            return null
         }
 
+        val respuesta = withTimeoutOrNull(100_000L) {
+            val requestJson = JSONObject().apply {
+                put("tipo", "OBTENER_PERFIL")
+                put("nombre", nombre)
+            }
+            enviarYEsperarRespuesta(requestJson.toString())
+        } ?: throw Exception("El servidor no respondió a tiempo.")
+        val tipo = respuesta.optString("tipo")
+        when(tipo){
+            "PERFIL_ACTUALIZADO" ->{
+                val resultado = DatosPerfil(
+                    nombre = respuesta.optString("nombre"),
+                    correo = respuesta.optString("correo"),
+                    puntos = respuesta.optInt("puntos"),
+                    partidas_ganadas = respuesta.optInt("partidas_ganadas"),
+                    partidas_jugadas = respuesta.optInt("partidas_jugadas"),
+                    cores = respuesta.optInt("cores"))
+                return resultado
 
+            }
+            else -> Log.e("ERROR", "Respuesta inesperada del servidor.")
+        }
+        return null
     }
 
 

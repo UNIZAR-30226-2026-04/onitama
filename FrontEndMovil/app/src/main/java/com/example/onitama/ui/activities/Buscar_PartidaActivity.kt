@@ -47,16 +47,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.onitama.R
 import com.example.onitama.api.BuscarPartida
-import com.example.onitama.autoLogin
+import com.example.onitama.AutoLogin
 import com.example.onitama.ui.activities.partida.PartidaActivity
 import kotlinx.coroutines.delay
 
 class Buscar_PartidaActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val nombreUsuario = autoLogin.obtenerNombre(this) ?: "Jugador"
-        val valorCores = autoLogin.obtenerCores(this)
-        val valorKatanas = autoLogin.obtenerKatanas(this)
+        val nombreUsuario = AutoLogin.obtenerNombre(this) ?: "Jugador"
+        val valorCores = AutoLogin.obtenerCores(this)
+        val valorKatanas = AutoLogin.obtenerKatanas(this)
 
         setContent {
             //esta sirve para guardar el valor de la función de cancelar
@@ -115,7 +115,7 @@ class Buscar_PartidaActivity: AppCompatActivity() {
                 delay(1000L) // Esperamos 1 segundo
                 tiempoEnSegundos-- // Restamos un segundo
             }
-            // Aquí habrá que poner lo que pasa cuando se llega al timeout
+            funcionCancelacion?.invoke()
         }
 
 
@@ -379,6 +379,35 @@ class Buscar_PartidaActivity: AppCompatActivity() {
                     fontSize = 30.sp,
                     color = colorResource(R.color.azulFondo)
                 )
+            }
+            if(tiempoEnSegundos == 0){
+                Text(
+                    "NO SE HA ENCONTRADO UN OPONENTE",
+                    fontFamily = quattrocentoBold,
+                    fontSize = 20.sp,
+                    color = Color.Red,
+                    modifier = Modifier
+                        .padding(top = 10.dp)
+
+                )
+                Button(
+                    onClick = {
+                        (context as? Activity)?.recreate()
+                    },
+                    modifier = Modifier
+                        .size(width = 240.dp, height = 70.dp)
+                        .padding(top = 15.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray )
+                ) {
+                    Text(
+                        "REINTENTAR",
+                        fontFamily = quattrocentoBold,
+                        fontSize = 30.sp,
+                        color = colorResource(R.color.azulFondo)
+                    )
+                }
+
             }
         }
 

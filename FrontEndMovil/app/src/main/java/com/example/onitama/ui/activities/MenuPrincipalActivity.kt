@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,15 +50,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.onitama.R
-import com.example.onitama.autoLogin
+import com.example.onitama.AutoLogin
 import com.example.onitama.ui.activities.partida.PartidaActivity
 
 class MenuPrincipalActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val nombreUsuario = autoLogin.obtenerNombre(this) ?: "Jugador"
-        val valorCores = autoLogin.obtenerCores(this)
-        val valorKatanas = autoLogin.obtenerKatanas(this)
         setContent {
             // Un contenedor base opcional (útil para temas y colores de fondo por defecto)
             Surface(
@@ -65,9 +63,6 @@ class MenuPrincipalActivity : AppCompatActivity() {
                 color = MaterialTheme.colorScheme.background
             ) {
                 MainMenuScreen(
-                    nombre = nombreUsuario,
-                    cores = valorCores,
-                    katanas = valorKatanas
                 )
             }
         }
@@ -76,15 +71,12 @@ class MenuPrincipalActivity : AppCompatActivity() {
 
 @Composable
 fun MainMenuScreen(
-    nombre: String = "Jugador",
-    cores: Int = 0,
-    katanas: Int = 0
 ) {
     val quattrocentoBold = FontFamily(Font(R.font.quattrocento_bold))
     var menuPrivadoDesplegado by remember { mutableStateOf(false) }
     val alphaOtrosBotones by animateFloatAsState(targetValue = if (menuPrivadoDesplegado) 0.3f else 1f)
     val context = LocalContext.current
-
+    val datosUsuario by AutoLogin.sesion.collectAsState()
 
     Box(
         modifier = Modifier
@@ -288,12 +280,12 @@ fun MainMenuScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(painterResource(id = R.drawable.katanas), contentDescription = "Katanas", modifier = Modifier.size(30.dp))
-                    Text(katanas.toString(), color = Color.White, fontSize = 24.sp, fontFamily = quattrocentoBold, modifier = Modifier.padding(start = 4.dp))
+                    Text(datosUsuario?.puntos.toString(), color = Color.White, fontSize = 24.sp, fontFamily = quattrocentoBold, modifier = Modifier.padding(start = 4.dp))
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(painterResource(id = R.drawable.core), contentDescription = "Core", modifier = Modifier.height(30.dp))
-                    Text(cores.toString(), color = Color.White, fontSize = 24.sp, fontFamily = quattrocentoBold, modifier = Modifier.padding(start = 4.dp))
+                    Text(datosUsuario?.cores.toString(), color = Color.White, fontSize = 24.sp, fontFamily = quattrocentoBold, modifier = Modifier.padding(start = 4.dp))
                 }
             }
         }

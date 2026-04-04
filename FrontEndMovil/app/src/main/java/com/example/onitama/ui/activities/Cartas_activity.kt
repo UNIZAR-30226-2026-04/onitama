@@ -4,8 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,20 +22,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -49,20 +40,18 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat.startActivity
 import com.example.onitama.R
-import com.example.onitama.autoLogin
+import com.example.onitama.AutoLogin
 import com.example.onitama.lib.Carta
 import com.example.onitama.lib.Cartas
 import com.example.onitama.lib.Movimiento
-import com.example.onitama.ui.activities.partida.PartidaActivity
 
 class Cartas_activity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val nombreUsuario = autoLogin.obtenerNombre(this) ?: "Jugador"
-        val valorCores = autoLogin.obtenerCores(this)
-        val valorKatanas = autoLogin.obtenerKatanas(this)
+        val nombreUsuario = AutoLogin.obtenerNombre(this) ?: "Jugador"
+        val valorCores = AutoLogin.obtenerCores(this)
+        val valorKatanas = AutoLogin.obtenerKatanas(this)
 
         setContent {
             // Un contenedor base opcional (útil para temas y colores de fondo por defecto)

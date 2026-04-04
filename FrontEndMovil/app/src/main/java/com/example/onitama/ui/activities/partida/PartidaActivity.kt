@@ -1,6 +1,5 @@
 package com.example.onitama.ui.activities.partida
 
-import android.app.Activity
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -26,17 +25,12 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButtonDefaults.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,8 +47,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import com.example.onitama.PartidaActiva
 import com.example.onitama.R
-import com.example.onitama.api.BuscarPartida
-import com.example.onitama.autoLogin
+import com.example.onitama.api.Auth
+import com.example.onitama.AutoLogin
+import com.example.onitama.DatosPerfil
+import com.example.onitama.api.Partida
 import com.example.onitama.lib.Carta
 import com.example.onitama.lib.Cartas
 import com.example.onitama.lib.EquipoID
@@ -62,17 +58,13 @@ import com.example.onitama.lib.EstadoJuego
 import com.example.onitama.lib.ModoJuego
 import com.example.onitama.lib.Movimiento
 import com.example.onitama.lib.Posicion
-import com.example.onitama.lib.calcularMovimientosValidos
-import com.example.onitama.lib.crearEstadoInicial
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 class PartidaActivity: AppCompatActivity() {
     private val viewModel: PartidaViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val nombreUsuario = autoLogin.obtenerNombre(this) ?: "Jugador"
-        val valorCores = autoLogin.obtenerCores(this)
-        val valorKatanas = autoLogin.obtenerKatanas(this)
 
         val modoString = intent.getStringExtra("MODO_JUEGO") ?: ModoJuego.BOT.name
         val modoJuego = try {
@@ -88,9 +80,6 @@ class PartidaActivity: AppCompatActivity() {
 
             Surface(modifier = Modifier.fillMaxSize()) {
                 MatchScreen(
-                    nombre = nombreUsuario,
-                    cores = valorCores,
-                    katanas = valorKatanas,
                     estado = estadoJuego, // Pasamos el estado a la UI
                     modo = modoJuego
                 )
@@ -101,13 +90,13 @@ class PartidaActivity: AppCompatActivity() {
 
     @Composable
     fun MatchScreen(
-        nombre: String = "Jugador",
-        cores: Int = 0,
-        katanas: Int = 0,
         estado: EstadoJuego,
         modo: ModoJuego
     ) {
-
+        val datosUsuario by AutoLogin.sesion.collectAsState()
+        val authClient: Auth = Auth()
+        val context = LocalContext.current
+        var partida = Partida()
 
         val quattrocentoBold = FontFamily(Font(R.font.quattrocento_bold))
 
@@ -140,7 +129,7 @@ class PartidaActivity: AppCompatActivity() {
                         text = when(motivo) {
                             "TRONO"-> if(victoria)"Colocaste tu rey en el trono del rival" else "Tu rival llevó su rey hasta tu trono"
                             "REY CAPTURADO"-> if(victoria)"Capturaste el rey de tu rival" else "Tu rival ha capturado tu rey"
-                            else -> if(victoria)"Tu rival abandonó la partida" else "Derrota"
+                            else -> if(victoria)"Tu rival abandonó la partida" else "Esta vez tu rival te ha vencido, más suerte a la próxima"
 
                         },
                         fontSize = 18.sp
@@ -148,7 +137,13 @@ class PartidaActivity: AppCompatActivity() {
                 },
                 confirmButton = {
                     Button(
-                        onClick = { finish() },
+                        onClick = {
+                            val datos = runBlocking {
+                                authClient.obtenerPerfil(datosUsuario!!.nombre)
+                            }
+                            AutoLogin.actualizar(context, datos)
+                            finish()
+                                  },
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.azulFondo))
                     ) {
                         Text("Volver al Menú", color = Color.White)
@@ -236,7 +231,7 @@ class PartidaActivity: AppCompatActivity() {
                                 modifier = Modifier.Companion.size(30.dp)
                             )
                             Text(
-                                katanas.toString(),
+                                datosUsuario?.puntos.toString(),
                                 color = Color.Companion.White,
                                 fontSize = 24.sp,
                                 fontFamily = quattrocentoBold,
@@ -251,7 +246,7 @@ class PartidaActivity: AppCompatActivity() {
                                 modifier = Modifier.Companion.height(30.dp)
                             )
                             Text(
-                                cores.toString(),
+                                datosUsuario?.cores.toString(),
                                 color = Color.Companion.White,
                                 fontSize = 24.sp,
                                 fontFamily = quattrocentoBold,
@@ -276,7 +271,7 @@ class PartidaActivity: AppCompatActivity() {
                         )
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
-                            text = if(modo == ModoJuego.BOT) "Iron" else PartidaActiva.datosPartida!!.oponente,
+                            text = if(modo == ModoJuego.BOT) "Iron" else PartidaActiva.datosPartida?.oponente ?: "Desconocido",
                             fontFamily = quattrocentoBold,
                             fontSize = 30.sp,
                             color = Color.Companion.White
@@ -289,7 +284,7 @@ class PartidaActivity: AppCompatActivity() {
                                     modifier = Modifier.Companion.size(30.dp)
                                 )
                                 Text(
-                                    PartidaActiva.datosPartida!!.oponentePt.toString(),
+                                    PartidaActiva.datosPartida?.oponentePt.toString(),
                                     color = Color.Companion.White,
                                     fontSize = 24.sp,
                                     )
@@ -304,6 +299,12 @@ class PartidaActivity: AppCompatActivity() {
                                 ModoJuego.BOT -> finish()
                                 ModoJuego.PUBLICA ->{
                                     viewModel.botonAbandonar()
+                                    val datos = runBlocking {
+                                        delay(1000)
+                                        authClient.obtenerPerfil(datosUsuario!!.nombre)
+                                    }
+                                    AutoLogin.actualizar(context, datos)
+                                    partida.desconectarPartida()
                                     finish()
                                 }
                                 else -> finish()
@@ -370,7 +371,7 @@ class PartidaActivity: AppCompatActivity() {
 
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
-                            text = nombre,
+                            text = datosUsuario!!.nombre,
                             fontFamily = quattrocentoBold,
                             fontSize = 30.sp,
                             color = Color.Companion.White
@@ -384,7 +385,7 @@ class PartidaActivity: AppCompatActivity() {
                                     .size(30.dp)
                             )
                             Text(
-                                katanas.toString(),
+                                datosUsuario?.puntos.toString(),
                                 color = Color.Companion.White,
                                 fontSize = 24.sp,
                                 fontFamily = quattrocentoBold,
