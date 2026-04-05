@@ -149,10 +149,12 @@ class PartidaActivity: AppCompatActivity() {
                 confirmButton = {
                     Button(
                         onClick = {
-                            val datos = runBlocking {
-                                authClient.obtenerPerfil(datosUsuario!!.nombre)
+                            if(modo == ModoJuego.PUBLICA) {
+                                val datos = runBlocking {
+                                    authClient.obtenerPerfil(datosUsuario!!.nombre)
+                                }
+                                AutoLogin.actualizar(context, datos)
                             }
-                            AutoLogin.actualizar(context, datos)
                             finish()
                                   },
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.azulFondo))
