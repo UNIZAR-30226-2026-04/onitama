@@ -160,7 +160,7 @@ fun computeZobrist (
         i = i + 1
     }
 
-    if (turno == 2) {
+    if (turno == EquipoID.ROJO.id) {
         h = h xor ZOBRIST_TURN
     }
 
@@ -220,7 +220,7 @@ fun crearEstadoSim (
 
             if (fi != null) {
                 if (fi.esRey){
-                    if (fi.equipo == EquipoID.ROJO) {
+                    if (fi.equipo == EquipoID.AZUL) {
                         board[toIndex(c, f)] = 3
                     } 
                     else {
@@ -228,7 +228,7 @@ fun crearEstadoSim (
                     }
                 }
                 else {
-                    if (fi.equipo == EquipoID.ROJO) {
+                    if (fi.equipo == EquipoID.AZUL) {
                         board[toIndex(c, f)] = 1 
                     }
                     else {
@@ -246,14 +246,14 @@ fun crearEstadoSim (
     var c1: List<Carta>
     var c2: List<Carta>
 
-    if (eqLocal == 1) {
+    if (eqLocal == EquipoID.AZUL.id) {
         c1 = est.cartasJugador
     }  
     else {
         c1 =  est.cartasOponente
     }
 
-    if (eqLocal == 2) {
+    if (eqLocal == EquipoID.ROJO.id) {
         c2 = est.cartasJugador 
     }
     else {
@@ -267,7 +267,7 @@ fun crearEstadoSim (
         est.cartasSiguientes[0],
         0)
 
-    e.hash = computeZobrist(e, 1) // Turno base (se cambiará dinámicamente)
+    e.hash = computeZobrist(e, est.turnoActual.id) // Turno base (se cambiará dinámicamente)
     return e
 }
 
@@ -290,11 +290,11 @@ fun esAmigo (
     p: Int,
     eq: Int
 ) : Boolean {
-    if (eq == 1) {
+    if (eq == EquipoID.AZUL.id) {
         return p == 1 || p == 3
     }
 
-    if (eq == 2) {
+    if (eq == EquipoID.ROJO.id) {
         return p == 2 || p == 4
     }
     
@@ -311,7 +311,7 @@ fun generarJugadas (
     val jugadas = mutableListOf<JugadaSim>()
     var cartas: List<Carta>
     
-    if (eq == 1) {
+    if (eq == EquipoID.AZUL.id) {
         cartas = e.cEq1
     } 
     else {
@@ -407,7 +407,7 @@ fun aplicarJugada(
     var equipoCartas: MutableList<Carta>
 
 
-    if (eq == 1){
+    if (eq == EquipoID.AZUL.id){
         equipoCartas = e.cEq1
     } 
     else {
@@ -463,14 +463,14 @@ fun compruebaTrono (
         if (e.board[i] == 3) {
             r1 = true 
             if (i == toIndex(CENTRO, DIM - 1)){
-                return 1  // Llegó al trono del equipo 2
+                return EquipoID.AZUL.id  // Llegó al trono del equipo 2
             }
         }
 
         if (e.board[i] == 4) {
             r2 = true 
             if (i == toIndex(CENTRO, 0)){
-                return 2  // Llegó al trono del equipo 1
+                return EquipoID.ROJO.id  // Llegó al trono del equipo 1
             }
         }
         
@@ -478,11 +478,11 @@ fun compruebaTrono (
     }
 
     if (!r1) {
-        return 2
+        return EquipoID.ROJO.id
     }
 
     if (!r2) {
-        return 1
+        return EquipoID.AZUL.id
     }
 
     return 0
@@ -497,21 +497,20 @@ fun esMovimientoGanadorInmediato (
     val destPiece = e.board[toIndex(j.destinoX, j.destinoY)]
 
     // 1) Ganar capturando rey.
-    if (eq == 1 && destPiece == 4) {
+    if (eq == EquipoID.AZUL.id && destPiece == 4) {
         return true
     }
 
-    if (eq == 2 && destPiece == 3) {
+    if (eq == EquipoID.ROJO.id && destPiece == 3) {
         return true
     }
 
     // 2) Ganar entrando al templo rival con nuestro rey.
-    if (eq == 1 && fromPiece == 3 && j.destinoX == CENTRO && j.destinoY == DIM - 1) {
+    if (eq == EquipoID.AZUL.id && fromPiece == 3 && j.destinoX == CENTRO && j.destinoY == DIM - 1) {
         return true
     }
 
-
-    if (eq == 2 && fromPiece == 4 && j.destinoX == CENTRO && j.destinoY == 0) {
+    if (eq == EquipoID.ROJO.id && fromPiece == 4 && j.destinoX == CENTRO && j.destinoY == 0) {
         return true
     }
 
@@ -660,10 +659,10 @@ fun evaluate (
                         var equipo = 0
 
                         if (p == 1 || p == 3) {
-                            equipo = 1
+                            equipo = EquipoID.AZUL.id
                         }
                         else {
-                            equipo = 2
+                            equipo = EquipoID.ROJO.id
                         }
 
                         if (esAmigo(adj, equipo)) {
@@ -694,7 +693,7 @@ fun evaluate (
     scoreP1 += (e.cEq1[0].movimientos.size + e.cEq1[1].movimientos.size) * 5
     scoreP2 += (e.cEq2[0].movimientos.size + e.cEq2[1].movimientos.size) * 5
 
-    if (eqTurno == 1) {
+    if (eqTurno == EquipoID.AZUL.id) {
         return (scoreP1 - scoreP2)
     }
     else {
@@ -736,7 +735,7 @@ fun scoreMove (
 
     // Prioridad posicional (ir hacia el centro)
     var pst : IntArray
-    if (eq == 1) {
+    if (eq == EquipoID.AZUL.id) {
         pst = PST_P1
     }
     else {
@@ -787,11 +786,11 @@ fun quiescence (
 
         var equipo = 0
 
-        if (eqTurno == 1) {
-            equipo = 2
+        if (eqTurno == EquipoID.AZUL.id) {
+            equipo = EquipoID.ROJO.id
         }
         else {
-            equipo = 1
+            equipo = EquipoID.AZUL.id
         }
 
         val score = -quiescence(child, -beta, -alpha, equipo)
@@ -874,7 +873,7 @@ fun minimaxAB (
         val child = cloneSim(e)
         aplicarJugada(child, j, eqTurno)
 
-        val equipo = if (eqTurno == 1) 2 else 1
+        val equipo = if (eqTurno == EquipoID.AZUL.id) EquipoID.ROJO.id else EquipoID.AZUL.id
 
         // 2. PASAMOS LA COPIA MUTABLE: -currentAlpha
         val score = -minimaxAB(child, depth - 1, -beta, -currentAlpha, equipo)
@@ -936,7 +935,7 @@ fun calcularMejorMovimientoIA (
     var globalBestMove: JugadaSim? = null
     var maxDepthReached = 0
 
-    val rivalEq = if (equipoIA.id == 1) EquipoID.ROJO else EquipoID.AZUL
+    val rivalEq = if (equipoIA == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL
 
     // ITERATIVE DEEPENING
     // Limitamos a Profundidad Maxima 15 para evitar loops infinitos teóricos, pero el tiempo cortará antes
@@ -974,11 +973,11 @@ fun calcularMejorMovimientoIA (
 
             var equipo = 0
 
-            if (equipoIA.id == 1) {
-                equipo = 2
+            if (equipoIA == EquipoID.AZUL) {
+                equipo = EquipoID.ROJO.id
             }
             else {
-                equipo = 1
+                equipo = EquipoID.AZUL.id
             }
 
             val score = -minimaxAB(child, currentDepth - 1, -beta, -alpha, equipo)

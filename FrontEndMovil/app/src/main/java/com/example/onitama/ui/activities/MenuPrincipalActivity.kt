@@ -74,7 +74,8 @@ fun MainMenuScreen(
 ) {
     val quattrocentoBold = FontFamily(Font(R.font.quattrocento_bold))
     var menuPrivadoDesplegado by remember { mutableStateOf(false) }
-    val alphaOtrosBotones by animateFloatAsState(targetValue = if (menuPrivadoDesplegado) 0.3f else 1f)
+    var menuEntrenamientoDesplegado by remember  {mutableStateOf(false) }
+    val alphaOtrosBotones by animateFloatAsState(targetValue = if (menuPrivadoDesplegado || menuEntrenamientoDesplegado) 0.3f else 1f)
     val context = LocalContext.current
     val datosUsuario by AutoLogin.sesion.collectAsState()
 
@@ -117,7 +118,23 @@ fun MainMenuScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.6f))
-                    .clickable { menuPrivadoDesplegado = false } // Si tocas fuera, se cierra
+                    .clickable {
+                        menuPrivadoDesplegado = false
+                    } // Si tocas fuera, se cierra
+            )
+        }
+
+        // ==========================================
+        // 2. Parte que se desplegara al hacer click en el botón de partida de entrenamiento
+        // ==========================================
+        if (menuEntrenamientoDesplegado) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable {
+                        menuEntrenamientoDesplegado = false
+                    } // Si tocas fuera, se cierra
             )
         }
 
@@ -148,7 +165,7 @@ fun MainMenuScreen(
                         val intent = Intent(context, Buscar_PartidaActivity::class.java)
                         context.startActivity(intent)
                     },
-                    enabled = !menuPrivadoDesplegado,
+                    enabled = !menuPrivadoDesplegado && !menuEntrenamientoDesplegado,
                     modifier = Modifier.size(width = 220.dp, height = 100.dp),
                     shape = RoundedCornerShape(16.dp), // Reemplaza @drawable/boton_esquinas_redondas
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White)
@@ -158,26 +175,90 @@ fun MainMenuScreen(
             }
 
             // --- Partida Entrenamiento ---
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 20.dp).alpha(alphaOtrosBotones)
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ironbot),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(150.dp).padding(end = 16.dp)
-                )
-                Button(
-                    onClick = {
-                        val intent = Intent(context, PartidaActivity::class.java)
-                        context.startActivity(intent) },
-                    enabled = !menuPrivadoDesplegado,
-                    modifier = Modifier.size(width = 220.dp, height = 100.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            )
+            {   Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 20.dp).alpha(alphaOtrosBotones)
                 ) {
-                    Text("PARTIDA ENTRENAMIENTO", fontFamily = quattrocentoBold, color = colorResource(R.color.azulFondo))
+                    Image(
+                        painter = painterResource(id = R.drawable.ironbot),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(150.dp).padding(end = 16.dp)
+                    )
+                    Button(
+                        onClick = { menuEntrenamientoDesplegado = !menuEntrenamientoDesplegado },
+                        enabled = !menuPrivadoDesplegado,
+                        modifier = Modifier.size(width = 220.dp, height = 100.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (menuEntrenamientoDesplegado) Color.LightGray else Color.White)
+                    ) {
+                        Text("PARTIDA ENTRENAMIENTO", fontFamily = quattrocentoBold, color = colorResource(R.color.azulFondo))
+                    }
+                }
+
+                // Opciones de dificultad a elegir
+                AnimatedVisibility(visible = menuEntrenamientoDesplegado) {
+                    Column(
+                        modifier = Modifier
+                            .padding(top = 10.dp)
+                            .padding(start = 116.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ){
+                        // Botón dificultad fácil
+                        Button(
+                            onClick = {
+                                val intent = Intent(context, PartidaActivity::class.java).apply {
+                                    putExtra("MODO_JUEGO", "BOT")
+                                    putExtra("DIFICULTAD", "FACIL")
+                                }
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.size(width = 200.dp, height = 60.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                        ){
+                            Text("NIVEL FÁCIL", fontFamily = quattrocentoBold, color = colorResource(R.color.azulFondo))
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Botón dificultad media
+                        Button(
+                            onClick = {
+                                val intent = Intent(context, PartidaActivity::class.java).apply {
+                                    putExtra("MODO_JUEGO", "BOT")
+                                    putExtra("DIFICULTAD", "MEDIO")
+                                }
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.size(width = 200.dp, height = 60.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                        ){
+                            Text("NIVEL MEDIO", fontFamily = quattrocentoBold, color = colorResource(R.color.azulFondo))
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Botón dificultad difícil
+                        Button(
+                            onClick = {
+                                val intent = Intent(context, PartidaActivity::class.java).apply {
+                                    putExtra("MODO_JUEGO", "BOT")
+                                    putExtra("DIFICULTAD", "DIFICIL")
+                                }
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.size(width = 200.dp, height = 60.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                        ){
+                            Text("NIVEL DIFÍCIL", fontFamily = quattrocentoBold, color = colorResource(R.color.azulFondo))
+                        }
+                    }
                 }
             }
 
@@ -197,6 +278,7 @@ fun MainMenuScreen(
                     )
                     Button(
                         onClick = { menuPrivadoDesplegado = !menuPrivadoDesplegado },
+                        enabled = !menuEntrenamientoDesplegado,
                         modifier = Modifier.size(width = 220.dp, height = 100.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = if (menuPrivadoDesplegado) Color.LightGray else Color.White)

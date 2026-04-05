@@ -53,6 +53,7 @@ import com.example.onitama.DatosPerfil
 import com.example.onitama.api.Partida
 import com.example.onitama.lib.Carta
 import com.example.onitama.lib.Cartas
+import com.example.onitama.lib.Dificultad
 import com.example.onitama.lib.EquipoID
 import com.example.onitama.lib.EstadoJuego
 import com.example.onitama.lib.ModoJuego
@@ -67,12 +68,22 @@ class PartidaActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val modoString = intent.getStringExtra("MODO_JUEGO") ?: ModoJuego.BOT.name
+        val nivelDificultadString = intent.getStringExtra("DIFICULTAD") ?: "FACIL"
+
         val modoJuego = try {
             ModoJuego.valueOf(modoString)
         } catch (e: Exception) {
             ModoJuego.BOT
         }
-        viewModel.iniciarPartida(modoJuego)
+
+        val nivelDificultad = try {
+            Dificultad.valueOf(nivelDificultadString)
+        } catch (e: Exception) {
+            Dificultad.FACIL
+        }
+
+        // Pasamos también la dificultad
+        viewModel.iniciarPartida(modoJuego, nivelDificultad)
 
         setContent {
             // Observamos el estado del ViewModel. Cuando cambie, la UI se repintará sola.

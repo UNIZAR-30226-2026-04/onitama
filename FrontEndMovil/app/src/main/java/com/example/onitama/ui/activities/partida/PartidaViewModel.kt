@@ -31,6 +31,9 @@ class PartidaViewModel : ViewModel() {
     val END = 6;
     var modoJuegoActual: ModoJuego = ModoJuego.BOT
         private set
+    var nivelDificultadBot: Dificultad = Dificultad.FACIL
+        private set
+
     private val _estado = MutableStateFlow(crearEstadoInicial())
     var razon: String? = null
     val estado: StateFlow<EstadoJuego> = _estado.asStateFlow()
@@ -41,8 +44,9 @@ class PartidaViewModel : ViewModel() {
 
     var limpiar: (() -> Unit)? = null
 
-    fun iniciarPartida(modo: ModoJuego) {
+    fun iniciarPartida(modo: ModoJuego, dificultad: Dificultad = Dificultad.FACIL) {
         modoJuegoActual = modo
+        nivelDificultadBot = dificultad
 
         val datos = PartidaActiva.datosPartida
 
@@ -231,7 +235,7 @@ class PartidaViewModel : ViewModel() {
                 // De momento así luego ya si eso añadimos un menú similar al que tenían las partidas privadas para elegir dificultad y equipo que quieres jugar
                 equipoIA = ia,
                 equipoLocal = equipoPropio,
-                dificultad = Dificultad.DIFICIL
+                dificultad = nivelDificultadBot
             )
 
             // 3. Aplicamos la jugada en el hilo principal
