@@ -11,5 +11,5 @@ DROP TABLE Jugador_Skins;
 DROP TABLE Partida;
 DROP TABLE Cartas_Accion;
 DROP TABLE Cartas_Mov;
-DROP TABLE Skin;
 DROP TABLE Jugador;
+DROP TABLE Skin;
