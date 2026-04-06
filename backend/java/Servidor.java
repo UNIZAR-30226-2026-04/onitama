@@ -15,6 +15,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
 import VO.Partida;
 import VO.CartaMov;
@@ -119,6 +121,7 @@ public class Servidor extends WebSocketServer {
     private Semaphore mutexParejas = new Semaphore(1);
     private Semaphore mutexConectados = new Semaphore(1);
     private ScheduledExecutorService temporizador = Executors.newScheduledThreadPool(10);
+    private Map<Integer, ScheduledFuture<?>> esperaPartida = new ConcurrentHashMap<>();
     // para mapear idNotificacion → timer activo y poder cancelarlo cuando el amigo
     // acepta o rechaza
     // concurrenthashmap y no hashmap porque el servidor es multihilo --> varios
@@ -373,6 +376,46 @@ public class Servidor extends WebSocketServer {
         }
 
         if (pj != null) {
+
+            //Temporizador de 2 minutos de espera
+            final int idPartida = pj.partida.getIDPartida();
+
+            ScheduledFuture<?> timerAntiguo = esperaPartida.remove(idPartida);
+            if (timerAntiguo != null) {
+                timerAntiguo.cancel(false);
+            }
+
+            final Pareja pjFinal = pj;
+            final WebSocket connFinal = conn;
+
+            ScheduledFuture<?> timerNuevo = temporizador.schedule(() -> {
+                JSONObject msg1 = new JSONObject();
+                JSONObject msg2 = new JSONObject();
+                System.out.print("TIEMPO!!!");
+                int equipo = obj.getInt("equipo");
+                
+                msg1.put("tipo", "DERROTA");
+                msg2.put("tipo", "VICTORIA");
+                msg2.put("motivo", "FIN_PARTIDA");
+                msg2.put("equipo_responsable", equipo);
+
+                InfoJugador oponente = pjFinal.getOponente(connFinal);
+                oponente.ws.send(msg1.toString());
+                connFinal.send(msg2.toString());
+
+                pjFinal.partida.finalizarPartida();
+                try {
+                    mutexParejas.acquire();
+                    parejas.remove(pjFinal);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    mutexParejas.release();
+                }
+            }, 10, TimeUnit.SECONDS);
+
+            esperaPartida.put(idPartida, timerNuevo);
+
             InfoJugador oponente = pj.getOponente(conn);
 
             // Verificamos que el oponente exista y que su conexión esté abierta
@@ -455,8 +498,7 @@ public class Servidor extends WebSocketServer {
                         System.out.println("Movimiento invalido en la partida " + pj.partida.getIDPartida());
                     } else {
                         msg.put("tipo", "CARTA_INVALIDA");
-                        System.out
-                                .println("Carta no presente en la partida en la partida " + pj.partida.getIDPartida());
+                        System.out.println("Carta no presente en la partida en la partida " + pj.partida.getIDPartida());
                     }
 
                     conn.send(msg.toString());
