@@ -393,6 +393,11 @@ public class Servidor extends WebSocketServer {
                 JSONObject msg2 = new JSONObject();
                 System.out.print("TIEMPO!!!");
                 int equipo = obj.getInt("equipo");
+                if(equipo == 1){
+                    equipo = 2;
+                }else{
+                    equipo = 1;
+                }
                 
                 msg1.put("tipo", "DERROTA");
                 msg2.put("tipo", "VICTORIA");
@@ -403,7 +408,7 @@ public class Servidor extends WebSocketServer {
                 oponente.ws.send(msg1.toString());
                 connFinal.send(msg2.toString());
 
-                pjFinal.partida.finalizarPartida();
+                pjFinal.partida.abandonarPartida(equipo);
                 try {
                     mutexParejas.acquire();
                     parejas.remove(pjFinal);
