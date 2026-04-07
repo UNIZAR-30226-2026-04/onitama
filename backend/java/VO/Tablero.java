@@ -32,10 +32,34 @@ public class Tablero {
 
     //Cargar tablero desde dos posiciones dadas. Formato: Rey [x,y], Peon (x,y)
     public void cargarTablero(String p1, String p2){
+        Pattern trampa = Pattern.compile("\\|(-?\\d+),(-?\\d+),(\\d+)\\|"); //Trampas: formato |x,y,activa|. activa es 1 si la trampa esta activa, 0 si ya se ha activado (y por tanto la casilla queda inutilizada)
+        Matcher t1 = trampa.matcher(p1);
+        Matcher t2 = trampa.matcher(p2);
+        int x, y, activa;
+
+        if (t1.find()) {
+            x = Integer.parseInt(t1.group(1)); // Primer grupo capturado (-?\\d+)
+            y = Integer.parseInt(t1.group(2)); // Segundo grupo capturado (-?\\d+)
+            activa = Integer.parseInt(t1.group(3)); // Tercer grupo capturado (\\d+)
+            tablero[y][x].activarTrampa();
+            if (activa == 0) {
+                tablero[y][x].desactivarCasilla();
+            }
+        }
+
+        if (t2.find()) {
+            x = Integer.parseInt(t2.group(1));
+            y = Integer.parseInt(t2.group(2));
+            activa = Integer.parseInt(t2.group(3));
+            tablero[y][x].activarTrampa();
+            if (activa == 0) {
+                tablero[y][x].desactivarCasilla();
+            }
+        }
+
         Pattern rey = Pattern.compile("\\[(-?\\d+),(-?\\d+)\\]");
         Matcher r1 = rey.matcher(p1);
         Matcher r2 = rey.matcher(p2);
-        int x, y;
 
         if (r1.find()) {
             x = Integer.parseInt(r1.group(1)); // Primer grupo capturado (-?\\d+)
@@ -126,30 +150,6 @@ public class Tablero {
         return x >= 0 && x < DIM && y >= 0 && y < DIM;
     }
 
-    //Coloca una casilla trampa en las coordenadas (x, y) indicadas por el jugador
-    //No se puede poner en tronos, casillas ocupadas ni casillas que ya son trampa
-    public boolean seleccionarCasillaTrampa(int x, int y){
-        if (!esCasillaValida(x, y)) {
-            return false;
-        }
-        Posicion pos = tablero[y][x];
-
-        //No poner trampa en tronos, en casillas ocupadas, ni en casillas que ya son trampa
-        if (pos != trono1 && pos != trono2 && pos.ocupado() == -1 && !casillaTrampa[y][x]) {
-            casillaTrampa[y][x] = true;
-            return true;
-        }
-        return false; //Casilla no valida para trampa
-    }
-
-    //Comprueba si la casilla (x, y) es una trampa
-    public boolean verificarCasillaTrampa(int x, int y){
-        if (!esCasillaValida(x, y)) {
-            return false;
-        }
-        return casillaTrampa[y][x];
-    }
-
     public void getPosicionesEquipos(StringPorReferencia p1, StringPorReferencia p2) {
         String pos1 = "";
         String pos2 = "";
@@ -160,8 +160,13 @@ public class Tablero {
             for (int j = 0; j < DIM; j++) {
                 Posicion p = tablero[i][j];
                 Ficha f = (p != null) ? p.getFicha() : null;
-                if (f == null) continue;
+                if (p==null || f == null) continue;
                 if (f.getEquipo() == 1) {
+                    if (p.esTrampa()) {
+                        // Formato Trampa: |x,y,activa|
+                        pos1 = pos1 + "|" + p.getX() + "," + p.getY() + "," + (p.estaActiva() ? "1" : "0") + "|";
+                        primerElemento1 = false;
+                    }
                     
                     // Si no es el primero, ponemos una coma separadora
                     if (!primerElemento1) {
@@ -175,6 +180,12 @@ public class Tablero {
                     }
                     primerElemento1 = false;
                 } else if (f.getEquipo() == 2) {
+                    if (p.esTrampa()) {
+                        // Formato Trampa: |x,y,activa|
+                        pos2 = pos2 + "|" + p.getX() + "," + p.getY() + "," + (p.estaActiva() ? "1" : "0") + "|";
+                        primerElemento2 = false;
+                    }
+
                     if (!primerElemento2) {
                         pos2 = pos2 + ",";
                     }

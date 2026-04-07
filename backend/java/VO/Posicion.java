@@ -14,7 +14,7 @@ public class Posicion {
         activa = true;
     }
 
-    public void actibarTrampa(){
+    public void activarTrampa(){
         trampa = true;
     }
 

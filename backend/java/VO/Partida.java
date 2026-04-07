@@ -285,10 +285,10 @@ public class Partida{
     public int setTrampa(int equipo, int fila, int columna){
         Posicion p = tablero.getPosicion(fila, columna);
         if (equipo == 1 && !trampaJ1 && p!= null) {
-            p.actibarTrampa();
+            p.activarTrampa();
             trampaJ1 = true;
         } else if(!trampaJ2 && p!= null){
-            p.actibarTrampa();
+            p.activarTrampa();
             trampaJ2 = true;
         } else{
             return -1; //Error: ya puso su trampa o la posicion no es valida
@@ -339,9 +339,9 @@ public class Partida{
                     break;
                 }
             }
-            //Por si acaso comprobamos que el movimiento existe
-            if (fOrigen == null || fOrigen.getEquipo() != equipo || !movExiste || !destino.estaActiva() || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
-                return -2; //Movimiento no valido segun la carta
+            //Por si acaso comprobamos que el movimiento existe y que se hayan puesto las trampas, aunque el controlador no deberia dejar llegar aqui si no se han puesto las trampas o si el movimiento no es valido
+            if (!trampaJ1 || !trampaJ2 || fOrigen == null || fOrigen.getEquipo() != equipo || !movExiste || !destino.estaActiva() || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
+                return -2; //Movimiento no valido
             }
 
             //Logica de casillas trampa

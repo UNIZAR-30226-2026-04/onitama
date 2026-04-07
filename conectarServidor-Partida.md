@@ -34,6 +34,19 @@ Si esta variable no está definida (o el servidor no responde), el frontend usa 
 ---
 
 ### 2.2 Mensajes que envía el CLIENTE al servidor
+#### `PONER_TRAMPA`
+Pone la trampa en la posicion correspondiente
+
+```json
+{
+  "tipo": "PONER_TRAMPA",
+  "equipo": 1,
+  "fila": 1,
+  "columna": 2
+}
+```
+
+---
 #### `BORRAR_AMIGO`
 Borra la amistad entre el usuario y el amigo
 
@@ -333,6 +346,26 @@ Se envía para pedir el historial de partidas públicas del usuario.
 ---
 
 ### 2.3 Mensajes que envía el SERVIDOR al cliente 
+#### `TRAMPA_INVALIDA`
+Lo manda si la trampa no es valida
+
+```json
+{
+  "tipo": "TRAMPA_INVALIDA"
+}
+```
+
+---
+#### `TRAMPAS_COLOCADAS`
+Lo manda si ambas trampas se han colocado (marca el verdadero inicio de la partida)
+
+```json
+{
+  "tipo": "TRAMPAS_COLOCADAS"
+}
+```
+
+---
 #### `TRAMPA_ACTIVADA`
 Lo manda si se ha activado alguna trampa
 
