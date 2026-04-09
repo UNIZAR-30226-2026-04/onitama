@@ -1,12 +1,15 @@
 package VO;
 
-import JDBC.CartasAccionJDBC;
 import java.sql.SQLException;
+
+import ACCIONES.Accion;
+import JDBC.CartasAccionJDBC;
 
 public class CartaAccion {
     private String nombre, accion, estado, img;
     private int puntosMin, equipo;
     private CartasAccionJDBC jdbc;
+    private Accion accionEjecutable;
     
     public CartaAccion(String nombre, String accion, int puntosMin, String img){
         this.nombre = nombre;
@@ -16,6 +19,36 @@ public class CartaAccion {
         this.estado = "VISION"; //Esta en modo vision (Para ver en la tienda)
         this.equipo = -1;
         jdbc = new CartasAccionJDBC();
+        switch (accion) {
+            case "ESPEJO":
+                accionEjecutable = new Espejo();
+                break;
+            case "REVIVIR":
+                accionEjecutable = new Revivir();
+                break;
+            case "SALVAR_REY":
+                accionEjecutable = new SalvarRey();
+                break;
+            case "SACRIFICIO":
+                accionEjecutable = new Sacrificio();
+                break;
+            case "SOLO_PARA_ADELANTE":
+                accionEjecutable = new SoloAdelante();
+                break;
+            case "VENGANZA":
+                accionEjecutable = new Venganza();
+                break;
+            case "ROBAR":
+                accionEjecutable = new Robar();
+                break;
+            case "CEGAR":
+                accionEjecutable = new Cegar();
+                break;
+            case "SOLO_PARA_ATRAS":
+                accionEjecutable = new SoloAtras();
+                break;
+            default:
+        }
     }
 
     //Constructor para cartas en partida, con estado y equipo
@@ -79,6 +112,16 @@ public class CartaAccion {
 
     public void setPuntosMin(int puntosMin){
         this.puntosMin = puntosMin;
+    }
+
+    public boolean jugarCarta(Partida partida, int x, int y, int equipo, int xOp, int yOp, String nomCarta){
+        if (accionEjecutable != null && equipo == this.equipo) {
+            if(accionEjecutable.ejecutar(partida, x, y, equipo, xOp, yOp, nomCarta)) {
+                estado = "USADA";
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean actualizarBD(){

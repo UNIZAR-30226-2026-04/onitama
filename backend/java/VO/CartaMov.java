@@ -1,11 +1,12 @@
 package VO;
 
-import JDBC.CartasMovJDBC;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import JDBC.CartasMovJDBC;
 
 public class CartaMov {
     private String nombre, estado, img;
@@ -93,6 +94,10 @@ public class CartaMov {
 
     public List<Posicion> getListaMovimientos(){
         return movimientos;
+    }
+
+    public void setListaMovimientos(List<Posicion> movimientos){
+        this.movimientos = movimientos;
     }
 
     public String getMovimientos(){

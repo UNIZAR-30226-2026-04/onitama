@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 
 public class Tablero {
     public Posicion[][] tablero;
-    public Posicion trono1, trono2;
+    public Posicion trono1, trono2, rey1, rey2;
     private int DIM;
     private boolean[][] casillaTrampa; //Para marcar casillas trampa
 
@@ -65,12 +65,14 @@ public class Tablero {
             x = Integer.parseInt(r1.group(1)); // Primer grupo capturado (-?\\d+)
             y = Integer.parseInt(r1.group(2)); // Segundo grupo capturado (-?\\d+)
             tablero[y][x].setFicha(new Ficha(true, 1));
+            rey1 = tablero[y][x];
         }
 
         if (r2.find()) {
             x = Integer.parseInt(r2.group(1));
             y = Integer.parseInt(r2.group(2));
             tablero[y][x].setFicha(new Ficha(true, 2));
+            rey2 = tablero[y][x];
         }
 
         // Peones: formato (x,y). No usar el genérico para no pisar las posiciones de rey [x,y]
@@ -105,6 +107,7 @@ public class Tablero {
                     if (j == centro) {
                         // rey
                         tablero[i][j].setFicha(new Ficha(true, 1));
+                        rey1 = tablero[i][j];
                     } else {
                         // peones
                         tablero[i][j].setFicha(new Ficha(false, 1));
@@ -113,6 +116,7 @@ public class Tablero {
                     //  Equipo 2
                     if (j == centro) {
                         tablero[i][j].setFicha(new Ficha(true, 2));
+                        rey2 = tablero[i][j];
                     } else {
                         tablero[i][j].setFicha(new Ficha(false, 2));
                     }
@@ -120,7 +124,39 @@ public class Tablero {
             }
         }
     }
+
+    public void setRey(int x, int y, int equipo) {
+        if (equipo == 1) {
+            setRey1(x, y);
+        } else {
+            setRey2(x, y);
+        }
+    }
     
+    public void setRey1(int x, int y) {
+        rey1 = tablero[y][x];
+    }
+
+    public void setRey2(int x, int y) {
+        rey2 = tablero[y][x];
+    }
+
+    public Posicion getRey(int equipo) {
+        if (equipo == 1) {
+            return rey1;
+        } else {
+            return rey2;
+        }
+    }
+
+    public Posicion getRey1() {
+        return rey1;
+    }
+
+    public Posicion getRey2() {
+        return rey2;
+    }
+
     public Posicion getPosicion(int x, int y){
     	return tablero[y][x];
     }

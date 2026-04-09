@@ -156,6 +156,14 @@ public class Partida{
        return cartasM;
     }
 
+    public void setCartasMovimiento(List<CartaMov> cartasM){
+       this.cartasM = cartasM;
+    }
+
+    public Posicion getPosicion(int x, int y){
+        return tablero.getPosicion(x, y);
+    }
+
     public void setJ1(Jugador j){
         this.jugador1 = j;
     }
@@ -232,6 +240,10 @@ public class Partida{
         }
     }
 
+    public Posicion getRey(int equipo) {
+        return tablero.getRey(equipo);
+    }
+
     //Un jugador abandona la partida, el otro gana automaticamente
     public boolean abandonarPartida(int equipoQueAbandona){
         this.estado = "FINALIZADA";
@@ -301,6 +313,24 @@ public class Partida{
         }
     }
 
+    //true -> exito en la accion
+    //false -> error (carta no del equipo, carta ya usada ...)
+    public boolean jugarAccion(String nomCartaAcc, int x, int y, int equipo, int xOp, int yOp, String nomCarta) {
+        if(equipo - 1 == turno % 2) { //Comprobamos que el equipo que juega es el correcto segun el turno
+            for (CartaAccion ca : cartasA) {
+                if (ca.getNombre().equals(nomCartaAcc)) {
+                    if (ca.jugarCarta(this, x, y, equipo, xOp, yOp, nomCarta)) {
+                        turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado)
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
    // 0 -> Movimiento realizado con exito
    // 1 -> equipo 1 gana
    // 2 -> equipo 2 gana
@@ -340,7 +370,7 @@ public class Partida{
                 }
             }
             //Por si acaso comprobamos que el movimiento existe y que se hayan puesto las trampas, aunque el controlador no deberia dejar llegar aqui si no se han puesto las trampas o si el movimiento no es valido
-            if (!trampaJ1 || !trampaJ2 || fOrigen == null || fOrigen.getEquipo() != equipo || !movExiste || !destino.estaActiva() || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
+            if ((equipo - 1 != turno % 2) || !trampaJ1 || !trampaJ2 || fOrigen == null || fOrigen.getEquipo() != equipo || !movExiste || !destino.estaActiva() || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
                 return -2; //Movimiento no valido
             }
 
@@ -389,6 +419,7 @@ public class Partida{
 
             // Verificar victoria por trono: el rey llega al trono enemigo
             if (fOrigen.isRey()) {
+                tablero.setRey(destino.getX(), destino.getY(), equipo);
                 Posicion tronoEnemigo = (equipo == 1) ? tablero.trono2 : tablero.trono1;
                 if (destino == tronoEnemigo) {
                     if (equipo == 1) { 
