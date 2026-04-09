@@ -43,6 +43,11 @@ import {
   type ResumenPartidaAmigo,
   type ResumenPartidaPublica,
 } from "@/api/social";
+import {
+  enviarSolicitarReanudar,
+  enviarAceptarReanudar,
+  enviarRechazarReanudar,
+} from "@/api/partida";
 import * as WS from "@/api/ws";
 import { getSkinNombre, getPiezaSrc, getSkinPrecio, normalizarSkinId, type SkinId } from "@/lib/skins";
 import { getImagenCarta, TODAS_LAS_CARTAS, type CartaMovDef } from "@/lib/cartas";
@@ -123,6 +128,24 @@ export default function PartidasPage() {
   } | null>(null);
   const [mensajePrivada, setMensajePrivada] = useState<string | null>(null);
   const [tiempoEsperaPrivada, setTiempoEsperaPrivada] = useState(120);
+
+  // ── Reanudar partida pausada ─────────────────────────────────────────────────
+  /** Solicitud de reanudar entrante desde el amigo */
+  const [solicitudReanudarEntrante, setSolicitudReanudarEntrante] = useState<{
+    remitente: string;
+    idNotificacion: number;
+    idPartida: number;
+  } | null>(null);
+  /** Reanudar en curso (yo lo solicité, esperando respuesta del amigo) */
+  const [reanudarEnCurso, setReanudarEnCurso] = useState<{
+    amigo: string;
+    idPartida: number;
+  } | null>(null);
+  /** Amigo seleccionado en la pestaña Reanudar */
+  const [amigoSeleccionadoReanudar, setAmigoSeleccionadoReanudar] = useState<InfoAmigo | null>(null);
+  /** Partidas pausadas con el amigo seleccionado */
+  const [partidasPausadas, setPartidasPausadas] = useState<ResumenPartidaAmigo[]>([]);
+  const [cargandoPartidasPausadas, setCargandoPartidasPausadas] = useState(false);
 
   // Panel lateral activo (null = pantalla principal con las tarjetas de partida)
   const [panelActivo, setPanelActivo] = useState<string | null>(null);
@@ -288,6 +311,26 @@ export default function PartidasPage() {
       .catch(() => setAmigos([]));
   }, [mostrarModalPartidaPrivada, tabPartidaPrivada, jugador.nombre]);
 
+  /** Cargar amigos al abrir la pestaña Reanudar. */
+  useEffect(() => {
+    if (!mostrarModalPartidaPrivada || tabPartidaPrivada !== "reanudar" || !jugador.nombre) return;
+    obtenerAmigos(jugador.nombre)
+      .then((lista) => setAmigos(lista))
+      .catch(() => setAmigos([]));
+    setAmigoSeleccionadoReanudar(null);
+    setPartidasPausadas([]);
+  }, [mostrarModalPartidaPrivada, tabPartidaPrivada, jugador.nombre]);
+
+  /** Cargar partidas pausadas con el amigo seleccionado en la pestaña Reanudar. */
+  useEffect(() => {
+    if (!amigoSeleccionadoReanudar || !jugador.nombre) return;
+    setCargandoPartidasPausadas(true);
+    obtenerPartidasConAmigo(jugador.nombre, amigoSeleccionadoReanudar.nombre)
+      .then((lista) => setPartidasPausadas(lista.filter((p) => p.estado === "PAUSADA")))
+      .catch(() => setPartidasPausadas([]))
+      .finally(() => setCargandoPartidasPausadas(false));
+  }, [amigoSeleccionadoReanudar, jugador.nombre]);
+
   /** Mensajes WS para flujo de invitación a partida privada. */
   useEffect(() => {
     const unsubEncontrada = WS.suscribir("PARTIDA_PRIVADA_ENCONTRADA", (msg) => {
@@ -314,11 +357,28 @@ export default function PartidasPage() {
       setMensajePrivada("Tu amigo no está conectado en este momento.");
     });
 
+    // Solicitud de reanudar recibida de un amigo
+    const unsubSolicitudReanudar = WS.suscribir("SOLICITUD_REANUDAR", (msg) => {
+      setSolicitudReanudarEntrante({
+        remitente: msg.remitente as string,
+        idNotificacion: msg.idNotificacion as number,
+        idPartida: msg.idPartida as number,
+      });
+    });
+
+    // ERROR_NO_UNIDO puede llegar también cuando el amigo rechaza o expira el reanudar
+    const unsubErrorNoUnido = WS.suscribir("ERROR_NO_UNIDO", () => {
+      setReanudarEnCurso(null);
+      setMensajePrivada("Tu amigo no aceptó reanudar la partida.");
+    });
+
     return () => {
       unsubEncontrada();
       unsubRechazada();
       unsubTimeout();
       unsubDesconectado();
+      unsubSolicitudReanudar();
+      unsubErrorNoUnido();
     };
   }, [router]);
 
@@ -474,6 +534,35 @@ export default function PartidasPage() {
     },
     [jugador.nombre]
   );
+
+  /** Envía SOLICITAR_REANUDAR para una partida pausada. */
+  const handleReanudarPartida = useCallback(
+    (amigo: InfoAmigo, idPartida: number) => {
+      const ok = enviarSolicitarReanudar(jugador.nombre, amigo.nombre, idPartida);
+      if (!ok) {
+        setMensajePrivada("No se pudo enviar la solicitud. Revisa la conexión.");
+        return;
+      }
+      setReanudarEnCurso({ amigo: amigo.nombre, idPartida });
+      setMostrarModalPartidaPrivada(false);
+    },
+    [jugador.nombre]
+  );
+
+  /** Acepta la solicitud de reanudar del amigo. */
+  const handleAceptarReanudar = useCallback(() => {
+    if (!solicitudReanudarEntrante) return;
+    enviarAceptarReanudar(solicitudReanudarEntrante.idNotificacion, jugador.nombre);
+    setSolicitudReanudarEntrante(null);
+    // El servidor responderá con PARTIDA_PRIVADA_ENCONTRADA → listener navega a /presentacion-partida
+  }, [solicitudReanudarEntrante, jugador.nombre]);
+
+  /** Rechaza la solicitud de reanudar del amigo. */
+  const handleRechazarReanudar = useCallback(() => {
+    if (!solicitudReanudarEntrante) return;
+    enviarRechazarReanudar(solicitudReanudarEntrante.idNotificacion, jugador.nombre);
+    setSolicitudReanudarEntrante(null);
+  }, [solicitudReanudarEntrante, jugador.nombre]);
 
   const confirmarComprarSkin = useCallback(async (skinId: SkinId) => {
     setAccionSkinEnCurso(`comprar-${skinId}`);
@@ -870,13 +959,121 @@ export default function PartidasPage() {
             )}
 
             {tabPartidaPrivada === "reanudar" && (
-              <div className="mt-8 rounded-xl border border-dashed border-stone-300 bg-stone-50 p-8 text-center">
-                <p className="text-stone-500 font-semibold">Pendiente de soporte backend</p>
-                <p className="text-stone-400 text-sm mt-1">
-                  Esta pestaña se activará cuando estén listos los mensajes de pausa y reanudar.
-                </p>
+              <div className="mt-5">
+                {amigos.length === 0 ? (
+                  <p className="text-stone-500 text-sm">No tienes amigos disponibles.</p>
+                ) : !amigoSeleccionadoReanudar ? (
+                  <>
+                    <p className="text-stone-500 text-sm mb-3">Selecciona un amigo para ver sus partidas pausadas:</p>
+                    <ul className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                      {amigos.map((amigo) => (
+                        <li key={amigo.nombre} className="flex items-center gap-3 bg-stone-50 rounded-xl px-4 py-3">
+                          <AvatarCircle nombre={amigo.nombre} avatarId={amigo.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" />
+                          <div className="flex-1">
+                            <p className="font-semibold text-stone-800">{amigo.nombre}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setAmigoSeleccionadoReanudar(amigo)}
+                            className="text-xs font-semibold px-4 py-2 rounded-lg bg-[#1a2d4a] text-white hover:bg-[#203a60]"
+                          >
+                            Ver partidas
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setAmigoSeleccionadoReanudar(null); setPartidasPausadas([]); }}
+                      className="text-xs text-stone-500 hover:text-stone-700 mb-3 flex items-center gap-1"
+                    >
+                      ← Volver a amigos
+                    </button>
+                    <p className="text-stone-600 text-sm font-semibold mb-2">
+                      Partidas pausadas con @{amigoSeleccionadoReanudar.nombre}:
+                    </p>
+                    {cargandoPartidasPausadas ? (
+                      <p className="text-stone-400 text-sm animate-pulse">Cargando…</p>
+                    ) : partidasPausadas.length === 0 ? (
+                      <p className="text-stone-400 text-sm">No hay partidas pausadas con este amigo.</p>
+                    ) : (
+                      <ul className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                        {partidasPausadas.map((p) => (
+                          <li key={p.partida_id} className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                            <div>
+                              <p className="text-xs font-semibold text-stone-700">Partida #{p.partida_id}</p>
+                              <p className="text-xs text-amber-600 font-semibold uppercase tracking-wide">⏸ Pausada</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleReanudarPartida(amigoSeleccionadoReanudar, p.partida_id!)}
+                              className="text-xs font-semibold px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-500"
+                            >
+                              Reanudar
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Modal: solicitud de reanudar entrante ─────────────────────── */}
+      {solicitudReanudarEntrante && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
+            <span className="text-4xl">⏯️</span>
+            <h2 className="text-xl font-bold text-white uppercase tracking-widest text-center">
+              Solicitud de reanudar
+            </h2>
+            <p className="text-white/60 text-sm text-center">
+              <span className="text-white font-semibold">@{solicitudReanudarEntrante.remitente}</span> quiere reanudar la partida #{solicitudReanudarEntrante.idPartida}. ¿Aceptas?
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                onClick={handleRechazarReanudar}
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
+              >
+                Rechazar
+              </button>
+              <button
+                type="button"
+                onClick={handleAceptarReanudar}
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-amber-700 text-white hover:bg-amber-600 transition-colors"
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Pantalla de espera: reanudar en curso ──────────────────────── */}
+      {reanudarEnCurso && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-8 flex flex-col items-center gap-6 shadow-2xl max-w-sm w-full mx-4">
+            <svg className="animate-spin h-12 w-12 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+            </svg>
+            <p className="text-white font-bold uppercase tracking-widest text-center">Esperando a @{reanudarEnCurso.amigo}…</p>
+            <p className="text-white/50 text-xs text-center">Tu amigo tiene 2 minutos para aceptar.</p>
+            <button
+              type="button"
+              onClick={() => setReanudarEnCurso(null)}
+              className="text-white/40 text-xs hover:text-white/70 transition-colors"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}

@@ -159,3 +159,43 @@ export function setWsActivo(_ws: WebSocket): void {
 export function getWsActivo(): WebSocket | null {
   return null;
 }
+
+// ─── Pausa / Reanudar (partidas privadas) ─────────────────────────────────────
+
+/** Solicita pausar la partida al oponente. */
+export function enviarSolicitarPausa(
+  remitente: string,
+  destinatario: string,
+  idPartida: string | number
+): boolean {
+  return WS.enviar({ tipo: "SOLICITAR_PAUSA", remitente, destinatario, idPartida: Number(idPartida) });
+}
+
+/** Acepta la solicitud de pausa recibida. */
+export function enviarAceptarPausa(idNotificacion: number, nombre: string): boolean {
+  return WS.enviar({ tipo: "ACEPTAR_PAUSA", idNotificacion, nombre });
+}
+
+/** Rechaza la solicitud de pausa recibida. */
+export function enviarRechazarPausa(idNotificacion: number, nombre: string): boolean {
+  return WS.enviar({ tipo: "RECHAZAR_PAUSA", idNotificacion, nombre });
+}
+
+/** Solicita reanudar una partida pausada. */
+export function enviarSolicitarReanudar(
+  remitente: string,
+  destinatario: string,
+  idPartida: number
+): boolean {
+  return WS.enviar({ tipo: "SOLICITAR_REANUDAR", remitente, destinatario, idPartida });
+}
+
+/** Acepta la solicitud de reanudar una partida. */
+export function enviarAceptarReanudar(idNotificacion: number, nombre: string): boolean {
+  return WS.enviar({ tipo: "ACEPTAR_REANUDAR", idNotificacion, nombre });
+}
+
+/** Rechaza la solicitud de reanudar una partida. */
+export function enviarRechazarReanudar(idNotificacion: number, nombre: string): boolean {
+  return WS.enviar({ tipo: "RECHAZAR_REANUDAR", idNotificacion, nombre });
+}

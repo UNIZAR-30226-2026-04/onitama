@@ -919,7 +919,7 @@ public class Servidor extends WebSocketServer {
 
         // nuevo añadimos avatar a la hora de registrar (skin no, va por defecto en inserción en base de datos)
         // y añadimos campo avatar al constructor
-        String avatar_id = obj.getString("avatar_id");
+        String avatar_id = obj.isNull("avatar_id") ? null : obj.optString("avatar_id", null);
         Jugador prueba = new Jugador(correo, nombre, contrasena, avatar_id); // El constructor ya hashea la contraseña internamente
         if (prueba.registrarse() && !estaConectado(nombre)) {
             System.out.println("Jugador registrado");

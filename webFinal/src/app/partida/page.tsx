@@ -52,6 +52,9 @@ import {
   enviarEstoyListo,
   enviarMovimiento,
   enviarAbandonar,
+  enviarSolicitarPausa,
+  enviarAceptarPausa,
+  enviarRechazarPausa,
   type RespuestaMover,
   type RespuestaTerminarPartida,
   type RespuestaPartidaEncontrada,
@@ -464,6 +467,13 @@ function PartidaInterna({
   /** Modal de solicitud de pausa (solo partidas privadas) */
   const [mostrarModalPausa, setMostrarModalPausa] = useState(false);
   const [mensajePausaPendiente, setMensajePausaPendiente] = useState<string | null>(null);
+  /** Pausa solicitada por mí — esperando respuesta del rival */
+  const [pausaEnCurso, setPausaEnCurso] = useState(false);
+  /** Solicitud de pausa recibida del rival */
+  const [solicitudPausaEntrante, setSolicitudPausaEntrante] = useState<{
+    remitente: string;
+    idNotificacion: number;
+  } | null>(null);
 
   const iaOcupada = useRef(false);
 
@@ -542,16 +552,37 @@ function PartidaInterna({
           break;
 
         case "TERMINAR_PARTIDA": {
-          // Compatibilidad con futuras versiones del servidor que usen TERMINAR_PARTIDA
           const t = msg as RespuestaTerminarPartida;
           setResultadoFinal({ ganador: t.ganador, razon: t.razon });
           break;
         }
+
+        case "SOLICITUD_PAUSA": {
+          // El rival quiere pausar — mostrar modal para aceptar/rechazar
+          setSolicitudPausaEntrante({
+            remitente: msg.remitente as string,
+            idNotificacion: msg.idNotificacion as number,
+          });
+          break;
+        }
+
+        case "PARTIDA_PAUSADA":
+          // La pausa fue aceptada (por mi o por el rival) — volver al menú
+          desconectarPartida();
+          router.push("/partidas");
+          break;
+
+        case "PAUSA_RECHAZADA":
+          // El rival rechazó mi solicitud de pausa
+          setPausaEnCurso(false);
+          setMensajePausaPendiente("Tu rival rechazó la solicitud de pausa.");
+          window.setTimeout(() => setMensajePausaPendiente(null), 3500);
+          break;
       }
     });
 
     return desconectar;
-  }, [jugadorActual.nombre, registrarMovimiento]); // Solo al montar en la practica
+  }, [jugadorActual.nombre, registrarMovimiento, router]); // Solo al montar en la practica
 
   // ─── Timer visual ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -742,14 +773,37 @@ function PartidaInterna({
     volverAPartidas();
   };
 
-  /**
-   * Placeholder frontend para el flujo de pausa en privada.
-   * Cuando backend lo soporte, aquí se enviará SOLICITAR_PAUSA.
-   */
+  /** Envía la solicitud de pausa al rival y espera su respuesta. */
   const handleConfirmarPausa = () => {
     setMostrarModalPausa(false);
-    setMensajePausaPendiente("Solicitud de pausa preparada. Pendiente de soporte backend.");
-    window.setTimeout(() => setMensajePausaPendiente(null), 3500);
+    if (!enServidor.current) return;
+    const ok = enviarSolicitarPausa(
+      jugadorActual.nombre,
+      infoOponente.current.nombre,
+      partidaId
+    );
+    if (ok) {
+      setPausaEnCurso(true);
+      setMensajePausaPendiente("Solicitud enviada. Esperando respuesta del rival…");
+    } else {
+      setMensajePausaPendiente("No se pudo enviar la solicitud. Comprueba la conexión.");
+      window.setTimeout(() => setMensajePausaPendiente(null), 3500);
+    }
+  };
+
+  /** El jugador acepta la solicitud de pausa del rival. */
+  const handleAceptarPausaEntrante = () => {
+    if (!solicitudPausaEntrante) return;
+    enviarAceptarPausa(solicitudPausaEntrante.idNotificacion, jugadorActual.nombre);
+    setSolicitudPausaEntrante(null);
+    // El servidor responderá con PARTIDA_PAUSADA → listener redirige a /partidas
+  };
+
+  /** El jugador rechaza la solicitud de pausa del rival. */
+  const handleRechazarPausaEntrante = () => {
+    if (!solicitudPausaEntrante) return;
+    enviarRechazarPausa(solicitudPausaEntrante.idNotificacion, jugadorActual.nombre);
+    setSolicitudPausaEntrante(null);
   };
 
   // ─── Derivados para el render ──────────────────────────────────────────────
@@ -949,6 +1003,37 @@ function PartidaInterna({
         </div>
       )}
 
+      {/* ═══ MODAL: SOLICITUD DE PAUSA ENTRANTE ═════════════════════════════ */}
+      {solicitudPausaEntrante && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
+            <span className="text-4xl">⏸️</span>
+            <h2 className="text-xl font-bold text-white uppercase tracking-widest text-center">
+              Solicitud de pausa
+            </h2>
+            <p className="text-white/60 text-sm text-center">
+              <span className="text-white font-semibold">@{solicitudPausaEntrante.remitente}</span> quiere pausar la partida para reanudarla más adelante. ¿Aceptas?
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                onClick={handleRechazarPausaEntrante}
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
+              >
+                Rechazar
+              </button>
+              <button
+                type="button"
+                onClick={handleAceptarPausaEntrante}
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-amber-700 text-white hover:bg-amber-600 transition-colors"
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ═══ ÁREA DE JUEGO ══════════════════════════════════════════════════ */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
@@ -1121,10 +1206,10 @@ function PartidaInterna({
             <button
               type="button"
               onClick={() => setMostrarModalPausa(true)}
-              disabled={hayFinPartida}
+              disabled={hayFinPartida || pausaEnCurso}
               className="w-full py-1.5 rounded-lg border border-amber-700/60 text-amber-300/80 text-xs font-bold uppercase tracking-widest hover:bg-amber-900/20 hover:text-amber-200 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              ⏸️ Pausar
+              {pausaEnCurso ? "⏳ Esperando…" : "⏸️ Pausar"}
             </button>
           )}
 
