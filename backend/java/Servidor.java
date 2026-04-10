@@ -24,8 +24,10 @@ import VO.CartaAccion;
 import VO.Posicion;
 import VO.Tablero;
 import VO.Jugador;
+import VO.Skin;
 import VO.Autenticacion;
 import JDBC.JugadorJDBC;
+import JDBC.SkinJDBC;
 import JDBC.NotificacionJDBC;
 import VO.Notificacion;
 import JDBC.CartasMovJDBC;
@@ -1443,6 +1445,12 @@ public class Servidor extends WebSocketServer {
                 seleccionarCartaAccion(conn, obj);
             } else if (tipoMSG.equals("JUGAR_CARTA_ACCION")) {
                 jugarCartaAccion(conn, obj);
+            } else if (tipoMSG.equals("OBTENER_TIENDA_SKINS")) {
+                obtenerTiendaSkins(conn, obj);
+            } else if (tipoMSG.equals("COMPRAR_SKIN")) {
+                comprarSkin(conn, obj);
+            } else if (tipoMSG.equals("ACTIVAR_SKIN")) {
+                activarSkin(conn, obj);
             }
         });
     }
@@ -1777,6 +1785,189 @@ public class Servidor extends WebSocketServer {
         } catch (Exception e) {
             System.err.println("Error inesperado al gestionar respuesta de reanudar: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private void obtenerTiendaSkins(WebSocket conn, JSONObject obj) {
+        String usuario = obj.getString("usuario");
+        try {
+            JugadorJDBC jugadorJdbc = new JugadorJDBC();
+            SkinJDBC skinJdbc = new SkinJDBC();
+
+            Jugador j = jugadorJdbc.buscarJugador(usuario);
+            if (j == null) {
+                conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
+                return;
+            }
+
+            List<Skin> todasLasSkins = skinJdbc.sacarSkinDisp();
+            List<Skin> skinsDelJugador = skinJdbc.sacarSkinJugador(usuario);
+
+            JSONArray skinsJSON = new JSONArray();
+            for (Skin s : todasLasSkins) {
+                boolean owned = s.getNombre().equals("Skin0") || skinsDelJugador.stream()
+                        .anyMatch(sk -> sk.getNombre().equals(s.getNombre()));
+                boolean esActiva = s.getNombre().equals(j.getSkinActiva());
+                JSONObject skinJSON = new JSONObject();
+                skinJSON.put("skin_id", s.getNombre());
+                skinJSON.put("precio", s.getPrecio());
+                skinJSON.put("owned", owned);
+                skinJSON.put("es_activa", esActiva);
+                skinsJSON.put(skinJSON);
+            }
+
+            JSONObject msg = new JSONObject();
+            msg.put("tipo", "TIENDA_SKINS");
+            msg.put("usuario", usuario);
+            msg.put("cores", j.getCores());
+            msg.put("skin_activa", j.getSkinActiva());
+            msg.put("skins", skinsJSON);
+            conn.send(msg.toString());
+            System.out.println("TIENDA_SKINS enviado a " + usuario);
+
+        } catch (SQLException e) {
+            System.err.println("Error al obtener tienda skins: " + e.getMessage());
+            conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
+        }
+    }
+
+    private void comprarSkin(WebSocket conn, JSONObject obj) {
+        String usuario = obj.getString("usuario");
+        String skinId = obj.getString("skin_id");
+        try {
+            JugadorJDBC jugadorJdbc = new JugadorJDBC();
+            SkinJDBC skinJdbc = new SkinJDBC();
+
+            Jugador j = jugadorJdbc.buscarJugador(usuario);
+            if (j == null) {
+                conn.send(new JSONObject()
+                        .put("tipo", "COMPRA_SKIN_ERROR")
+                        .put("skin_id", skinId)
+                        .put("codigo", "ERROR_BD")
+                        .toString());
+                return;
+            }
+
+            Skin skin = skinJdbc.buscarSkin(skinId);
+            if (skin == null) {
+                conn.send(new JSONObject()
+                        .put("tipo", "COMPRA_SKIN_ERROR")
+                        .put("skin_id", skinId)
+                        .put("codigo", "SKIN_NO_EXISTE")
+                        .toString());
+                return;
+            }
+
+            // Comprobar si ya la posee
+            List<Skin> skinsDelJugador = skinJdbc.sacarSkinJugador(usuario);
+            boolean yaComprada = skinsDelJugador.stream()
+                    .anyMatch(sk -> sk.getNombre().equals(skinId));
+            if (yaComprada) {
+                conn.send(new JSONObject()
+                        .put("tipo", "COMPRA_SKIN_ERROR")
+                        .put("skin_id", skinId)
+                        .put("codigo", "YA_COMPRADA")
+                        .toString());
+                return;
+            }
+
+            // Comprobar cores suficientes
+            if (j.getCores() < skin.getPrecio()) {
+                conn.send(new JSONObject()
+                        .put("tipo", "COMPRA_SKIN_ERROR")
+                        .put("skin_id", skinId)
+                        .put("codigo", "CORES_INSUFICIENTES")
+                        .toString());
+                return;
+            }
+
+            // Realizar la compra: descontar cores y registrar relación
+            int nuevosCores = j.getCores() - skin.getPrecio();
+            boolean coresOk = jugadorJdbc.updateCores(usuario, nuevosCores);
+            boolean skinOk = jugadorJdbc.desbloquearSkin(usuario, skinId);
+
+            if (!coresOk || !skinOk) {
+                conn.send(new JSONObject()
+                        .put("tipo", "COMPRA_SKIN_ERROR")
+                        .put("skin_id", skinId)
+                        .put("codigo", "ERROR_BD")
+                        .toString());
+                return;
+            }
+
+            JSONObject msg = new JSONObject();
+            msg.put("tipo", "COMPRA_SKIN_OK");
+            msg.put("skin_id", skinId);
+            msg.put("cores", nuevosCores);
+            conn.send(msg.toString());
+            System.out.println("COMPRA_SKIN_OK: " + usuario + " compró " + skinId + " | cores restantes: " + nuevosCores);
+
+        } catch (SQLException e) {
+            System.err.println("Error al comprar skin: " + e.getMessage());
+            conn.send(new JSONObject()
+                    .put("tipo", "COMPRA_SKIN_ERROR")
+                    .put("skin_id", skinId)
+                    .put("codigo", "ERROR_BD")
+                    .toString());
+        }
+    }
+
+    private void activarSkin(WebSocket conn, JSONObject obj) {
+        String usuario = obj.getString("usuario");
+        String skinId = obj.getString("skin_id");
+        try {
+            JugadorJDBC jugadorJdbc = new JugadorJDBC();
+            SkinJDBC skinJdbc = new SkinJDBC();
+
+            // Comprobar que la skin existe
+            Skin skin = skinJdbc.buscarSkin(skinId);
+            if (skin == null) {
+                conn.send(new JSONObject()
+                        .put("tipo", "ACTIVAR_SKIN_ERROR")
+                        .put("skin_id", skinId)
+                        .put("codigo", "SKIN_NO_EXISTE")
+                        .toString());
+                return;
+            }
+
+            // Comprobar que el jugador la posee (Skin0 siempre disponible)
+            if (!skinId.equals("Skin0")) {
+                List<Skin> skinsDelJugador = skinJdbc.sacarSkinJugador(usuario);
+                boolean posee = skinsDelJugador.stream()
+                        .anyMatch(sk -> sk.getNombre().equals(skinId));
+                if (!posee) {
+                    conn.send(new JSONObject()
+                            .put("tipo", "ACTIVAR_SKIN_ERROR")
+                            .put("skin_id", skinId)
+                            .put("codigo", "NO_POSEIDA")
+                            .toString());
+                    return;
+                }
+            }
+
+            boolean ok = jugadorJdbc.updateSkinActiva(usuario, skinId);
+            if (!ok) {
+                conn.send(new JSONObject()
+                        .put("tipo", "ACTIVAR_SKIN_ERROR")
+                        .put("skin_id", skinId)
+                        .put("codigo", "ERROR_BD")
+                        .toString());
+                return;
+            }
+
+            JSONObject msg = new JSONObject();
+            msg.put("tipo", "SKIN_ACTIVADA");
+            msg.put("skin_activa", skinId);
+            conn.send(msg.toString());
+            System.out.println("SKIN_ACTIVADA: " + usuario + " activó " + skinId);
+
+        } catch (SQLException e) {
+            System.err.println("Error al activar skin: " + e.getMessage());
+            conn.send(new JSONObject()
+                    .put("tipo", "ACTIVAR_SKIN_ERROR")
+                    .put("skin_id", skinId)
+                    .put("codigo", "ERROR_BD")
+                    .toString());
         }
     }
 
