@@ -73,6 +73,22 @@ const NOMBRE_DIFICULTAD: Record<Dificultad, string> = {
   dificil: "Difícil",
 };
 
+const DESCRIPCION_CARTA_ACCION: Record<string, string> = {
+  ESPEJO: "Invierte horizontalmente los movimientos de todas las cartas del tablero durante este turno.",
+  REVIVIR: "Resucita un peón perdido y lo coloca en tu trono vacío.",
+  SALVAR_REY: "Teletransporta a tu Rey intercambiando su posición con la de un peón aliado.",
+  SACRIFICIO: "Sacrifica uno de tus peones para eliminar un peón rival.",
+  SOLO_PARA_ADELANTE: "Bloquea los movimientos hacia atrás: todas las cartas solo pueden avanzar.",
+  SOLO_PARA_ATRAS: "Bloquea los movimientos hacia adelante: todas las cartas solo pueden retroceder.",
+  ROBAR: "Roba una carta de movimiento del rival. Él repone una del mazo.",
+  CEGAR: "El rival pierde la vista de sus cartas durante los próximos 2 turnos.",
+  VENGANZA: "Si te matan al rey en los primeros 5 minutos, puedes forzar un empate.",
+};
+
+function getDescripcionCartaAccion(accion: string): string {
+  return DESCRIPCION_CARTA_ACCION[accion?.toUpperCase()] ?? "Carta de efecto especial.";
+}
+
 function getMockOponente(dificultad: Dificultad) {
   return {
     nombre: `Iron Bot (${NOMBRE_DIFICULTAD[dificultad]})`,
@@ -510,6 +526,15 @@ function PartidaInterna({
   } | null>(null);
   const [razonLocalFin, setRazonLocalFin] = useState<string | null>(null);
 
+  /** Toast in-game: reemplaza los alert() del navegador */
+  const [mensajeInGame, setMensajeInGame] = useState<string | null>(null);
+  const msgTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showMsgInGame = (texto: string) => {
+    if (msgTimeoutRef.current) clearTimeout(msgTimeoutRef.current);
+    setMensajeInGame(texto);
+    msgTimeoutRef.current = setTimeout(() => setMensajeInGame(null), 3500);
+  };
+
   /** Controla la visibilidad del modal de confirmación de abandono */
   const [mostrarModalAbandono, setMostrarModalAbandono] = useState(false);
   /** Modal de solicitud de pausa (solo partidas privadas) */
@@ -777,7 +802,7 @@ function PartidaInterna({
         }
 
         case "TRAMPA_INVALIDA":
-          alert("Posición inválida para colocar la trampa.");
+          showMsgInGame("Posición inválida para colocar la trampa.");
           setEstado((prev) => {
             const nuevo = prev.tablero.map(f => f.map(c => ({ ...c, esTrampaEquipo: c.esTrampaEquipo === miEquipoActual ? undefined : c.esTrampaEquipo })));
             return { ...prev, tablero: nuevo };
@@ -789,7 +814,7 @@ function PartidaInterna({
           break;
 
         case "CARTA_ACCION_INVALIDA":
-          alert("Carta de acción seleccionada/jugada es inválida.");
+          showMsgInGame("Carta de acción seleccionada/jugada es inválida.");
           break;
 
         case "CARTA_ACCION_JUGADA": {
@@ -811,6 +836,13 @@ function PartidaInterna({
   useEffect(() => {
     // No correr el timer si la partida terminó
     if (estado.ganador || resultadoFinal) return;
+
+    // No iniciar durante fases de setup (trampa / selección de carta de acción)
+    if (estado.fasePartida !== "JUGANDO") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTiempoRestante(TIEMPO_TURNO);
+      return;
+    }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTiempoRestante(TIEMPO_TURNO);
@@ -846,7 +878,7 @@ function PartidaInterna({
       });
     }, 1000);
     return () => clearInterval(intervalo);
-  }, [estado.turnoActual, estado.ganador, resultadoFinal]);
+  }, [estado.turnoActual, estado.ganador, resultadoFinal, estado.fasePartida]);
 
   // ─── IA del oponente (solo en modo mock / entrenamiento) ──────────────────
   const ejecutarIa = useCallback((est: EstadoJuego) => {
@@ -902,12 +934,12 @@ function PartidaInterna({
 
     if (estado.fasePartida === "COLOCAR_TRAMPA" && enServidor.current) {
       if (celda.ficha) {
-        alert("No puedes poner la trampa sobre una ficha.");
+        showMsgInGame("No puedes poner la trampa sobre una ficha.");
         return; 
       }
       const enMiMitad = (miEquipo === 1 && fila > 0 && fila <= 2) || (miEquipo === 2 && fila >= 4 && fila <= 5);
       if (!enMiMitad) {
-        alert("Debe colocarse en la 2ª o 3ª fila de tu lado.");
+        showMsgInGame("Debe colocarse en la 2ª o 3ª fila de tu lado.");
         return;
       }
       if (estado.tablero.some(f => f.some(c => c.esTrampaEquipo === miEquipoActual))) {
@@ -936,11 +968,11 @@ function PartidaInterna({
         const tronoCol = Math.floor(DIM / 2);
         const tronoFila = miEquipo === 1 ? 0 : DIM - 1;
         if (fila !== tronoFila || col !== tronoCol) {
-          alert("Debes seleccionar TU TRONO para revivir al peón.");
+          showMsgInGame("Debes seleccionar TU TRONO para revivir al peón.");
           return;
         }
         if (celda.ficha) {
-          alert("Tu trono debe estar vacío para poder revivir un peón.");
+          showMsgInGame("Tu trono debe estar vacío para poder revivir un peón.");
           return;
         }
         // Comprobar visualmente (frontal) si faltan peones propios
@@ -949,7 +981,7 @@ function PartidaInterna({
            if (c.ficha && c.ficha.equipo === miEquipo) misPeones++;
         }));
         if (misPeones >= 5) {
-          alert("No puedes revivir, no has perdido ningún peón.");
+          showMsgInGame("No puedes revivir, no has perdido ningún peón.");
           return;
         }
         
@@ -963,7 +995,7 @@ function PartidaInterna({
         return;
       } else if (m === "SALVAR_REY") {
         if (!celda.ficha || celda.ficha.equipo !== miEquipo || celda.ficha.esRey) {
-          alert("Debes seleccionar un PEÓN ALIADO para intercambiarlo con tu rey.");
+          showMsgInGame("Debes seleccionar un PEÓN ALIADO para intercambiarlo con tu rey.");
           return;
         }
         enviarJugarCartaAccion({
@@ -976,13 +1008,13 @@ function PartidaInterna({
         return;
       } else if (m === "SACRIFICIO_PROPIO") {
         if (!celda.ficha || celda.ficha.equipo !== miEquipo || celda.ficha.esRey) {
-          alert("Debes seleccionar un PEÓN PROPIO para sacrificar."); return;
+          showMsgInGame("Debes seleccionar un PEÓN PROPIO para sacrificar."); return;
         }
         setEstado(curr => ({...curr, modoAccion: "SACRIFICIO_RIVAL", accionParams: { ...p, x: col, y: fila }}));
         return;
       } else if (m === "SACRIFICIO_RIVAL") {
         if (!celda.ficha || celda.ficha.equipo === miEquipo || celda.ficha.esRey) {
-          alert("Debes seleccionar un PEÓN RIVAL para destruir."); return;
+          showMsgInGame("Debes seleccionar un PEÓN RIVAL para destruir."); return;
         }
         enviarJugarCartaAccion({
           equipo: miEquipo,
@@ -993,7 +1025,7 @@ function PartidaInterna({
         setEstado(curr => ({...curr, modoAccion: null, accionParams: {}}));
         return;
       } else if (m === "ROBAR") {
-        alert("Debes hacer click en la CARTA AL LADO DEL PERFIL del rival para robarla.");
+        showMsgInGame("Debes hacer click en la carta del rival para robársela.");
         return;
       }
     }
@@ -1622,7 +1654,7 @@ function PartidaInterna({
                        // Condición: Solo si ha perdido al menos un peón (menos de 5 piezas en total)
                        const piezas = estado.tablero.flat().filter(celda => celda.ficha?.equipo === miEquipoActual);
                        if (piezas.length >= 5) {
-                          alert("Aún tienes todas tus piezas. No puedes usar el Santo Grial.");
+                          showMsgInGame("Aún tienes todas tus piezas. No puedes usar el Santo Grial.");
                           return;
                        }
                        setEstado(curr => ({ ...curr, modoAccion: c as any, accionParams: {} }));
@@ -1636,6 +1668,7 @@ function PartidaInterna({
                >
                  <span className="text-2xl">🌟</span>
                  <span className="text-[#22c55e] font-bold uppercase tracking-widest text-xs text-center px-1 break-words">{estado.cartaAccionPropia.nombre}</span>
+                 <span className="text-white/50 text-[9px] text-center leading-tight px-1">{getDescripcionCartaAccion(estado.cartaAccionPropia.accion)}</span>
                </button>
                {estado.modoAccion && (
                  <button
@@ -1716,6 +1749,13 @@ function PartidaInterna({
           </div>
       )}
 
+      {/* ═══ TOAST IN-GAME (reemplaza alert del navegador) ══════════════════════════ */}
+      {mensajeInGame && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] bg-red-700/95 backdrop-blur-sm text-white px-5 py-3 rounded-xl shadow-2xl border border-red-400/60 text-sm font-semibold text-center max-w-xs pointer-events-none">
+          ⚠ {mensajeInGame}
+        </div>
+      )}
+
       {/* ═══ MODAL PARA ELEGIR CARTA DE ACCIÓN ════════════════════════════════════════ */}
       {estado.fasePartida === "ELEGIR_CARTA_ACCION" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -1729,12 +1769,12 @@ function PartidaInterna({
                    key={idx}
                    onClick={() => {
                      enviarSeleccionCartaAccion(miEquipoActual, cartaCa.nombre);
-                     // Limpiamos visualmente las opciones y mostramos que estamos esperando
                      setEstado(curr => ({ ...curr, opcionesCartasAccion: [] }));
                    }}
-                   className="w-32 h-40 bg-[#f5ede0] border-2 border-[#a8906a] rounded-xl flex items-center justify-center font-bold text-center p-3 text-[#2d1a0a] hover:scale-105 hover:bg-[#ede0cc] transition-all shadow-md cursor-pointer"
+                   className="w-44 bg-[#f5ede0] border-2 border-[#a8906a] rounded-xl flex flex-col items-center justify-start gap-2 p-4 text-[#2d1a0a] hover:scale-105 hover:bg-[#ede0cc] transition-all shadow-md cursor-pointer"
                 >
-                  <span className="uppercase text-sm leading-tight text-center break-words w-full h-full flex items-center justify-center">{cartaCa.nombre}</span>
+                  <span className="uppercase text-sm font-bold leading-tight text-center break-words">{cartaCa.nombre}</span>
+                  <span className="text-[11px] font-normal text-[#5a3a1a]/80 leading-snug text-center">{getDescripcionCartaAccion(cartaCa.accion)}</span>
                 </button>
               ))}
             </div>
