@@ -36,15 +36,15 @@ public class Partida{
         cartaAccionActivaJ2 = null;
         turnoAccionJ1 = -1;
         turnoAccionJ2 = -1;
-        eleccionCartaAccionJ1 = false;
-        eleccionCartaAccionJ2 = false; 
+        eleccionCartaAccionJ1 = true; // Frontend no implementa selección de carta acción: se salta automáticamente
+        eleccionCartaAccionJ2 = true; 
         this.estado = estado;
         this.tiempo = tiempo;
         this.tipo = tipo;
         this.turno = turno;
         this.muertesJ1 = m1;
-        trampaJ1 = false; //Modificar para meter en la base de datos 
-        trampaJ2 = false;
+        trampaJ1 = true; // Frontend no implementa fase de trampas: se salta automáticamente
+        trampaJ2 = true;
         this.muertesJ2 = m2;
         this.j1Ganador = g1;
         this.j2Ganador = g2;
@@ -87,9 +87,15 @@ public class Partida{
     public void asignarCartas(){
         try {
             int puntosMin = Math.min(this.jugador1.getPuntos(), this.jugador2.getPuntos());
-            this.cartasA = jdbcAccion.asignar4CartasPartida(IDPartida, puntosMin);
-            this.cartasM = jdbcMov.asignar7CartasPartida(IDPartida, puntosMin);
-        } catch (java.sql.SQLException e) {
+            java.util.List<CartaAccion> ca = jdbcAccion.asignar4CartasPartida(IDPartida, puntosMin);
+            this.cartasA = ca != null ? ca : new java.util.ArrayList<>();
+            java.util.List<CartaMov> cm = jdbcMov.asignar7CartasPartida(IDPartida, puntosMin);
+            this.cartasM = cm != null ? cm : new java.util.ArrayList<>();
+            if (this.cartasA.isEmpty()) {
+                System.err.println("asignarCartas: no se obtuvieron cartas de acción para IDPartida=" + IDPartida + " puntosMin=" + puntosMin);
+            }
+        } catch (Exception e) {
+            System.err.println("asignarCartas: error al asignar cartas - " + e.getMessage());
             this.cartasA = new java.util.ArrayList<>();
             this.cartasM = new java.util.ArrayList<>();
         }
@@ -165,6 +171,24 @@ public class Partida{
 
     public void setCartasMovimiento(List<CartaMov> cartasM){
        this.cartasM = cartasM;
+    }
+
+    public void setCartasAccion(List<CartaAccion> cartasA){
+       this.cartasA = cartasA;
+    }
+
+    /** Carga las cartas de movimiento y acción desde la BD (necesario al reanudar una partida pausada). */
+    public void cargarCartas() {
+        try {
+            this.cartasM = jdbcMov.sacarCartasPartida(IDPartida);
+            this.cartasA = jdbcAccion.sacarCartasPartida(IDPartida);
+            if (this.cartasM == null) this.cartasM = new java.util.ArrayList<>();
+            if (this.cartasA == null) this.cartasA = new java.util.ArrayList<>();
+        } catch (java.sql.SQLException e) {
+            System.err.println("cargarCartas: error al cargar cartas de la BD - " + e.getMessage());
+            if (this.cartasM == null) this.cartasM = new java.util.ArrayList<>();
+            if (this.cartasA == null) this.cartasA = new java.util.ArrayList<>();
+        }
     }
 
     public Posicion getPosicion(int x, int y){
@@ -245,7 +269,7 @@ public class Partida{
 
     //Pausa la partida cambiando su estado
     public boolean pausarPartida(){
-        if (!"JUGANDOSE".equals(estado)) {
+        if (!"JUGANDOSE".equalsIgnoreCase(estado)) {
             return false; //Solo se puede pausar una partida en curso
         }
         this.estado = "PAUSADA";
@@ -258,7 +282,7 @@ public class Partida{
 
     //Reanuda la partida desde el estado de pausa
     public boolean reanudarPartida(){
-        if (!"PAUSADA".equals(estado)) {
+        if (!"PAUSADA".equalsIgnoreCase(estado)) {
             return false; //Solo se puede reanudar una partida PAUSADA
         }
         this.estado = "JUGANDOSE";

@@ -92,11 +92,12 @@ class Pareja {
         eleccion = 0; //Para las cartas de accion
         p1 = _p1;
         p2 = _p2;
-        // De momento solo existe partidas Publicas
         partida = new Partida(0, "JUGANDOSE", 0, tipo, null, null, 0, 0, _p1.nombre, _p2.nombre, false, false, 0);
-        partida.registrarPartida();
-        partida.asignarCartas(); // Genera las cartas aleatorias
-        partida.repartirCartas(); // Repartimos a los equipos sus cartas
+        if (!partida.registrarPartida()) {
+            throw new RuntimeException("No se pudo registrar la partida: " + _p1.nombre + " o " + _p2.nombre + " ya tiene una partida activa (JUGANDOSE) en la BD.");
+        }
+        partida.asignarCartas();
+        partida.repartirCartas();
     }
 
     public boolean buscar(WebSocket _p1) {
@@ -423,7 +424,7 @@ public class Servidor extends WebSocketServer {
                 } finally {
                     mutexParejas.release();
                 }
-            }, 10, TimeUnit.SECONDS);
+            }, 2, TimeUnit.MINUTES);
 
             esperaPartida.put(idPartida, timerNuevo);
 
@@ -857,22 +858,42 @@ public class Servidor extends WebSocketServer {
 
         GestorNotificaciones gestor = new GestorNotificaciones();
         try {
-            // obtenemos la notificación para saber quién es el remitente y el destinatario
             NotificacionJDBC notifJdbc = new NotificacionJDBC();
             Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
-            System.err.println(
-                    "NOTIFICACION CON LOS SIGUIENTES: " + notif.getRemitente() + ", " + notif.getDestinatario());
+            if (notif == null) {
+                System.err.println("aceptarInvitacion: notificación no encontrada id=" + idNotificacion);
+                conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
+                return;
+            }
+            System.out.println("Invitación aceptada: " + notif.getRemitente() + " -> " + notif.getDestinatario());
 
             InfoJugador j1 = buscarJugadorConectado(notif.getRemitente());
             InfoJugador j2 = buscarJugadorConectado(notif.getDestinatario());
+
+            if (j1 == null || j2 == null) {
+                System.err.println("aceptarInvitacion: jugador no encontrado en conectados (j1=" + j1 + ", j2=" + j2 + ")");
+                conn.send(new JSONObject().put("tipo", "ERROR_DESCONECTADO").toString());
+                return;
+            }
+
             Pareja pj = new Pareja(j1, j2, "PRIVADA");
-            parejas.add(pj);
-            System.err.println("Partida privada con id: " + pj.partida.getIDPartida());
+            try {
+                mutexParejas.acquire();
+                parejas.add(pj);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                mutexParejas.release();
+            }
+            System.out.println("Partida privada iniciada con id: " + pj.partida.getIDPartida());
             iniciar(pj, "PARTIDA_PRIVADA_ENCONTRADA");
 
         } catch (SQLException e) {
-            System.err.println("Error al aceptar invitación: " + e.getMessage());
+            System.err.println("Error SQL al aceptar invitación: " + e.getMessage());
             conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
+        } catch (Exception e) {
+            System.err.println("Error inesperado al aceptar invitación: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -1432,6 +1453,10 @@ public class Servidor extends WebSocketServer {
             String destinatario = obj.getString("destinatario");
             int idPartida = obj.getInt("idPartida");
 
+            // Cancelar el timer de turno mientras se espera la respuesta de pausa
+            ScheduledFuture<?> timerPausa = esperaPartida.remove(idPartida);
+            if (timerPausa != null) timerPausa.cancel(false);
+
             GestorNotificaciones gestor = new GestorNotificaciones();
             int idNotif = gestor.enviarSolicitudPausa(remitente, destinatario, idPartida);
 
@@ -1483,7 +1508,15 @@ public class Servidor extends WebSocketServer {
                     Pareja pj = buscarParejaPorNombre(notif.getRemitente());
                     if (pj == null) pj = buscarParejaPorNombre(notif.getDestinatario());
                     if (pj != null) {
-                        pj.partida.pausarPartida(); // cambia estado a PAUSADA y lo persiste
+                        // Cancelar timer de turno por si aún estaba activo
+                        ScheduledFuture<?> timer = esperaPartida.remove(pj.partida.getIDPartida());
+                        if (timer != null) timer.cancel(false);
+                        boolean pausada = pj.partida.pausarPartida(); // cambia estado a PAUSADA y lo persiste
+                        if (!pausada) {
+                            System.err.println("pausarPartida falló para partida " + pj.partida.getIDPartida() + " (estado=" + pj.partida.getEstado() + "). Forzando estado PAUSADA.");
+                            // Forzar actualización directa en BD por si hay inconsistencia de mayúsculas
+                            try { new JDBC.PartidaJDBC().updateEstado(pj.partida.getIDPartida(), "PAUSADA"); } catch (Exception ex) { ex.printStackTrace(); }
+                        }
                         pj.partida.actualizarBD();  // guarda tablero, fichas y turno
                         try {
                             mutexParejas.acquire();
@@ -1571,16 +1604,28 @@ public class Servidor extends WebSocketServer {
 
             if (aceptar) {
                 boolean ok = gestor.aceptarNotificacion(idNotificacion, nombreQuienResponde);
+                System.out.println("gestionarRespuestaReanudar: aceptarNotificacion ok=" + ok);
                 if (ok) {
                     // cargamos partida de la base
                     PartidaJDBC partidaJdbc = new PartidaJDBC();
-                    Partida partidaGuardada = partidaJdbc.buscarPorId(notif.getIdPartida());
-                    if (partidaGuardada == null) return;
+                    Integer idPartida = notif.getIdPartida();
+                    System.out.println("gestionarRespuestaReanudar: buscando partida id=" + idPartida);
+                    Partida partidaGuardada = idPartida != null ? partidaJdbc.buscarPorId(idPartida) : null;
+                    if (partidaGuardada == null) {
+                        System.err.println("gestionarRespuestaReanudar: partida no encontrada id=" + idPartida);
+                        conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
+                        return;
+                    }
+                    partidaGuardada.cargarCartas(); // cargar cartasM y cartasA desde BD
 
-                    // volvemos a hacer la pareja para meterlos al juego
-                    // pero la creamos para que no haga partida nueva sino que use la existente
                     InfoJugador j1 = buscarJugadorConectado(notif.getRemitente());
                     InfoJugador j2 = buscarJugadorConectado(notif.getDestinatario());
+                    System.out.println("gestionarRespuestaReanudar: j1=" + (j1 != null ? j1.nombre : "null") + ", j2=" + (j2 != null ? j2.nombre : "null"));
+                    if (j1 == null || j2 == null) {
+                        System.err.println("gestionarRespuestaReanudar: jugador no conectado");
+                        conn.send(new JSONObject().put("tipo", "ERROR_DESCONECTADO").toString());
+                        return;
+                    }
                     Pareja pj = new Pareja(j1, j2, partidaGuardada);
                     try {
                         mutexParejas.acquire();
@@ -1609,6 +1654,7 @@ public class Servidor extends WebSocketServer {
                     msg1.put("carta_siguiente", cola);
                     msg1.put("tablero_eq1", partidaGuardada.getPos_Fichas_Eq1());
                     msg1.put("tablero_eq2", partidaGuardada.getPos_Fichas_Eq2());
+                    msg1.put("turno", partidaGuardada.getTurno());
 
                     JSONObject msg2 = new JSONObject();
                     msg2.put("tipo", "PARTIDA_PRIVADA_ENCONTRADA");
@@ -1622,6 +1668,7 @@ public class Servidor extends WebSocketServer {
                     msg2.put("carta_siguiente", cola);
                     msg2.put("tablero_eq1", partidaGuardada.getPos_Fichas_Eq1());
                     msg2.put("tablero_eq2", partidaGuardada.getPos_Fichas_Eq2());
+                    msg2.put("turno", partidaGuardada.getTurno());
 
                     j1.ws.send(msg1.toString());
                     j2.ws.send(msg2.toString());
@@ -1637,7 +1684,10 @@ public class Servidor extends WebSocketServer {
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al gestionar respuesta de reanudar: " + e.getMessage());
+            System.err.println("Error SQL al gestionar respuesta de reanudar: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error inesperado al gestionar respuesta de reanudar: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

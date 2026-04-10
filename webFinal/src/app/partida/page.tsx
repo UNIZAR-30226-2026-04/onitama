@@ -421,8 +421,12 @@ function PartidaInterna({
       try {
         const datos = JSON.parse(raw) as Omit<RespuestaPartidaEncontrada, "tipo"> & {
           tipo?: "PARTIDA_ENCONTRADA" | "PARTIDA_PRIVADA_ENCONTRADA";
+          tablero_eq1?: string;
+          tablero_eq2?: string;
+          turno?: number;
         };
-        setEstado(crearEstadoDesdeServidor(datos as RespuestaPartidaEncontrada));
+        const estadoInicial = crearEstadoDesdeServidor(datos as RespuestaPartidaEncontrada & { tablero_eq1?: string; tablero_eq2?: string; turno?: number });
+        setEstado(estadoInicial);
         equipoJugadorRef.current = datos.equipo;
         setMiEquipoActual(datos.equipo);
         infoOponente.current = {
@@ -435,7 +439,14 @@ function PartidaInterna({
           puntos: datos.oponentePt,
           avatar_id: datos.oponente_avatar_id ?? null,
         });
-        setAguardandoInicio(datos.equipo === 2);
+        // Si hay tablero guardado, el turno viene del servidor; si no, equipo 2 espera siempre
+        const esReanudada = !!(datos.tablero_eq1 && datos.tablero_eq2);
+        if (esReanudada) {
+          // aguardandoInicio = true solo si NO es mi turno
+          setAguardandoInicio(estadoInicial.turnoActual !== datos.equipo);
+        } else {
+          setAguardandoInicio(datos.equipo === 2);
+        }
         setTipoPartida(
           datos.tipo === "PARTIDA_PRIVADA_ENCONTRADA" ? "PRIVADA" : "PUBLICA"
         );

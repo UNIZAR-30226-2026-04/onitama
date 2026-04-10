@@ -62,7 +62,7 @@ public class GestorNotificaciones {
 
             case Notificacion.TIPO_SOLICITUD_PAUSA:
                 if (n.getIdPartida() != null) {
-                    if (partidaJdbc.updateEstado(n.getIdPartida(), "Pausada")) {
+                    if (partidaJdbc.updateEstado(n.getIdPartida(), "PAUSADA")) {
                         return notifJdbc.actualizarEstado(idNotificacion, Notificacion.ESTADO_ACEPTADA);
                     }
                 }
@@ -70,7 +70,7 @@ public class GestorNotificaciones {
 
             case Notificacion.TIPO_REANUDAR_PARTIDA:
                 if (n.getIdPartida() != null) {
-                    if (partidaJdbc.updateEstado(n.getIdPartida(), "Jugandose")) {
+                    if (partidaJdbc.updateEstado(n.getIdPartida(), "JUGANDOSE")) {
                         return notifJdbc.actualizarEstado(idNotificacion, Notificacion.ESTADO_ACEPTADA);
                     }
                 }

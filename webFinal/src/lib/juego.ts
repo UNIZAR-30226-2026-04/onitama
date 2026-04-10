@@ -189,17 +189,63 @@ function convertirCarta(carta: CartaServidor | string): CartaMovDef {
  *
  * @param datos  Datos del mensaje PARTIDA_ENCONTRADA
  */
+/**
+ * Parsea las cadenas de posición del servidor (formato Java Tablero) en un tablero frontend.
+ * Formato eq1/eq2: "[x,y]" = rey, "(x,y)" = peón. x=col, y=fila.
+ */
+function tableroDesdeServidor(eq1: string, eq2: string): Celda[][] {
+  const tablero: Celda[][] = Array.from({ length: DIM }, (_, fila) =>
+    Array.from({ length: DIM }, (_, col) => ({
+      ficha: null,
+      esTrono: (fila === 0 && col === CENTRO) || (fila === DIM - 1 && col === CENTRO),
+    }))
+  );
+
+  const colocar = (str: string, equipo: EquipoID) => {
+    // Rey: [x,y]
+    const reyRe = /\[(-?\d+),(-?\d+)\]/g;
+    let m;
+    while ((m = reyRe.exec(str)) !== null) {
+      const col = parseInt(m[1]), fila = parseInt(m[2]);
+      if (fila >= 0 && fila < DIM && col >= 0 && col < DIM)
+        tablero[fila][col].ficha = { equipo, esRey: true };
+    }
+    // Peones: (x,y)
+    const peonRe = /\((-?\d+),(-?\d+)\)/g;
+    while ((m = peonRe.exec(str)) !== null) {
+      const col = parseInt(m[1]), fila = parseInt(m[2]);
+      if (fila >= 0 && fila < DIM && col >= 0 && col < DIM)
+        tablero[fila][col].ficha = { equipo, esRey: false };
+    }
+  };
+
+  colocar(eq1, 1);
+  colocar(eq2, 2);
+  return tablero;
+}
+
 export function crearEstadoDesdeServidor(datos: {
   cartas_jugador: (CartaServidor | string)[];
   cartas_oponente: (CartaServidor | string)[];
   carta_siguiente: (CartaServidor | string)[];
   equipo?: 1 | 2;
+  tablero_eq1?: string;
+  tablero_eq2?: string;
+  /** Turno numérico del servidor: par=equipo1, impar=equipo2 */
+  turno?: number;
 }): EstadoJuego {
+  const tieneTableroGuardado = datos.tablero_eq1 && datos.tablero_eq2;
+  const tablero = tieneTableroGuardado
+    ? tableroDesdeServidor(datos.tablero_eq1!, datos.tablero_eq2!)
+    : crearTableroInicial();
+
+  // Si viene turno del servidor lo usamos; si no, equipo 1 empieza siempre.
+  const turnoActual: EquipoID =
+    datos.turno !== undefined ? (datos.turno % 2 === 0 ? 1 : 2) : 1;
+
   return {
-    tablero: crearTableroInicial(),
-    // Equipo 1 empieza siempre. La pantalla de partida bloquea al equipo 2
-    // hasta recibir el primer MOVER del equipo 1 (aguardandoInicio).
-    turnoActual: 1,
+    tablero,
+    turnoActual,
     cartasJugador: datos.cartas_jugador.map(convertirCarta),
     cartasOponente: datos.cartas_oponente.map(convertirCarta),
     cartasSiguientes: datos.carta_siguiente.map(convertirCarta),
