@@ -448,7 +448,8 @@ public class Partida{
                 }
             }
             //Por si acaso comprobamos que el movimiento existe y que se hayan puesto las trampas
-            if ((equipo - 1 != turno % 2) || !trampaJ1 || !trampaJ2 || !eleccionCartaAccionJ1 || !eleccionCartaAccionJ2 || fOrigen == null || fOrigen.getEquipo() != equipo || !movExiste || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
+            if ((equipo - 1 != turno % 2) || !trampaJ1 || !trampaJ2 || !eleccionCartaAccionJ1 || !eleccionCartaAccionJ2 || fOrigen == null || fOrigen.getEquipo() != equipo || !destino.estaActiva() || !movExiste || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
+                System.out.println("ERROR AL MOVER");
                 return -2; //Movimiento no valido
             }
             

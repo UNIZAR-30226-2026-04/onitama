@@ -493,6 +493,14 @@ public class Servidor extends WebSocketServer {
                         msgEq2.put("equipo_responsable", equipo);
                         msgEq2.put("tipo", "DERROTA");
 
+                        try {
+                            mutexParejas.acquire();
+                            parejas.remove(pjFinal);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        } finally {
+                            mutexParejas.release();
+                        }
                         if (equipo == 1) {
                             // conn es Eq1 (gana)
                             conn.send(msgEq1.toString());
@@ -514,6 +522,15 @@ public class Servidor extends WebSocketServer {
                         msgEq2.put("motivo", "FIN_PARTIDA");
                         msgEq2.put("equipo_responsable", equipo);
                         msgEq2.put("tipo", "VICTORIA");
+
+                        try {
+                            mutexParejas.acquire();
+                            parejas.remove(pjFinal);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        } finally {
+                            mutexParejas.release();
+                        }
 
                         if (equipo == 2) {
                             // conn es Eq2 (gana)
