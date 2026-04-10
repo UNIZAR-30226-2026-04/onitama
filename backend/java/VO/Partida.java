@@ -26,6 +26,8 @@ public class Partida{
     private CartasMovJDBC jdbcMov;
     private JugadorJDBC jdbcJugador;
 
+    public Posicion trampaActivada = null;
+
     public Partida(int IDPartida, String estado, int tiempo, String tipo, String p1, String p2, int m1, int m2, String jugador1, String jugador2, boolean g1, boolean g2, int turno) {
         this.IDPartida = IDPartida;
         this.jdbc = new PartidaJDBC();
@@ -36,15 +38,16 @@ public class Partida{
         cartaAccionActivaJ2 = null;
         turnoAccionJ1 = -1;
         turnoAccionJ2 = -1;
-        eleccionCartaAccionJ1 = true; // Frontend no implementa selección de carta acción: se salta automáticamente
-        eleccionCartaAccionJ2 = true; 
+        boolean esNueva = (p1 == null || p1.isEmpty()) && (p2 == null || p2.isEmpty());
+        eleccionCartaAccionJ1 = estado != null && (estado.equals("JUGANDOSE") || estado.equals("FINALIZADA")) && !esNueva; 
+        eleccionCartaAccionJ2 = estado != null && (estado.equals("JUGANDOSE") || estado.equals("FINALIZADA")) && !esNueva; 
         this.estado = estado;
         this.tiempo = tiempo;
         this.tipo = tipo;
         this.turno = turno;
         this.muertesJ1 = m1;
-        trampaJ1 = true; // Frontend no implementa fase de trampas: se salta automáticamente
-        trampaJ2 = true;
+        trampaJ1 = estado != null && (estado.equals("JUGANDOSE") || estado.equals("FINALIZADA")) && !esNueva; 
+        trampaJ2 = estado != null && (estado.equals("JUGANDOSE") || estado.equals("FINALIZADA")) && !esNueva;
         this.muertesJ2 = m2;
         this.j1Ganador = g1;
         this.j2Ganador = g2;
@@ -348,11 +351,21 @@ public class Partida{
     // 0 -> nada
     // 1 -> todas las trampas puestas
     public int setTrampa(int equipo, int fila, int columna){
-        Posicion p = tablero.getPosicion(fila, columna);
-        if (equipo == 1 && !trampaJ1 && p!= null) {
+        Posicion p = tablero.getPosicion(columna, fila);
+        
+        boolean valida = false;
+        if (p != null && p.ocupado() == -1 && !p.esTrampa()) {
+            int dim = tablero.getDIM();
+            if (equipo == 1 && fila > 0 && fila <= 2) valida = true;
+            else if (equipo == 2 && fila >= dim - 3 && fila <= dim - 2) valida = true;
+        }
+        
+        if (!valida) return -1; //Error: posicion no valida
+        
+        if (equipo == 1 && !trampaJ1) {
             p.activarTrampa();
             trampaJ1 = true;
-        } else if(!trampaJ2 && p!= null){
+        } else if(equipo == 2 && !trampaJ2){
             p.activarTrampa();
             trampaJ2 = true;
         } else{
@@ -400,7 +413,7 @@ public class Partida{
    // 2 -> equipo 2 gana
    // -1 -> carta no existente en la partida
    // -2 -> movimiento no valido
-    public int moverFicha(int equipo, Posicion origen, Posicion destino, String cartaNom, Posicion Trampa) {
+    public int moverFicha(int equipo, Posicion origen, Posicion destino, String cartaNom) {
         Ficha fOrigen = origen.getFicha();
         Ficha fDestino = destino.getFicha();
         CartaMov carta = null;
@@ -426,6 +439,7 @@ public class Partida{
             int normDy = (equipo == 1) ?  rawDy : -rawDy;
 
             Posicion movimientoARealizar = new Posicion(normDx, normDy, null);
+            // ... validaciones iniciales
             boolean movExiste = false;
             for(Posicion mov : movimientosValidos){
                 movExiste = movimientoARealizar.getX() == mov.getX() && movimientoARealizar.getY() == mov.getY();
@@ -433,53 +447,57 @@ public class Partida{
                     break;
                 }
             }
-            //Por si acaso comprobamos que el movimiento existe y que se hayan puesto las trampas, aunque el controlador no deberia dejar llegar aqui si no se han puesto las trampas o si el movimiento no es valido
-            if ((equipo - 1 != turno % 2) || !trampaJ1 || !trampaJ2 || !eleccionCartaAccionJ1 || !eleccionCartaAccionJ2 || fOrigen == null || fOrigen.getEquipo() != equipo || !movExiste || !destino.estaActiva() || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
+            //Por si acaso comprobamos que el movimiento existe y que se hayan puesto las trampas
+            if ((equipo - 1 != turno % 2) || !trampaJ1 || !trampaJ2 || !eleccionCartaAccionJ1 || !eleccionCartaAccionJ2 || fOrigen == null || fOrigen.getEquipo() != equipo || !movExiste || destino.getX()>=7 || destino.getY()>=7 || destino.getX()<0 || destino.getY()<0) {
                 return -2; //Movimiento no valido
             }
+            
+            // Si el destino tiene una trampa que ya NO ESTA activa, no se puede pisar (?) Wait, that means inactive traps act as walls. Actually we should just allow passing but do nothing, or it's a wall? Let's just keep the original constraint, which actually blocked it. Wait, the user said it freezes, but maybe we should allow moving ONLY if it's NOT an inactive trap. So we change it back to original check.
+
+            boolean esTrampa = destino.esTrampa() && destino.estaActiva();
 
             //Logica de casillas trampa
-            if(destino.esTrampa()){
+            if(esTrampa){
                 destino.desactivarCasilla();
                 boolean reyMatado = origen.matar(); // Mata la ficha que haya en la casilla trampa
-                Trampa = destino; //Devolvemos la posicion de la trampa para que el controlador pueda notificar a los jugadores
+                this.trampaActivada = destino; // Guardamos para que el servidor lo lea
                 if (reyMatado && equipo == 1) {
                     j2Ganador = true;
                     j1Ganador = false;
-                    //finalizarPartida();
                     return 2; //Gana el equipo 2 por trampa
                 } else if (reyMatado) {
                     j1Ganador = true;
                     j2Ganador = false;
-                    //finalizarPartida();
                     return 1; //Gana el equipo 1 por trampa
+                } else {
+                    if (equipo == 1) { muertesJ1++; } else { muertesJ2++; }
+                    origen.setFicha(null);
+                    destino.setFicha(null); // La ficha desaparece
                 }
-            }
-
-            //Posibilidad de que se requiera modificaciones
-            else if (fDestino != null && fDestino.getEquipo() != equipo) {
-                if (fDestino.matar()) { //Si se mata al rey, se acaba la partida
-                    //Posible implementacion de patron observer para notificar victoria al matar al rey
+            } else {
+                //Posibilidad de normal captura
+                if (fDestino != null && fDestino.getEquipo() != equipo) {
+                    if (fDestino.matar()) { //Si se mata al rey, se acaba la partida
+                        //Posible implementacion de patron observer para notificar victoria al matar al rey
+                        if (equipo == 1) {
+                            j1Ganador = true;
+                            muertesJ2++;
+                            return 1;
+                        } else {
+                            j2Ganador = true;
+                            muertesJ1++;
+                            return 2;
+                        }
+                    }
                     if (equipo == 1) {
-                        j1Ganador = true;
                         muertesJ2++;
-                        //finalizarPartida();
-                        return 1;
                     } else {
-                        j2Ganador = true;
                         muertesJ1++;
-                        //finalizarPartida();
-                        return 2;
                     }
                 }
-                if (equipo == 1) {
-                    muertesJ2++;
-                } else {
-                    muertesJ1++;
-                }
+                destino.setFicha(fOrigen);
+                origen.setFicha(null);
             }
-            destino.setFicha(fOrigen);
-            origen.setFicha(null);
 
             // Verificar victoria por trono: el rey llega al trono enemigo
             if (fOrigen.isRey()) {

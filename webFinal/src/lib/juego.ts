@@ -36,9 +36,22 @@ export interface Celda {
   ficha: Ficha | null;
   /** true si esta casilla es el trono de algún equipo */
   esTrono: boolean;
+  esTrampaEquipo?: number | null; // 1 | 2 o null
 }
 
+export type FasePartida = "COLOCAR_TRAMPA" | "ELEGIR_CARTA_ACCION" | "JUGANDO" | "TERMINADA";
+
 export interface EstadoJuego {
+  fasePartida: FasePartida;
+  opcionesCartasAccion: { nombre: string }[];
+  cartaAccionPropia: string | null;
+  cartaAccionRival: string | null;
+  /** Estado de interacción visual para jugar una carta de acción */
+  modoAccion?: "REVIVIR" | "SALVAR_REY" | "SACRIFICIO_PROPIO" | "SACRIFICIO_RIVAL" | "ROBAR" | null;
+  /** Datos temporales recogidos durante el modoAccion */
+  accionParams?: {
+    x?: number; y?: number; x_op?: number; y_op?: number; cartaRobar?: string;
+  };
   tablero: Celda[][];
   turnoActual: EquipoID;
   /** 2 cartas del jugador local (equipo 2) */
@@ -80,6 +93,7 @@ export function crearTableroInicial(): Celda[][] {
       return {
         ficha,
         esTrono: (fila === 0 || fila === DIM - 1) && col === CENTRO,
+        esTrampaEquipo: null,
       };
     })
   );
@@ -92,6 +106,10 @@ export function crearTableroInicial(): Celda[][] {
 export function crearEstadoInicial(): EstadoJuego {
   const cartas = seleccionarCartasAleatorias(7);
   return {
+    fasePartida: "JUGANDO", // En mock saltamos directo a jugar
+    opcionesCartasAccion: [],
+    cartaAccionPropia: null,
+    cartaAccionRival: null,
     tablero: crearTableroInicial(),
     turnoActual: 1,
     cartasJugador: [cartas[0], cartas[1]],
@@ -198,6 +216,7 @@ function tableroDesdeServidor(eq1: string, eq2: string): Celda[][] {
     Array.from({ length: DIM }, (_, col) => ({
       ficha: null,
       esTrono: (fila === 0 && col === CENTRO) || (fila === DIM - 1 && col === CENTRO),
+      esTrampaEquipo: null,
     }))
   );
 
@@ -216,6 +235,14 @@ function tableroDesdeServidor(eq1: string, eq2: string): Celda[][] {
       const col = parseInt(m[1]), fila = parseInt(m[2]);
       if (fila >= 0 && fila < DIM && col >= 0 && col < DIM)
         tablero[fila][col].ficha = { equipo, esRey: false };
+    }
+    // Trampas: |x,y,activa|
+    const trampaRe = /\|(-?\d+),(-?\d+),(\d+)\|/g;
+    while ((m = trampaRe.exec(str)) !== null) {
+      const col = parseInt(m[1]), fila = parseInt(m[2]);
+      const activa = parseInt(m[3]) === 1;
+      if (activa && fila >= 0 && fila < DIM && col >= 0 && col < DIM)
+        tablero[fila][col].esTrampaEquipo = equipo;
     }
   };
 
@@ -244,6 +271,10 @@ export function crearEstadoDesdeServidor(datos: {
     datos.turno !== undefined ? (datos.turno % 2 === 0 ? 1 : 2) : 1;
 
   return {
+    fasePartida: tieneTableroGuardado ? "JUGANDO" : "COLOCAR_TRAMPA",
+    opcionesCartasAccion: [],
+    cartaAccionPropia: null,
+    cartaAccionRival: null,
     tablero,
     turnoActual,
     cartasJugador: datos.cartas_jugador.map(convertirCarta),
@@ -290,7 +321,8 @@ export function ejecutarMovimiento(
   destinoFila: number,
   destinoCol: number,
   carta: CartaMovDef,
-  equipoLocal: EquipoID = 2
+  equipoLocal: EquipoID = 2,
+  trampaActivada?: boolean
 ): ResultadoMovimiento {
   // Copia profunda del tablero
   const tablero: Celda[][] = estado.tablero.map((fila) =>
@@ -301,12 +333,24 @@ export function ejecutarMovimiento(
   );
 
   const fichaMovida = tablero[origenFila][origenCol].ficha!;
-  const fichaDestino = tablero[destinoFila][destinoCol].ficha;
-  const capturado = fichaDestino !== null;
-  const esReyCapturado = capturado && fichaDestino!.esRey;
+  let esReyCapturado = false;
+  let capturado = false;
 
-  tablero[destinoFila][destinoCol].ficha = fichaMovida;
-  tablero[origenFila][origenCol].ficha = null;
+  const esTrampaOponente = tablero[destinoFila][destinoCol].esTrampaEquipo && tablero[destinoFila][destinoCol].esTrampaEquipo !== (fichaMovida.equipo as EquipoID);
+
+  if (trampaActivada || esTrampaOponente) {
+    // Si murió en la trampa, la ficha se esfuma y se desactiva la trampa
+    tablero[destinoFila][destinoCol].ficha = null;
+    tablero[destinoFila][destinoCol].esTrampaEquipo = undefined; // desaparece la firma visual
+    tablero[origenFila][origenCol].ficha = null;
+  } else {
+    const fichaDestino = tablero[destinoFila][destinoCol].ficha;
+    capturado = fichaDestino !== null;
+    esReyCapturado = capturado && fichaDestino!.esRey;
+
+    tablero[destinoFila][destinoCol].ficha = fichaMovida;
+    tablero[origenFila][origenCol].ficha = null;
+  }
 
   // Victoria por trono: el rey llega al trono enemigo
   const victoriaPortrono =
@@ -345,6 +389,7 @@ export function ejecutarMovimiento(
     esReyCapturado || victoriaPortrono ? equipoActual : null;
 
   const nuevoEstado: EstadoJuego = {
+    ...estado,
     tablero,
     turnoActual: equipoActual === 2 ? 1 : 2,
     cartasJugador: nuevasCartasJugador,

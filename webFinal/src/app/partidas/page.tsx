@@ -128,6 +128,7 @@ export default function PartidasPage() {
     idNotificacion: number | null;
   } | null>(null);
   const [mensajePrivada, setMensajePrivada] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [tiempoEsperaPrivada, setTiempoEsperaPrivada] = useState(120);
   const [tiempoEsperaReanudar, setTiempoEsperaReanudar] = useState(120);
 
@@ -189,6 +190,7 @@ export default function PartidasPage() {
 
   /** Cargar notificaciones del sessionStorage y suscribirse a nuevas por WS. */
   useEffect(() => {
+    setMounted(true);
     setNotificaciones(leerNotificaciones());
 
     // Nuevas notificaciones en tiempo real
@@ -695,13 +697,13 @@ export default function PartidasPage() {
           <div className="flex items-center gap-2">
             <Image src="/katanas.png" alt="Katanas" width={22} height={22} className="h-5 w-auto shrink-0" />
             <span className="text-white font-semibold text-sm tabular-nums">
-              {jugador.puntos.toLocaleString()}
+              {mounted ? jugador.puntos.toLocaleString() : "---"}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Image src="/core.png" alt="Cores" width={22} height={22} className="h-5 w-auto shrink-0" />
             <span className="text-white font-semibold text-sm tabular-nums">
-              {jugador.cores.toLocaleString()}
+              {mounted ? jugador.cores.toLocaleString() : "---"}
             </span>
           </div>
           <div className="hidden sm:block h-8 w-px bg-white/20 shrink-0" aria-hidden />

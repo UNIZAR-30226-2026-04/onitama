@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { useState, useEffect } from "react";
 
 export function getAvatarSrc(avatarId?: string | null): string | null {
   if (!avatarId) return null;
@@ -20,12 +21,17 @@ export function AvatarCircle({
   textClass?: string;
   bgClass?: string;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const src = getAvatarSrc(avatarId);
   const inicial = (nombre?.charAt(0) ?? "?").toUpperCase();
 
   return (
     <div className={`${sizeClass} rounded-full overflow-hidden ${bgClass} flex items-center justify-center`}>
-      {src ? (
+      {(mounted && src) ? (
         <Image
           src={src}
           alt={`Avatar de ${nombre}`}

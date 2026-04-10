@@ -44,6 +44,30 @@ export interface MensajeAbandonar {
   equipo: 1 | 2;
 }
 
+export interface MensajePonerTrampa {
+  tipo: "PONER_TRAMPA";
+  equipo: 1 | 2;
+  fila: number;
+  columna: number;
+}
+
+export interface MensajeCartaAccion {
+  tipo: "CARTA_ACCION";
+  equipo: 1 | 2;
+  carta: string;
+}
+
+export interface MensajeJugarCartaAccion {
+  tipo: "JUGAR_CARTA_ACCION";
+  equipo: 1 | 2;
+  cartaAccion: string;
+  x: number;
+  y: number;
+  x_op: number;
+  y_op: number;
+  cartaRobar: string;
+}
+
 // ── Respuestas del servidor ───────────────────────────────────────────────────
 
 /** Datos de la partida enviados por el servidor al emparejar dos jugadores */
@@ -93,6 +117,40 @@ export interface RespuestaTerminarPartida {
   razon: string;
 }
 
+export interface RespuestaSeleccioneCartaAccion {
+  tipo: "SELECCIONE_CARTA_ACCION";
+  cartas_accion: { nombre: string }[];
+}
+
+export interface RespuestaPartidaLista {
+  tipo: "PARTIDA_LISTA";
+  cartas_accion: { nombre: string }[];
+}
+
+export interface RespuestaCartaAccionJugada {
+  tipo: "CARTA_ACCION_JUGADA";
+  carta_accion: string;
+  x: number;
+  y: number;
+  x_op: number;
+  y_op: number;
+  carta_robar: string;
+}
+
+export interface RespuestaTrampaActivada {
+  tipo: "TRAMPA_ACTIVADA";
+  columna: number;
+  fila: number;
+}
+
+export interface RespuestaTrampaInvalida {
+  tipo: "TRAMPA_INVALIDA";
+}
+
+export interface RespuestaCartaAccionInvalida {
+  tipo: "CARTA_ACCION_INVALIDA";
+}
+
 export type MensajeServidor =
   | RespuestaTuTurno
   | RespuestaMover
@@ -100,6 +158,12 @@ export type MensajeServidor =
   | RespuestaVictoria
   | RespuestaDerrota
   | RespuestaTerminarPartida
+  | RespuestaSeleccioneCartaAccion
+  | RespuestaPartidaLista
+  | RespuestaCartaAccionJugada
+  | RespuestaTrampaActivada
+  | RespuestaTrampaInvalida
+  | RespuestaCartaAccionInvalida
   | { tipo: string; [key: string]: unknown };
 
 // ─── Conexión a la partida ────────────────────────────────────────────────────
@@ -136,6 +200,18 @@ export function enviarMovimiento(datos: Omit<MensajeMover, "tipo">): boolean {
 /** Notifica al servidor que el jugador abandona la partida voluntariamente */
 export function enviarAbandonar(equipo: 1 | 2): boolean {
   return WS.enviar({ tipo: "ABANDONAR", equipo } satisfies MensajeAbandonar);
+}
+
+export function enviarPonerTrampa(equipo: 1 | 2, fila: number, columna: number): boolean {
+  return WS.enviar({ tipo: "PONER_TRAMPA", equipo, fila, columna } satisfies MensajePonerTrampa);
+}
+
+export function enviarSeleccionCartaAccion(equipo: 1 | 2, carta: string): boolean {
+  return WS.enviar({ tipo: "CARTA_ACCION", equipo, carta } satisfies MensajeCartaAccion);
+}
+
+export function enviarJugarCartaAccion(datos: Omit<MensajeJugarCartaAccion, "tipo">): boolean {
+  return WS.enviar({ tipo: "JUGAR_CARTA_ACCION", ...datos } as MensajeJugarCartaAccion);
 }
 
 /**

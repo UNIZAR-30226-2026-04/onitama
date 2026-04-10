@@ -449,18 +449,16 @@ public class Servidor extends WebSocketServer {
 
                 if (XO > -1 && YO > -1 && XD > -1 && YD > -1) {
                     Tablero tb = pj.partida.getTablero();
-                    Posicion Trampa = null; // Para recoger la posición de la trampa en caso de que el movimiento sea a una casilla trampa, y así poder notificarlo a los jugadores
-                    estado = pj.partida.moverFicha(equipo, tb.getPosicion(XO, YO), tb.getPosicion(XD, YD), carta, Trampa);
-                    if (Trampa != null) {
+                    estado = pj.partida.moverFicha(equipo, tb.getPosicion(XO, YO), tb.getPosicion(XD, YD), carta);
+                    Posicion trampaAct = pj.partida.trampaActivada;
+                    if (trampaAct != null) {
                         JSONObject msgTrampa = new JSONObject();
                         msgTrampa.put("tipo", "TRAMPA_ACTIVADA");
-                        msgTrampa.put("columna", Trampa.getX());
-                        msgTrampa.put("fila", Trampa.getY());
+                        msgTrampa.put("columna", trampaAct.getX());
+                        msgTrampa.put("fila", trampaAct.getY());
                         conn.send(msgTrampa.toString());
                         oponente.ws.send(msgTrampa.toString());
                     }
-                    // rotarCartas se llama internamente en moverFicha (solo en movimientos válidos)
-                    // pj.partida.rotarCartas(carta, equipo);
                 }
 
                 JSONObject msg = new JSONObject();
@@ -473,28 +471,64 @@ public class Servidor extends WebSocketServer {
                         msg.put("col_destino", XD);
                         msg.put("fila_destino", YD);
                         msg.put("carta", carta);
+                        msg.put("equipo", equipo);
+                        if (pj.partida.trampaActivada != null) {
+                            msg.put("trampa_activada", true);
+                            pj.partida.trampaActivada = null; // reset
+                        }
                     } else if (estado == 1) {
+                        JSONObject msgEq1 = new JSONObject();
+                        msgEq1.put("motivo", "FIN_PARTIDA");
+                        msgEq1.put("equipo_responsable", equipo);
+                        msgEq1.put("tipo", "VICTORIA");
+                        
+                        JSONObject msgEq2 = new JSONObject();
+                        msgEq2.put("motivo", "FIN_PARTIDA");
+                        msgEq2.put("equipo_responsable", equipo);
+                        msgEq2.put("tipo", "DERROTA");
+
                         if (equipo == 1) {
-                            msg.put("tipo", "DERROTA");
+                            // conn es Eq1 (gana)
+                            conn.send(msgEq1.toString());
+                            if(oponente.ws.isOpen()) oponente.ws.send(msgEq2.toString());
                         } else {
-                            msg.put("tipo", "VICTORIA");
-                            msg.put("motivo", "FIN_PARTIDA");
-                            msg.put("equipo_responsable", equipo);
+                            // conn es Eq2 (pierde)
+                            conn.send(msgEq2.toString());
+                            if(oponente.ws.isOpen()) oponente.ws.send(msgEq1.toString());
                         }
-                        //pj.partida.actualizarBD(); // Si se termina la partida -> actualizo la base de datos
+                        System.out.println("Partida finalizada con victoria del eq1 " + pj.partida.getIDPartida());
+                        return;
                     } else if (estado == 2) {
+                        JSONObject msgEq1 = new JSONObject();
+                        msgEq1.put("motivo", "FIN_PARTIDA");
+                        msgEq1.put("equipo_responsable", equipo);
+                        msgEq1.put("tipo", "DERROTA");
+                        
+                        JSONObject msgEq2 = new JSONObject();
+                        msgEq2.put("motivo", "FIN_PARTIDA");
+                        msgEq2.put("equipo_responsable", equipo);
+                        msgEq2.put("tipo", "VICTORIA");
+
                         if (equipo == 2) {
-                            msg.put("tipo", "DERROTA");
+                            // conn es Eq2 (gana)
+                            conn.send(msgEq2.toString());
+                            if(oponente.ws.isOpen()) oponente.ws.send(msgEq1.toString());
                         } else {
-                            msg.put("tipo", "VICTORIA");
-                            msg.put("motivo", "FIN_PARTIDA");
-                            msg.put("equipo_responsable", equipo);
+                            // conn es Eq1 (pierde)
+                            conn.send(msgEq1.toString());
+                            if(oponente.ws.isOpen()) oponente.ws.send(msgEq2.toString());
                         }
-                        //pj.partida.actualizarBD();
+                        System.out.println("Partida finalizada con victoria del eq2 " + pj.partida.getIDPartida());
+                        return;
                     }
 
-                    // Enviamos el mensaje AL OPOONENTE ANTES DE CUALQUIER CAMBIO A LA BASE
-                    oponente.ws.send(msg.toString());
+                    // Enviamos el mensaje de MOVER
+                    if (estado == 0) {
+                        oponente.ws.send(msg.toString());
+                        if (msg.has("trampa_activada")) {
+                            conn.send(msg.toString());
+                        }
+                    }
                     System.out.println("Movimiento reenviado en la partida " + pj.partida.getIDPartida());
 
                     // Partida terminada por victoria: quitar la pareja para que ABANDONAR/MOVER
@@ -1090,18 +1124,33 @@ public class Servidor extends WebSocketServer {
                 msg.put("tipo", "TRAMPA_INVALIDA");
                 conn.send(msg.toString());
             }else if(estado == 1){
-                JSONObject msg = new JSONObject();
-                msg.put("tipo", "SELECCIONE_CARTA_ACCION"); //Iniciamos la seleccion de cartas de Accion
-                JSONArray cartasJSON = new JSONArray();
+                //Iniciamos la seleccion de cartas de Accion para J1
+                JSONObject msg1 = new JSONObject();
+                msg1.put("tipo", "SELECCIONE_CARTA_ACCION"); 
+                JSONArray cartasJSON1 = new JSONArray();
                 for (CartaAccion ca : pj.partida.getCartasAccion()) {
-                    if (ca.getEquipo()==-equipo) {
+                    if (ca.getEquipo() == -1) {
                         JSONObject cartaJSON = new JSONObject();
                         cartaJSON.put("nombre", ca.getNombre());
-                        cartasJSON.put(cartaJSON);
+                        cartasJSON1.put(cartaJSON);
                     }
                 }
-                msg.put("cartas_accion", cartasJSON);
-                conn.send(msg.toString());
+                msg1.put("cartas_accion", cartasJSON1);
+                pj.p1.ws.send(msg1.toString());
+
+                //Iniciamos la seleccion de cartas de Accion para J2
+                JSONObject msg2 = new JSONObject();
+                msg2.put("tipo", "SELECCIONE_CARTA_ACCION"); 
+                JSONArray cartasJSON2 = new JSONArray();
+                for (CartaAccion ca : pj.partida.getCartasAccion()) {
+                    if (ca.getEquipo() == -2) {
+                        JSONObject cartaJSON = new JSONObject();
+                        cartaJSON.put("nombre", ca.getNombre());
+                        cartasJSON2.put(cartaJSON);
+                    }
+                }
+                msg2.put("cartas_accion", cartasJSON2);
+                pj.p2.ws.send(msg2.toString());
             }
         }
     }
