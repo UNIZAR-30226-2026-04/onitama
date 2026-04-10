@@ -27,7 +27,7 @@ import {
   normalizarSkinId,
 } from "@/lib/skins";
 
-type EstadoUI = "buscando" | "error" | "timeout" | "presentacion";
+type EstadoUI = "buscando" | "error" | "presentacion";
 
 export default function BuscarPartidaPage() {
   const router = useRouter();
@@ -65,8 +65,6 @@ export default function BuscarPartidaPage() {
 
       } else if (resultado.estado === "CANCELADO") {
         router.push("/partidas");
-      } else if (resultado.estado === "TIMEOUT") {
-        setEstadoUI("timeout");
       } else {
         setEstadoUI("error");
       }
@@ -266,14 +264,12 @@ export default function BuscarPartidaPage() {
             </>
           )}
 
-          {/* Estado: error o timeout */}
-          {(estadoUI === "error" || estadoUI === "timeout") && respuesta && (
+          {/* Estado: error de conexión */}
+          {estadoUI === "error" && (
             <>
               <div className="w-full rounded-xl border-2 border-red-400 bg-red-900/30 px-6 py-4 text-red-200 text-sm text-center">
-                <p className="font-bold mb-1 uppercase tracking-wide">
-                  {estadoUI === "timeout" ? "Tiempo agotado" : "Error de conexión"}
-                </p>
-                <p>{respuesta.mensaje}</p>
+                <p className="font-bold mb-1 uppercase tracking-wide">Error de conexión</p>
+                <p>{respuesta?.mensaje ?? "No se pudo conectar al servidor."}</p>
               </div>
 
               <button

@@ -55,17 +55,12 @@ function mockBuscarPartida(): Promise<RespuestaBuscarPartida> {
  * Busca una partida pública enviando BUSCAR_PARTIDA al servidor.
  * Devuelve { promise, cancel } para poder cancelar la búsqueda enviando CANCELAR.
  *
- * Requiere que el WS esté ya abierto (tras el login o registro).
- * Si no hay conexión activa, cae al mock.
- *
- * @param nombre    Nombre de usuario del jugador (para el matchmaking)
- * @param puntos    Puntuación del jugador (matchmaking ±100 puntos)
- * @param timeoutMs Tiempo máximo de espera en ms (default: 45 s)
+ * No hay timeout en el cliente: el servidor gestiona sus propios tiempos.
+ * El usuario puede cancelar manualmente en cualquier momento.
  */
 export function buscarPartida(
   nombre = "Jugador",
-  puntos = 0,
-  timeoutMs = 45_000
+  puntos = 0
 ): ResultadoBusqueda {
   if (!WS.usarServidor) {
     return {
@@ -81,12 +76,10 @@ export function buscarPartida(
 
   let resuelto = false;
   let unsub: (() => void) | null = null;
-  let timer: ReturnType<typeof setTimeout> | null = null;
 
   const resolver = (r: RespuestaBuscarPartida) => {
     if (resuelto) return;
     resuelto = true;
-    if (timer !== null) clearTimeout(timer);
     unsub?.();
     resolvePromise(r);
   };
@@ -127,13 +120,6 @@ export function buscarPartida(
         unsub();
         return;
       }
-
-      timer = setTimeout(() => {
-        resolver({
-          estado: "TIMEOUT",
-          mensaje: "Sin respuesta del servidor. Inténtalo de nuevo.",
-        });
-      }, timeoutMs);
 
       const enviado = WS.enviar({ tipo: "BUSCAR_PARTIDA", nombre, puntos } satisfies MensajeBuscarPartida);
       if (!enviado) {
