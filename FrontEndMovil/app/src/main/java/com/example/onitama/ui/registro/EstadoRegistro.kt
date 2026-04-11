@@ -8,6 +8,7 @@ data class EstadoRegistro(
     val correo: String = "",
     val contrasenya: String = "",
     val contrasenyaR: String = "",
+    val avatar: String = "",
     val creada: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null

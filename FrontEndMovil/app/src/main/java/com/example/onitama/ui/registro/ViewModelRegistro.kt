@@ -35,12 +35,16 @@ class ViewModelRegistro() : ViewModel() {
         _estadoUI.value = _estadoUI.value.copy(contrasenyaR = contrasenyaR)
     }
 
+    fun onAvatarChange(avatar: String){
+        _estadoUI.value = _estadoUI.value.copy(avatar = avatar)
+    }
+
     /**
      * Función que se ejecuta al hacer clic en el botón 'Registrarse'.
      * Comprueba que los datos se han rellenado correctamente y envía
      * la solicitud al servidor.
      */
-    fun onCrearClick() {
+    fun onCrearClick(): Boolean {
 
         val estadoActual = _estadoUI.value
         if (estadoActual.nombre.isEmpty() || estadoActual.correo.isEmpty()
@@ -48,31 +52,37 @@ class ViewModelRegistro() : ViewModel() {
             _estadoUI.value = estadoActual.copy(
                 error = "Completa todos los campos"
             )
-            return
+            return false
         }
         if (estadoActual.contrasenya != estadoActual.contrasenyaR) {
             _estadoUI.value = estadoActual.copy(
                 error = "Las contraseñas no coinciden"
             )
-            return
+            return false
         }
         if (!validar(estadoActual.contrasenya)) {
             _estadoUI.value = estadoActual.copy(
                 error = "La contraseña debe tener al menos 8" +
                         "caracteres, incluyendo letras y números"
             )
-            return
+            return false
         }
+        return true
 
+    }
+
+    fun registrarDelTodo(){
+        val estadoActual = _estadoUI.value
         viewModelScope.launch {
             _estadoUI.value = estadoActual.copy(isLoading = true, error = null)
             try {
                 authClient.registrarUsuario(
                     estadoActual.correo,
                     estadoActual.nombre,
-                    estadoActual.contrasenya
+                    estadoActual.contrasenya,
+                    estadoActual.avatar
                 )
-                
+
                 _estadoUI.value = _estadoUI.value.copy(isLoading = false, creada = true)
             } catch (e: Exception) {
                 _estadoUI.value = _estadoUI.value.copy(

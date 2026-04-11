@@ -12,7 +12,8 @@ data class DatosPerfil(
     val puntos: Int,
     val partidas_ganadas: Int,
     val partidas_jugadas: Int,
-    val cores: Int
+    val cores: Int,
+    val avatar_id: String
 )
 
 object AutoLogin {
@@ -24,6 +25,8 @@ object AutoLogin {
     private const val JUGADAS = "jugadas"
     private const val GANADAS = "ganadas"
     private const val KATANAS = "katanas"
+
+    private const val AVATAR = "Avatra_id"
     private const val CORES = "cores"
 
     // El estado interno (privado)
@@ -46,17 +49,19 @@ object AutoLogin {
                 puntos = pref.getInt(KATANAS, 0),
                 partidas_ganadas = pref.getInt(GANADAS, 0),
                 partidas_jugadas = pref.getInt(JUGADAS, 0),
-                cores = pref.getInt(CORES, 0)
+                cores = pref.getInt(CORES, 0),
+                avatar_id = pref.getString(AVATAR, "")?: ""
             )
         }
     }
 
-    fun inicioSesion(context: Context, nombre: String, katanas: Int, cores: Int){
+    fun inicioSesion(context: Context, nombre: String, katanas: Int, cores: Int, avatar: String){
         val pref = obtenerPreferences(context).edit()
         pref.putBoolean(HAINICIADO, true)
         pref.putString(NOMBRE, nombre)
         pref.putInt(KATANAS, katanas)
         pref.putInt(CORES, cores)
+        pref.putString(AVATAR, avatar)
         pref.apply()
 
         val estadoActual = _sesion.value
@@ -65,7 +70,8 @@ object AutoLogin {
             _sesion.value = estadoActual.copy(
                 nombre = nombre,
                 puntos = katanas,
-                cores = cores
+                cores = cores,
+                avatar_id = avatar
             )
         } else {
             _sesion.value = DatosPerfil(
@@ -74,7 +80,8 @@ object AutoLogin {
                 puntos = katanas,
                 partidas_ganadas = 0,
                 partidas_jugadas = 0,
-                cores = cores
+                cores = cores,
+                avatar_id = avatar
             )
         }
     }
@@ -89,6 +96,7 @@ object AutoLogin {
         pref.putInt(CORES, datos.cores)
         pref.putInt(JUGADAS, datos.partidas_jugadas)
         pref.putInt(GANADAS, datos.partidas_ganadas)
+        pref.putString(AVATAR, datos.avatar_id)
         pref.apply()
 
         _sesion.value = datos

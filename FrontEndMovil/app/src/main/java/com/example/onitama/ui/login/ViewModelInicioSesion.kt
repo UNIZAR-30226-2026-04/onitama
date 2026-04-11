@@ -56,7 +56,8 @@ class ViewModelInicioSesion() : ViewModel() {
                     context,
                     datos!!.nombre,
                     datos.puntos,
-                    datos.cores
+                    datos.cores,
+                    datos.avatar_id
                 )
                 AutoLogin.actualizar(context, datos as DatosPerfil?)
                 

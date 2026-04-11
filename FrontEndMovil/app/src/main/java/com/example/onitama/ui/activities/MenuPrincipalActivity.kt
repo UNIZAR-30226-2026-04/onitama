@@ -2,6 +2,7 @@ package com.example.onitama.ui.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedVisibility
@@ -329,17 +330,37 @@ fun MainMenuScreen(
                 .background(colorResource(id = R.color.azulFondo))
                 .padding(horizontal = 16.dp)
         ) {
+            Log.d("DEBUG", "Imagen: ${datosUsuario?.avatar_id}")
+            val imageResId = context.resources.getIdentifier(
+                datosUsuario?.avatar_id,
+                "drawable",
+                context.packageName
+            )
+
+
+            //🛡️ PROTECCIÓN ANTI-CRASH: Si la imagen no existe (0), ponemos el logo por defecto
+            val idSeguro = if (imageResId != 0) imageResId else R.drawable.onitama_text
+
             // A) Botón de Perfil
-            IconButton(
+            /*IconButton(
                 onClick = { /* Acción perfil */ },
                 modifier = Modifier
                     .size(80.dp)
                     .align(Alignment.CenterEnd)
                     .clip(CircleShape)
-                    .background(Color.White)
+                    .background(idSeguro)
             ) {
 
-            }
+            }*/
+            Image(
+                painterResource(idSeguro),
+                contentDescription = "Imagen de perfil",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(80.dp)
+                    .align(Alignment.CenterEnd)
+                    .clip(CircleShape)
+            )
 
             // B) Título del juego
             Image(

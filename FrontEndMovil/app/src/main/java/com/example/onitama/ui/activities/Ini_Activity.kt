@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.example.onitama.ui.login.Ini_Ses_Activity
+import com.example.onitama.ui.registro.Reg_Activity
 import com.example.onitama.ui.welcome.PantallaBienvenida
 import com.example.onitama.ui.theme.OnitamaTheme
 

@@ -140,19 +140,20 @@ class Auth(
     }
 
     // ─── Registro ─────────────────────────────────────────────────────────────────
-    suspend fun registrarUsuario(correo: String, nombre: String, password: String) {
+    suspend fun registrarUsuario(correo: String, nombre: String, password: String, avatar: String) {
         // ── Mock ──
         if (!usarServidor) {
             return // Simulamos éxito en modo desarrollo
         }
 
         // ── Servidor ──
-        val respuesta = withTimeoutOrNull(100_000L) {
+        val respuesta = withTimeoutOrNull(10_000L) {
             val requestJson = JSONObject().apply {
                 put("tipo", "REGISTRARSE")
                 put("correo", correo)
                 put("nombre", nombre)
                 put("password", password)
+                put("avatar_id", avatar)
             }
 
             enviarYEsperarRespuesta(requestJson.toString())
@@ -186,7 +187,8 @@ class Auth(
                     puntos = respuesta.optInt("puntos"),
                     partidas_ganadas = respuesta.optInt("partidas_ganadas"),
                     partidas_jugadas = respuesta.optInt("partidas_jugadas"),
-                    cores = respuesta.optInt("cores"))
+                    cores = respuesta.optInt("cores"),
+                    avatar_id= respuesta.optString("avatar_id"))
                 return resultado
 
             }
