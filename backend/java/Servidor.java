@@ -974,6 +974,9 @@ public class Servidor extends WebSocketServer {
             }
             System.out.println("Invitación aceptada: " + notif.getRemitente() + " -> " + notif.getDestinatario());
 
+            // actualizamos el estado de la notificación a ACEPTADA
+            notifJdbc.actualizarEstado(idNotificacion, Notificacion.ESTADO_ACEPTADA);
+
             InfoJugador j1 = buscarJugadorConectado(notif.getRemitente());
             InfoJugador j2 = buscarJugadorConectado(notif.getDestinatario());
 
