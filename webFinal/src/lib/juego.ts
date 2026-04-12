@@ -36,7 +36,12 @@ export interface Celda {
   ficha: Ficha | null;
   /** true si esta casilla es el trono de algún equipo */
   esTrono: boolean;
-  esTrampaEquipo?: number | null; // 1 | 2 o null
+  /**
+   * 1 | 2 = trampa activa de ese equipo (aún no disparada).
+   * -1    = trampa disparada (casilla injugable).
+   * null  = sin trampa.
+   */
+  esTrampaEquipo?: number | null;
 }
 
 export type FasePartida = "COLOCAR_TRAMPA" | "ELEGIR_CARTA_ACCION" | "JUGANDO" | "TERMINADA";
@@ -46,6 +51,8 @@ export interface EstadoJuego {
   opcionesCartasAccion: { nombre: string; accion: string }[];
   cartaAccionPropia: { nombre: string; accion: string } | null;
   cartaAccionRival: { nombre: string; accion: string } | null;
+  /** Carta que abrió el modo de acción (puede ser la segunda en mano) */
+  cartaAccionParaModo: { nombre: string; accion: string } | null;
   /** Estado de interacción visual para jugar una carta de acción */
   modoAccion?: "REVIVIR" | "SALVAR_REY" | "SACRIFICIO_PROPIO" | "SACRIFICIO_RIVAL" | "ROBAR" | null;
   /** Datos temporales recogidos durante el modoAccion */
@@ -77,10 +84,89 @@ export interface EstadoJuego {
     origen: { fila: number; col: number };
     destino: { fila: number; col: number };
   } | null;
-  /** Contador de turnos para el efecto de ceguera (Acción CEGAR) */
-  cegueraContador: number;
-  /** Quién está ciego (null, 1 o 2) */
+  /** Equipo ciego durante toda la partida por Brujería (null = sin efecto activo) */
   equipoCiego: EquipoID | null;
+  /**
+   * Dama del Mar / Finisterre: restricción solo para quien toque mover con el efecto.
+   * Se limpia cuando el rival del jugador que jugó la carta mueve (o cadena acción→tú→rival).
+   */
+  restriccionSolo: RestriccionSolo | null;
+  /**
+   * Equipo que jugó Pensatorium (ESPEJO). El servidor deshace el espejo cuando mueve el rival;
+   * el cliente debe invertir otra vez las cartas en ese momento para coincidir con el servidor.
+   */
+  espejoActivadoPor: EquipoID | null;
+}
+
+/** Estado de la restricción adelante/atrás (sincronizado con Partida.java) */
+export interface RestriccionSolo {
+  tipo: "SOLO_PARA_ADELANTE" | "SOLO_PARA_ATRAS";
+  /** Quien jugó la carta Dama/Finisterre */
+  caster: EquipoID;
+  /** Quien debe obedecer la restricción en su siguiente movimiento */
+  equipoAfectado: EquipoID;
+}
+
+export function transferirRestriccionSoloSiJuegaAccion(
+  r: RestriccionSolo | null,
+  equipoQueJuegaAccion: EquipoID
+): RestriccionSolo | null {
+  if (!r || r.equipoAfectado !== equipoQueJuegaAccion) return r;
+  const otro: EquipoID = equipoQueJuegaAccion === 1 ? 2 : 1;
+  return { ...r, equipoAfectado: otro };
+}
+
+export function resolverRestriccionSoloTrasMovimiento(
+  r: RestriccionSolo | null,
+  equipoQueMueve: EquipoID
+): RestriccionSolo | null {
+  if (!r || r.equipoAfectado !== equipoQueMueve) return r;
+  const rivalDelCaster: EquipoID = r.caster === 1 ? 2 : 1;
+  if (equipoQueMueve === rivalDelCaster) {
+    return null;
+  }
+  if (equipoQueMueve === r.caster) {
+    return { ...r, equipoAfectado: rivalDelCaster };
+  }
+  return r;
+}
+
+export function activarRestriccionSolo(
+  caster: EquipoID,
+  tipo: "SOLO_PARA_ADELANTE" | "SOLO_PARA_ATRAS"
+): RestriccionSolo {
+  return {
+    tipo,
+    caster,
+    equipoAfectado: caster === 1 ? 2 : 1,
+  };
+}
+
+/** Misma transformación que al aplicar ESPEJO (invertir dc en cada vector). */
+export function invertirCartasEspejo(cartas: CartaMovDef[]): CartaMovDef[] {
+  return cartas.map((ca) => ({
+    ...ca,
+    movimientos: (ca.movimientos || []).map((m) => ({ dc: -m.dc, df: m.df })),
+  }));
+}
+
+/**
+ * Si el servidor habría deshecho ESPEJO en este movimiento (mueve quien no jugó Pensatorium),
+ * alinea las cartas del cliente con Partida.moverFicha.
+ */
+export function deshacerEspejoTrasMovimientoRival(
+  estado: EstadoJuego,
+  equipoQueMueve: EquipoID
+): EstadoJuego {
+  const c = estado.espejoActivadoPor;
+  if (c === null || equipoQueMueve === c) return estado;
+  return {
+    ...estado,
+    cartasJugador: invertirCartasEspejo(estado.cartasJugador),
+    cartasOponente: invertirCartasEspejo(estado.cartasOponente),
+    cartasSiguientes: invertirCartasEspejo(estado.cartasSiguientes),
+    espejoActivadoPor: null,
+  };
 }
 
 // ─── Creación del estado inicial ──────────────────────────────────────────────
@@ -114,6 +200,7 @@ export function crearEstadoInicial(): EstadoJuego {
     opcionesCartasAccion: [],
     cartaAccionPropia: null,
     cartaAccionRival: null,
+    cartaAccionParaModo: null,
     tablero: crearTableroInicial(),
     turnoActual: 1,
     cartasJugador: [cartas[0], cartas[1]],
@@ -124,8 +211,9 @@ export function crearEstadoInicial(): EstadoJuego {
     movimientosValidos: [],
     ganador: null,
     ultimoMovimiento: null,
-    cegueraContador: 0,
     equipoCiego: null,
+    restriccionSolo: null,
+    espejoActivadoPor: null,
   };
 }
 
@@ -144,17 +232,27 @@ export function calcularMovimientosValidos(
   fila: number,
   col: number,
   carta: CartaMovDef,
-  equipo: EquipoID
+  equipo: EquipoID,
+  restriccionSolo?: RestriccionSolo | null
 ): { fila: number; col: number }[] {
   const signo = equipo === 2 ? 1 : -1;
   const validos: { fila: number; col: number }[] = [];
 
   for (const { dc, df } of carta.movimientos) {
+    if (
+      restriccionSolo &&
+      restriccionSolo.equipoAfectado === equipo
+    ) {
+      if (restriccionSolo.tipo === "SOLO_PARA_ADELANTE" && df < 0) continue;
+      if (restriccionSolo.tipo === "SOLO_PARA_ATRAS" && df > 0) continue;
+    }
     const nf = fila - df * signo;
     const nc = col + dc * signo;
 
     if (nf < 0 || nf >= DIM || nc < 0 || nc >= DIM) continue;
     if (tablero[nf][nc].ficha?.equipo === equipo) continue;
+    // Las celdas de trampa disparada son injugables
+    if (tablero[nf][nc].esTrampaEquipo === -1) continue;
 
     validos.push({ fila: nf, col: nc });
   }
@@ -281,6 +379,7 @@ export function crearEstadoDesdeServidor(datos: {
     opcionesCartasAccion: [],
     cartaAccionPropia: null,
     cartaAccionRival: null,
+    cartaAccionParaModo: null,
     tablero,
     turnoActual,
     cartasJugador: datos.cartas_jugador.map(convertirCarta),
@@ -291,8 +390,9 @@ export function crearEstadoDesdeServidor(datos: {
     movimientosValidos: [],
     ganador: null,
     ultimoMovimiento: null,
-    cegueraContador: 0,
     equipoCiego: null,
+    restriccionSolo: null,
+    espejoActivadoPor: null,
   };
 }
 
@@ -347,9 +447,9 @@ export function ejecutarMovimiento(
   const esTrampaOponente = tablero[destinoFila][destinoCol].esTrampaEquipo && tablero[destinoFila][destinoCol].esTrampaEquipo !== (fichaMovida.equipo as EquipoID);
 
   if (trampaActivada || esTrampaOponente) {
-    // Si murió en la trampa, la ficha se esfuma y se desactiva la trampa
+    // La ficha muere y la celda queda injugable (-1 = disparada / calavera)
     tablero[destinoFila][destinoCol].ficha = null;
-    tablero[destinoFila][destinoCol].esTrampaEquipo = undefined; // desaparece la firma visual
+    tablero[destinoFila][destinoCol].esTrampaEquipo = -1;
     tablero[origenFila][origenCol].ficha = null;
   } else {
     const fichaDestino = tablero[destinoFila][destinoCol].ficha;
@@ -411,12 +511,8 @@ export function ejecutarMovimiento(
       origen: { fila: origenFila, col: origenCol },
       destino: { fila: destinoFila, col: destinoCol },
     },
-    cegueraContador: (estado.cegueraContador > 0 && estado.equipoCiego === equipoActual) 
-      ? estado.cegueraContador - 1 
-      : estado.cegueraContador,
-    equipoCiego: (estado.cegueraContador === 1 && estado.equipoCiego === equipoActual)
-      ? null
-      : estado.equipoCiego,
+    equipoCiego: estado.equipoCiego,
+    restriccionSolo: resolverRestriccionSoloTrasMovimiento(estado.restriccionSolo, equipoActual),
   };
 
   return { nuevoEstado, capturado, esReyCapturado, victoriaPortrono };

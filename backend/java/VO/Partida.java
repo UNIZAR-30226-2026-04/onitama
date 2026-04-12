@@ -18,6 +18,10 @@ public class Partida{
     private boolean j1Ganador, j2Ganador, trampaJ1, trampaJ2, eleccionCartaAccionJ1, eleccionCartaAccionJ2;
     private Jugador jugador1, jugador2;
     private CartaAccion cartaAccionActivaJ1, cartaAccionActivaJ2;
+    /** Restricción Dama del Mar / Finisterre: no se mutan cartas; solo validación por turno */
+    private String restriccionSoloTipo;
+    private int restriccionSoloEquipoAfectado;
+    private int restriccionSoloCaster;
     private List<CartaAccion> cartasA;
     private List<CartaMov> cartasM;
     private Tablero tablero;
@@ -36,6 +40,9 @@ public class Partida{
         this.jdbcJugador = new JugadorJDBC();
         cartaAccionActivaJ1 = null;
         cartaAccionActivaJ2 = null;
+        restriccionSoloTipo = null;
+        restriccionSoloEquipoAfectado = 0;
+        restriccionSoloCaster = 0;
         turnoAccionJ1 = -1;
         turnoAccionJ2 = -1;
         boolean esNueva = (p1 == null || p1.isEmpty()) && (p2 == null || p2.isEmpty());
@@ -226,8 +233,9 @@ public class Partida{
                 cartaEncontrada = true;
                 // si la partida se pausa antes de jugarla, se recupera con equipo y estado correctos al reanudar
                 ca.actualizarDatosPartida(IDPartida);
-            }else if (ca.getNombre().equals(nomCarta)) {
-                cartaA = ca; 
+            } else if (!ca.getNombre().equals(nomCarta) && ca.getEquipo() == -equipo) {
+                // La carta que NO eligió este jugador: se la asignamos al rival
+                cartaA = ca;
             }
         }
         int equipoOp = (equipo == 1) ? 2 : 1;
@@ -422,17 +430,55 @@ public class Partida{
         }
     }
 
+    private void activarRestriccionSolo(int casterEquipo, String tipoAccion) {
+        restriccionSoloCaster = casterEquipo;
+        restriccionSoloTipo = tipoAccion;
+        restriccionSoloEquipoAfectado = (casterEquipo == 1) ? 2 : 1;
+    }
+
+    /** Si quien juega la acción debía mover bajo restricción, la pasa al rival sin mover. */
+    private void transferirRestriccionSoloSiJuegaAccion(int equipo) {
+        if (restriccionSoloTipo != null && restriccionSoloEquipoAfectado == equipo) {
+            restriccionSoloEquipoAfectado = (equipo == 1) ? 2 : 1;
+        }
+    }
+
+    private void limpiarRestriccionSolo() {
+        int c = restriccionSoloCaster;
+        restriccionSoloTipo = null;
+        restriccionSoloEquipoAfectado = 0;
+        restriccionSoloCaster = 0;
+        if (c == 1 && cartaAccionActivaJ1 != null) {
+            String acc = cartaAccionActivaJ1.getAccion();
+            if ("SOLO_PARA_ADELANTE".equals(acc) || "SOLO_PARA_ATRAS".equals(acc)) {
+                cartaAccionActivaJ1 = null;
+                turnoAccionJ1 = -1;
+            }
+        } else if (c == 2 && cartaAccionActivaJ2 != null) {
+            String acc = cartaAccionActivaJ2.getAccion();
+            if ("SOLO_PARA_ADELANTE".equals(acc) || "SOLO_PARA_ATRAS".equals(acc)) {
+                cartaAccionActivaJ2 = null;
+                turnoAccionJ2 = -1;
+            }
+        }
+    }
+
     //true -> exito en la accion
     //false -> error (carta no del equipo, carta ya usada ...)
     public boolean jugarAccion(String nomCartaAcc, int x, int y, int equipo, int xOp, int yOp, String nomCarta) {
         boolean cartaEncontrada = false;
         CartaAccion cartaA = null;
-        if(equipo - 1 == turno % 2 && (cartaAccionActivaJ1 ==null && equipo == 1) || (cartaAccionActivaJ2 ==null && equipo == 2)) { //Comprobamos que el equipo que juega es el correcto segun el turno
+        if (equipo - 1 == turno % 2 && ((cartaAccionActivaJ1 == null && equipo == 1) || (cartaAccionActivaJ2 == null && equipo == 2))) { // Turno correcto y aún no hay otra acción activa de ese equipo
             for (CartaAccion ca : cartasA) {
                 if (ca.getNombre().equals(nomCartaAcc)) {
                     if (ca.jugarCarta(this, x, y, equipo, xOp, yOp, nomCarta)) {
+                        transferirRestriccionSoloSiJuegaAccion(equipo);
                         turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado)
                         cartaEncontrada = true;
+                        String acc = ca.getAccion();
+                        if ("SOLO_PARA_ADELANTE".equals(acc) || "SOLO_PARA_ATRAS".equals(acc)) {
+                            activarRestriccionSolo(equipo, acc);
+                        }
                         cartaAccionActivaJ1 = (equipo == 1) ? ca : null;
                         cartaAccionActivaJ2 = (equipo == 2) ? ca : null;
                         turnoAccionJ1 = (equipo == 1) ? turno : turnoAccionJ1;
@@ -488,6 +534,14 @@ public class Partida{
                 movExiste = movimientoARealizar.getX() == mov.getX() && movimientoARealizar.getY() == mov.getY();
                 if (movExiste){
                     break;
+                }
+            }
+            if (movExiste && restriccionSoloTipo != null && restriccionSoloEquipoAfectado == equipo) {
+                if ("SOLO_PARA_ADELANTE".equals(restriccionSoloTipo) && normDy < 0) {
+                    movExiste = false;
+                }
+                if ("SOLO_PARA_ATRAS".equals(restriccionSoloTipo) && normDy > 0) {
+                    movExiste = false;
                 }
             }
             //Por si acaso comprobamos que el movimiento existe y que se hayan puesto las trampas
@@ -562,12 +616,22 @@ public class Partida{
 
             rotarCartas(carta.getNombre(), equipo);
             turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado)
-            if (turnoAccionJ1 != -1 && turno > turnoAccionJ1 && equipo - 1 != (turno-1)%2) {
+            if (restriccionSoloTipo != null && restriccionSoloEquipoAfectado == equipo) {
+                int rivalDelCaster = restriccionSoloCaster == 1 ? 2 : 1;
+                if (equipo == rivalDelCaster) {
+                    limpiarRestriccionSolo();
+                } else if (equipo == restriccionSoloCaster) {
+                    restriccionSoloEquipoAfectado = rivalDelCaster;
+                }
+            }
+            if (cartaAccionActivaJ1 != null && turnoAccionJ1 != -1 && turno > turnoAccionJ1 && equipo == 2 && "ESPEJO".equals(cartaAccionActivaJ1.getAccion())) {
                 cartaAccionActivaJ1.deshacerCarta(this);
+                cartaAccionActivaJ1 = null;
                 turnoAccionJ1 = -1;
             }
-            if (turnoAccionJ2 != -1 && turno > turnoAccionJ2 && equipo - 1 != (turno-1)%2) { //Deshacemos la accion solo si ha movido el rival despues de activar la accion
+            if (cartaAccionActivaJ2 != null && turnoAccionJ2 != -1 && turno > turnoAccionJ2 && equipo == 1 && "ESPEJO".equals(cartaAccionActivaJ2.getAccion())) {
                 cartaAccionActivaJ2.deshacerCarta(this);
+                cartaAccionActivaJ2 = null;
                 turnoAccionJ2 = -1;
             }
             return 0; //Movimiento realizado con exito

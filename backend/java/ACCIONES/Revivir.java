@@ -12,7 +12,7 @@ public class Revivir extends Accion {
     @Override
     public boolean ejecutar(Partida partida, int x, int y, int equipo, int xOp, int yOp, String nomCarta) {
         System.out.println("Ejecutando acción: " + getNombre());
-        boolean posicionValida = (equipo == 2 && y <= 4) || (equipo == 1 && y >= 4);
+        boolean posicionValida = (equipo == 2 && y >= 3) || (equipo == 1 && y <= 3);
         return posicionValida && partida.getPosicion(x, y).setFicha(new Ficha(false, equipo)) == 0;
     }
 

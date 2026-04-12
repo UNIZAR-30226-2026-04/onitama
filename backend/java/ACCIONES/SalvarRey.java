@@ -12,7 +12,7 @@ public class SalvarRey extends Accion {
     @Override
     public boolean ejecutar(Partida partida, int x, int y, int equipo, int xOp, int yOp, String nomCarta) {
         System.out.println("Ejecutando acción: " + getNombre());
-        boolean posicionValida = (equipo == 2 && y <= 4) || (equipo == 1 && y >= 4);
+        boolean posicionValida = (equipo == 2 && y >= 3) || (equipo == 1 && y <= 3);
         if (posicionValida && partida.getPosicion(x, y).setFicha(new Ficha(true, equipo)) == 0) {
             partida.getRey(equipo).setFicha(null);
             return true;

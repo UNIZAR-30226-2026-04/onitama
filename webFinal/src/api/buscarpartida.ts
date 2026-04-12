@@ -102,8 +102,9 @@ export function buscarPartida(
 
       const handler = (msg: WS.MensajeWS) => {
         if (resuelto) return;
-        // Guardar todos los datos para que /partida/page.tsx los lea al inicializarse
-        sessionStorage.setItem("datosPartida", JSON.stringify(msg));
+        // Guardar todos los datos para que /partida/page.tsx los lea al inicializarse.
+        // partida_nueva: true indica que es un juego nuevo → frontend arranca en COLOCAR_TRAMPA
+        sessionStorage.setItem("datosPartida", JSON.stringify({ ...msg, partida_nueva: true }));
 
         resolver({
           estado: "ENCONTRADA",

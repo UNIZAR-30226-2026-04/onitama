@@ -130,6 +130,8 @@ export interface RespuestaPartidaLista {
 export interface RespuestaCartaAccionJugada {
   tipo: "CARTA_ACCION_JUGADA";
   carta_accion: string;
+  /** Tipo de acción (p. ej. ESPEJO, CEGAR); necesario para aplicar el efecto en el cliente rival */
+  accion?: string;
   x: number;
   y: number;
   x_op: number;

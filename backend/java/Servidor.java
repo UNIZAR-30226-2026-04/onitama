@@ -1258,9 +1258,17 @@ public class Servidor extends WebSocketServer {
                 msg.put("tipo", "CARTA_ACCION_INVALIDA");
                 conn.send(msg.toString());
             }else{
+                String accionTipo = "";
+                for (CartaAccion ca : pj.partida.getCartasAccion()) {
+                    if (ca.getNombre().equals(nomCartaAcc)) {
+                        accionTipo = ca.getAccion();
+                        break;
+                    }
+                }
                 JSONObject msg = new JSONObject();
                 msg.put("tipo", "CARTA_ACCION_JUGADA");
                 msg.put("carta_accion", nomCartaAcc);
+                msg.put("accion", accionTipo);
                 msg.put("x", x);
                 msg.put("y", y);
                 msg.put("x_op", xOp);
@@ -1325,8 +1333,9 @@ public class Servidor extends WebSocketServer {
                     }
                     msg1.put("cartas_accion", cartasJSON1);
                     msg2.put("cartas_accion", cartasJSON2);
-                    conn.send(msg1.toString());
-                    pj.getOponente(conn).ws.send(msg2.toString());
+                    // msg1 siempre a p1 (equipo 1) y msg2 siempre a p2 (equipo 2)
+                    pj.p1.ws.send(msg1.toString());
+                    pj.p2.ws.send(msg2.toString());
                 }
             }
         }

@@ -13,7 +13,7 @@
  * como con las que llegan en tiempo real por WebSocket.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { obtenerJugadorActivo, guardarSesion, cerrarSesion, type DatosSesion } from "@/lib/sesion";
@@ -145,6 +145,13 @@ export default function PartidasPage() {
     idPartida: number;
     idNotificacion: number | null;
   } | null>(null);
+
+  /** Refs para ERROR_NO_UNIDO: el servidor usa el mismo tipo para invitación privada y reanudar. */
+  const invitacionPrivadaRef = useRef(invitacionPrivadaEnCurso);
+  const reanudarEnCursoRef = useRef(reanudarEnCurso);
+  invitacionPrivadaRef.current = invitacionPrivadaEnCurso;
+  reanudarEnCursoRef.current = reanudarEnCurso;
+
   /** Amigo seleccionado en la pestaña Reanudar */
   const [amigoSeleccionadoReanudar, setAmigoSeleccionadoReanudar] = useState<InfoAmigo | null>(null);
   /** Partidas pausadas con el amigo seleccionado */
@@ -348,7 +355,9 @@ export default function PartidasPage() {
   /** Mensajes WS para flujo de invitación a partida privada. */
   useEffect(() => {
     const unsubEncontrada = WS.suscribir("PARTIDA_PRIVADA_ENCONTRADA", (msg) => {
-      sessionStorage.setItem("datosPartida", JSON.stringify(msg));
+      // partida_nueva: true solo en partidas nuevas (no en reanudaciones)
+      const esReanudacion = !!reanudarEnCursoRef.current;
+      sessionStorage.setItem("datosPartida", JSON.stringify({ ...msg, partida_nueva: !esReanudacion }));
       setInvitacionPrivadaEnCurso(null);
       setMostrarModalPartidaPrivada(false);
       router.push("/presentacion-partida");
@@ -360,10 +369,20 @@ export default function PartidasPage() {
       setMensajePrivada("Tu amigo rechazó la solicitud de partida privada.");
     });
 
-    const unsubTimeout = WS.suscribir("ERROR_NO_UNIDO", () => {
+    /** Mismo tipo de mensaje del servidor para invitación privada y reanudar (timeout / rechazo). */
+    const unsubErrorNoUnido = WS.suscribir("ERROR_NO_UNIDO", () => {
+      const esperandoInvitacion = !!invitacionPrivadaRef.current;
+      const esperandoReanudar = !!reanudarEnCursoRef.current;
       setInvitacionPrivadaEnCurso(null);
+      setReanudarEnCurso(null);
       setMostrarModalPartidaPrivada(false);
-      setMensajePrivada("Tu amigo no aceptó la solicitud de partida en el tiempo límite.");
+      if (esperandoInvitacion) {
+        setMensajePrivada("Demasiado tarde: la invitación a partida privada ya no es válida.");
+      } else if (esperandoReanudar) {
+        setMensajePrivada("Tu amigo no aceptó reanudar la partida a tiempo.");
+      } else {
+        setMensajePrivada("La solicitud ha expirado o ya no es válida.");
+      }
     });
 
     const unsubDesconectado = WS.suscribir("ERROR_DESCONECTADO", () => {
@@ -387,20 +406,13 @@ export default function PartidasPage() {
       });
     });
 
-    // ERROR_NO_UNIDO puede llegar también cuando el amigo rechaza o expira el reanudar
-    const unsubErrorNoUnido = WS.suscribir("ERROR_NO_UNIDO", () => {
-      setReanudarEnCurso(null);
-      setMensajePrivada("Tu amigo no aceptó reanudar la partida.");
-    });
-
     return () => {
       unsubEncontrada();
       unsubRechazada();
-      unsubTimeout();
+      unsubErrorNoUnido();
       unsubDesconectado();
       unsubNotifEnviada();
       unsubSolicitudReanudar();
-      unsubErrorNoUnido();
     };
   }, [router]);
 
