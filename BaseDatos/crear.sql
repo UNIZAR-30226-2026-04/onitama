@@ -49,6 +49,8 @@ CREATE TABLE Partida (
     Es_Ganador_J1 BOOLEAN,
     Es_Ganador_J2 BOOLEAN,
     Turno INTEGER,
+    Pos_Trampa_J1 VARCHAR(10),
+    Pos_Trampa_J2 VARCHAR(10),
     FOREIGN KEY (J1) REFERENCES Jugador(Nombre_US),
     FOREIGN KEY (J2) REFERENCES Jugador(Nombre_US)
 );

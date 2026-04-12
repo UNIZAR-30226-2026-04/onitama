@@ -98,7 +98,7 @@ class Pareja {
         // Limpiamos partidas fantasma (abandonos por desconexión) antes de intentar crear una nueva
         new JDBC.PartidaJDBC().terminarPartidasEnCurso(_p1.nombre, _p2.nombre);
 
-        partida = new Partida(0, "JUGANDOSE", 0, tipo, null, null, 0, 0, _p1.nombre, _p2.nombre, false, false, 0);
+        partida = new Partida(0, "JUGANDOSE", 0, tipo, null, null, 0, 0, _p1.nombre, _p2.nombre, false, false, 0, null, null);
         if (!partida.registrarPartida()) {
             throw new RuntimeException("No se pudo registrar la partida: " + _p1.nombre + " o " + _p2.nombre + " ya tiene una partida activa (JUGANDOSE) en la BD.");
         }
@@ -180,7 +180,25 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    // Con 'iniciar' construimos los JSON de tipo PARTIDA_ENCONTRADA
+    // para poder recuperar cartas de acción en partidas privadas reanudadas
+    private void cartasAccionPartida(Pareja pj, JSONArray cartasJ1, JSONArray cartasJ2) {
+        List<CartaAccion> cartas = pj.partida.getCartasAccion();
+
+        for (CartaAccion carta : cartas) {
+            JSONObject JSONCarta = new JSONObject();
+            JSONCarta.put("nombre", carta.getNombre());
+            JSONCarta.put("estado", carta.getEstado());
+            JSONCarta.put("equipo", carta.getEquipo());
+
+            if (carta.getEquipo() == 1) {
+                cartasJ1.put(JSONCarta);
+            } else if (carta.getEquipo() == 2) {
+                cartasJ2.put(JSONCarta);
+            }
+        }
+    }
+
+    // Con 'iniciar' construimos los JSON de tipo PARTIDA_ENCONTRADA o PARTIDA_PRIVADA_ENCONTRADA
     public void iniciar(Pareja pj, String msgTipoPartida) {
 
         JSONArray mazoJ1 = new JSONArray();
@@ -197,8 +215,10 @@ public class Servidor extends WebSocketServer {
         msg1.put("cartas_jugador", mazoJ1);
         msg1.put("cartas_oponente", mazoJ2);
         msg1.put("carta_siguiente", cola);
-        // nuevo
         msg1.put("oponente_avatar_id", pj.p2.avatarId);
+        msg1.put("tablero_eq1", pj.partida.getPos_Fichas_Eq1());
+        msg1.put("tablero_eq2", pj.partida.getPos_Fichas_Eq2());
+        msg1.put("turno", pj.partida.getTurno());
 
         JSONObject msg2 = new JSONObject(); // al que le emparejan a j1
         msg2.put("tipo", msgTipoPartida);
@@ -209,8 +229,10 @@ public class Servidor extends WebSocketServer {
         msg2.put("cartas_jugador", mazoJ2);
         msg2.put("cartas_oponente", mazoJ1);
         msg2.put("carta_siguiente", cola);
-        // nuevo
         msg2.put("oponente_avatar_id", pj.p1.avatarId);
+        msg2.put("tablero_eq1", pj.partida.getPos_Fichas_Eq1());
+        msg2.put("tablero_eq2", pj.partida.getPos_Fichas_Eq2());
+        msg2.put("turno", pj.partida.getTurno());
 
         pj.p1.ws.send(msg1.toString());
         pj.p2.ws.send(msg2.toString());
@@ -470,6 +492,13 @@ public class Servidor extends WebSocketServer {
                 JSONObject msg = new JSONObject();
 
                 if (estado >= 0) {
+                    // almacenamos cambios en bd para todos los movimientos exitosos
+                    try {
+                        pj.partida.actualizarBD();
+                    } catch (Exception e) {
+                        System.err.println("Error al actualizar BD después de movimiento: " + e.getMessage());
+                    }
+
                     if (estado == 0) {
                         msg.put("tipo", "MOVER");
                         msg.put("col_origen", XO);
@@ -1238,6 +1267,12 @@ public class Servidor extends WebSocketServer {
                 msg.put("y_op", yOp);
                 msg.put("carta_robar", cartaRobar);
                 pj.getOponente(conn).ws.send(msg.toString()); //Avisamos al oponente de la carta que se ha jugado
+                // actualizamos turno y estado de cartas en bd
+                try {
+                    pj.partida.actualizarBD();
+                } catch (Exception e) {
+                    System.err.println("Error al actualizar BD después de jugar acción: " + e.getMessage());
+                }
             }
         }
     }
@@ -1775,6 +1810,10 @@ public class Servidor extends WebSocketServer {
                     JSONArray cola = new JSONArray();
                     cartasPartida(pj, mazoJ1, mazoJ2, cola);
 
+                    JSONArray cartasAccionJ1 = new JSONArray();
+                    JSONArray cartasAccionJ2 = new JSONArray();
+                    cartasAccionPartida(pj, cartasAccionJ1, cartasAccionJ2);
+
                     JSONObject msg1 = new JSONObject();
                     msg1.put("tipo", "PARTIDA_PRIVADA_ENCONTRADA");
                     msg1.put("partida_id", partidaGuardada.getIDPartida());
@@ -1788,6 +1827,10 @@ public class Servidor extends WebSocketServer {
                     msg1.put("tablero_eq1", partidaGuardada.getPos_Fichas_Eq1());
                     msg1.put("tablero_eq2", partidaGuardada.getPos_Fichas_Eq2());
                     msg1.put("turno", partidaGuardada.getTurno());
+                    msg1.put("trampa_j1_pos", partidaGuardada.getTrampaPosJ1());
+                    msg1.put("trampa_j2_pos", partidaGuardada.getTrampaPosJ2());
+                    msg1.put("cartas_accion_jugador", cartasAccionJ1);
+                    msg1.put("cartas_accion_oponente", cartasAccionJ2);
 
                     JSONObject msg2 = new JSONObject();
                     msg2.put("tipo", "PARTIDA_PRIVADA_ENCONTRADA");
@@ -1802,6 +1845,10 @@ public class Servidor extends WebSocketServer {
                     msg2.put("tablero_eq1", partidaGuardada.getPos_Fichas_Eq1());
                     msg2.put("tablero_eq2", partidaGuardada.getPos_Fichas_Eq2());
                     msg2.put("turno", partidaGuardada.getTurno());
+                    msg2.put("trampa_j1_pos", partidaGuardada.getTrampaPosJ1());
+                    msg2.put("trampa_j2_pos", partidaGuardada.getTrampaPosJ2());
+                    msg2.put("cartas_accion_jugador", cartasAccionJ2);
+                    msg2.put("cartas_accion_oponente", cartasAccionJ1);
 
                     j1.ws.send(msg1.toString());
                     j2.ws.send(msg2.toString());

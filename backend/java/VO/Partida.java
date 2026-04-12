@@ -14,7 +14,7 @@ public class Partida{
     private static final int BASE_PUNTOS_DERROTA = 30;
 
     private int IDPartida, tiempo, muertesJ1, muertesJ2, turno, turnoAccionJ1, turnoAccionJ2;
-    private String estado, tipo; //Cambiar fichas por su correspondiente clase
+    private String estado, tipo, trampaPosJ1, trampaPosJ2; //Cambiar fichas por su correspondiente clase
     private boolean j1Ganador, j2Ganador, trampaJ1, trampaJ2, eleccionCartaAccionJ1, eleccionCartaAccionJ2;
     private Jugador jugador1, jugador2;
     private CartaAccion cartaAccionActivaJ1, cartaAccionActivaJ2;
@@ -28,7 +28,7 @@ public class Partida{
 
     public Posicion trampaActivada = null;
 
-    public Partida(int IDPartida, String estado, int tiempo, String tipo, String p1, String p2, int m1, int m2, String jugador1, String jugador2, boolean g1, boolean g2, int turno) {
+    public Partida(int IDPartida, String estado, int tiempo, String tipo, String p1, String p2, int m1, int m2, String jugador1, String jugador2, boolean g1, boolean g2, int turno, String trampaPosJ1, String trampaPosJ2) {
         this.IDPartida = IDPartida;
         this.jdbc = new PartidaJDBC();
         this.jdbcAccion = new CartasAccionJDBC();
@@ -46,6 +46,8 @@ public class Partida{
         this.tipo = tipo;
         this.turno = turno;
         this.muertesJ1 = m1;
+        this.trampaPosJ1 = trampaPosJ1;
+        this.trampaPosJ2 = trampaPosJ2;
         trampaJ1 = estado != null && (estado.equals("JUGANDOSE") || estado.equals("FINALIZADA")) && !esNueva; 
         trampaJ2 = estado != null && (estado.equals("JUGANDOSE") || estado.equals("FINALIZADA")) && !esNueva;
         this.muertesJ2 = m2;
@@ -73,8 +75,8 @@ public class Partida{
         }
     }
 
-    public int getTurno(){
-        return turno;
+    public int getTurno() {
+    return turno;
     }
 
     public boolean registrarPartida(){
@@ -172,6 +174,14 @@ public class Partida{
        return cartasM;
     }
 
+    public String getTrampaPosJ1() {
+        return trampaPosJ1;
+    }
+
+    public String getTrampaPosJ2() {
+        return trampaPosJ2;
+    }
+
     public void setCartasMovimiento(List<CartaMov> cartasM){
        this.cartasM = cartasM;
     }
@@ -214,6 +224,8 @@ public class Partida{
                 ca.setEquipo(equipo);
                 ca.setEstado("USABLE");
                 cartaEncontrada = true;
+                // si la partida se pausa antes de jugarla, se recupera con equipo y estado correctos al reanudar
+                ca.actualizarDatosPartida(IDPartida);
             }else if (ca.getNombre().equals(nomCarta)) {
                 cartaA = ca; 
             }
@@ -222,6 +234,8 @@ public class Partida{
         if (cartaEncontrada && cartaA != null) { //Asignamos la otra carta al oponente
             cartaA.setEquipo(equipoOp);
             cartaA.setEstado("USABLE");
+            // lo mismo con la carta que se rechaza
+            cartaA.actualizarDatosPartida(IDPartida);
         }
         eleccionCartaAccionJ1 = (equipo == 1) ? true : eleccionCartaAccionJ1;
         eleccionCartaAccionJ2 = (equipo == 2) ? true : eleccionCartaAccionJ2;
@@ -365,9 +379,22 @@ public class Partida{
         if (equipo == 1 && !trampaJ1) {
             p.activarTrampa();
             trampaJ1 = true;
+            trampaPosJ1 = columna + "," + fila;
+             try {
+                // único update, ocurre una sola vez
+                jdbc.updateTrampaJ1(IDPartida, trampaPosJ1);
+            } catch (SQLException e) {
+                System.err.println("Error al persistir trampa J1: " + e.getMessage());
+            }
         } else if(equipo == 2 && !trampaJ2){
             p.activarTrampa();
             trampaJ2 = true;
+            trampaPosJ2 = columna + "," + fila;
+             try {
+                jdbc.updateTrampaJ2(IDPartida, trampaPosJ2);
+            } catch (SQLException e) {
+                System.err.println("Error al persistir trampa J2: " + e.getMessage());
+            }
         } else{
             return -1; //Error: ya puso su trampa o la posicion no es valida
         }

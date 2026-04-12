@@ -33,7 +33,7 @@ public final class PartidaJDBC {
     }
 
     public int registrarPartida(Partida partida) throws SQLException {
-        final String sql = "INSERT INTO Partida (Estado, Tiempo, Tipo, Pos_Fichas_Eq1, Pos_Fichas_Eq2, FichasMuertas1, FichasMuertas2, J1, J2, Es_Ganador_J1, Es_Ganador_J2, Turno) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO Partida (Estado, Tiempo, Tipo, Pos_Fichas_Eq1, Pos_Fichas_Eq2, FichasMuertas1, FichasMuertas2, J1, J2, Es_Ganador_J1, Es_Ganador_J2, Turno, Pos_Trampa_J1, Pos_Trampa_J2) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         //Añadimos Statement.RETURN_GENERATED_KEYS al preparar la sentencia para que nos devuelva el id generado
         try (Connection conn = dataSource.getConnection();
@@ -51,6 +51,8 @@ public final class PartidaJDBC {
             ps.setBoolean(10, partida.isEs_Ganador_J1());
             ps.setBoolean(11, partida.isEs_Ganador_J2());
             ps.setInt(12, partida.getTurno());
+            ps.setString(13, partida.getTrampaPosJ1());
+            ps.setString(14, partida.getTrampaPosJ2());
             
             int filasAfectadas = ps.executeUpdate();
             if (filasAfectadas > 0) {
@@ -267,6 +269,34 @@ public final class PartidaJDBC {
         }
     }
 
+    // UPDATES DE CASILLA TRAMPA PARA QUE NO SEAN NULL AL RECUPERAR PARTIDA PRIVADA
+    // registrarPartida todavía pone null en casillas trampa porque los jugadores no las han
+    // elegido, entonces actualizarBD también las guardaba como null.
+    // Este update se va a hacer una única vez por casilla trampa para poder recuperar las coordenadas.
+    public boolean updateTrampaJ1(int ID, String pos) throws SQLException {
+        try(Connection c = dataSource.getConnection(); 
+            PreparedStatement p = c.prepareStatement("UPDATE Partida SET Pos_Trampa_J1 = ? WHERE ID_Partida = ?")) { 
+            p.setString(1, pos); 
+            p.setInt(2, ID); 
+            p.executeUpdate(); 
+            return true;
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    public boolean updateTrampaJ2(int ID, String pos) throws SQLException {
+        try(Connection c = dataSource.getConnection(); 
+            PreparedStatement p = c.prepareStatement("UPDATE Partida SET Pos_Trampa_J2 = ? WHERE ID_Partida = ?")) { 
+            p.setString(1, pos); 
+            p.setInt(2, ID); 
+            p.executeUpdate(); 
+            return true;
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
     public void borrar(int IDPartida) throws SQLException {
         final String sql = "DELETE FROM Partida WHERE ID_Partida = ?";
         try (Connection conn = dataSource.getConnection();
@@ -291,7 +321,9 @@ public final class PartidaJDBC {
             rs.getString("J2"),
             rs.getBoolean("Es_Ganador_J1"),
             rs.getBoolean("Es_Ganador_J2"),
-            rs.getInt("Turno")
+            rs.getInt("Turno"),
+            rs.getString("Pos_Trampa_J1"),
+            rs.getString("Pos_Trampa_J2")
         );
     }
 }
