@@ -347,16 +347,32 @@ public class Partida{
         this.estado = "FINALIZADA";
         // Cores: +10 victoria, 0 derrota (sin cambio por tablero)
         if (j1Ganador && jugador1 != null) {
-            jugador1.registrarPartida(10, puntosKatanasSegunTablero(true, 1), true);
+            if(tipo.equals("PRIVADA")){
+                jugador1.registrarPartida(0, 0, true);
+            }else{
+                jugador1.registrarPartida(10, puntosKatanasSegunTablero(true, 1), true);
+            }
         }
         if (j2Ganador && jugador2 != null) {
-            jugador2.registrarPartida(10, puntosKatanasSegunTablero(true, 2), true);
+            if(tipo.equals("PRIVADA")){
+                jugador2.registrarPartida(0, 0, true);
+            }else{
+                jugador2.registrarPartida(10, puntosKatanasSegunTablero(true, 2), true);
+            }
         }
         if (!j1Ganador && jugador1 != null) {
-            jugador1.registrarPartida(0, puntosKatanasSegunTablero(false, 1), false);
+            if(tipo.equals("PRIVADA")){
+                jugador1.registrarPartida(0, 0, false);
+            }else{
+                jugador1.registrarPartida(10, puntosKatanasSegunTablero(false, 1), false);
+            }
         }
         if (!j2Ganador && jugador2 != null) {
-            jugador2.registrarPartida(0, puntosKatanasSegunTablero(false, 2), false);
+            if(tipo.equals("PRIVADA")){
+                jugador2.registrarPartida(0, 0, false);
+            }else{
+                jugador2.registrarPartida(10, puntosKatanasSegunTablero(false, 2), false);
+            }
         }
         return actualizarBD();
     }
