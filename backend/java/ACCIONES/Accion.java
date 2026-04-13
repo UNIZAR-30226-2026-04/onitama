@@ -16,4 +16,8 @@ public abstract class Accion {
     public abstract boolean ejecutar(Partida partida, int x, int y, int equipo, int xOp, int yOp, String nomCarta);
 
     public abstract void deshacer(Partida partida);
+
+    public boolean esMovPermitido(int x, int y){
+        return true;
+    }
 }

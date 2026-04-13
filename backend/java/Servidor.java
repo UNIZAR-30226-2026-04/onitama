@@ -635,7 +635,14 @@ public class Servidor extends WebSocketServer {
             mutexParejas.release(); // SIGNAL
         }
 
-        if (pj != null) {
+        if (pj != null) { 
+            final int idPartida = pj.partida.getIDPartida();
+
+            ScheduledFuture<?> timerAntiguo = esperaPartida.remove(idPartida);
+            if (timerAntiguo != null) {
+                timerAntiguo.cancel(false);
+            }
+
             InfoJugador oponente = pj.getOponente(conn);
             JSONObject msg = new JSONObject();
 
@@ -1255,6 +1262,48 @@ public class Servidor extends WebSocketServer {
         }
 
         if(pj != null){
+            final int idPartida = pj.partida.getIDPartida();
+
+            ScheduledFuture<?> timerAntiguo = esperaPartida.remove(idPartida);
+            if (timerAntiguo != null) {
+                timerAntiguo.cancel(false);
+            }
+
+            final Pareja pjFinal = pj;
+            final WebSocket connFinal = conn;
+            final int equipoFinal = equipo;
+
+            ScheduledFuture<?> timerNuevo = temporizador.schedule(() -> {
+                JSONObject msg1 = new JSONObject();
+                JSONObject msg2 = new JSONObject();
+                System.out.print("TIEMPO!!!");
+                int eq = equipoFinal;
+                if(eq == 1){
+                    eq = 2;
+                }else{
+                    eq = 1;
+                }
+                
+                msg1.put("tipo", "DERROTA");
+                msg2.put("tipo", "VICTORIA");
+                msg2.put("motivo", "FIN_PARTIDA");
+                msg2.put("equipo_responsable", eq);
+
+                InfoJugador oponente = pjFinal.getOponente(connFinal);
+                oponente.ws.send(msg1.toString());
+                connFinal.send(msg2.toString());
+
+                pjFinal.partida.abandonarPartida(eq);
+                try {
+                    mutexParejas.acquire();
+                    parejas.remove(pjFinal);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    mutexParejas.release();
+                }
+            }, 2, TimeUnit.MINUTES);
+            
             boolean estado = pj.partida.jugarAccion(nomCartaAcc, x, y, equipo, xOp, yOp, cartaRobar);
             if(!estado){
                 JSONObject msg = new JSONObject();

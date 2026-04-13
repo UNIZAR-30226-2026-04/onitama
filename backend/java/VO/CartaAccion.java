@@ -115,6 +115,10 @@ public class CartaAccion {
         this.puntosMin = puntosMin;
     }
 
+    public boolean permiteMovimiento(int x, int y){
+        return accionEjecutable.esMovPermitido(x, y);
+    }
+
     public boolean jugarCarta(Partida partida, int x, int y, int equipo, int xOp, int yOp, String nomCarta){
         if (estado.equals("USABLE") &&  equipo == this.equipo && accion.equals("CEGAR")) {
             return true; //Como es un efecto visual, se manejara en el front (solo se mandara el mensaje avisando que se ha jugado)

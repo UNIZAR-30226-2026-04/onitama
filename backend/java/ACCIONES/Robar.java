@@ -21,6 +21,7 @@ public class Robar extends Accion {
                 carta.setEstado("EQ"+equipo);
                 carta.actualizarDatosPartida(partida.getIDPartida());
                 encontrada = true;
+                partida.decrementarTurno(); //Decrementamos turno porque seguira siendo nuestro turno
             }
             if (carta.getEstado().equals("MAZO")) {
                 if (encontrada) {
