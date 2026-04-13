@@ -72,6 +72,55 @@ class Partida(
         val equipo: Int
     ): MensajeCliente()
 
+    @Serializable
+    @SerialName("SOLICITAR_PAUSA")
+    data class MensajeSolicitarPausa(
+        val remitente: String,
+        val destinatario: String, 
+        val idPartida: Int
+    ) : MensajeCliente()
+
+    @Serializable
+    @SerialName("ACEPTAR_PAUSA")
+    data class MensajeAceptarPausa(
+        val idNotificacion: Int,
+        val nombre: String
+    ) : MensajeCliente()
+
+    @Serializable
+    @SerialName("RECHAZAR_PAUSA")
+    data class MensajeRechazarPausa(
+        val idNotificacion: Int,
+        val nombre: String
+    ) : MensajeCliente()
+
+    @Serializable
+    @SerialName("PONER_TRAMPA")
+    data class MensajePonerTrampa(
+        val equipo: Int,
+        val fila: Int,
+        val columna: Int
+    ) : MensajeCliente()
+
+    @Serializable
+    @SerialName("CARTA_ACCION")
+    data class MensajeSeleccionarCartaAccion(
+        val carta: String,
+        val equipo: Int
+    ) : MensajeCliente()
+
+    @Serializable
+    @SerialName("JUGAR_CARTA_ACCION")
+    data class MensajeJugarCartaAccion(
+        val cartaAccion: String,
+        val equipo: Int,
+        val x: Int,
+        val y: Int,
+        val x_op: Int = -1,
+        val y_op: Int = -1,
+        val cartaRobar: String = ""
+    ) : MensajeCliente()
+
     // ----------------------------------------------------
     // MENSAJES QUE RECIBIMOS DEL SERVIDOR (Servidor -> Cliente)
     // ----------------------------------------------------
@@ -84,6 +133,13 @@ class Partida(
     )
 
     @Serializable
+    data class CartaAccionJson(
+        val nombre: String,
+        val accion: String,
+        val estado: String? = null
+    )
+
+    @Serializable
     @SerialName("PARTIDA_ENCONTRADA")
     data class RespuestaPartidaEncontrada(
         val partida_id: Int,
@@ -92,12 +148,40 @@ class Partida(
         val oponentePt: Int,
         val cartas_jugador: List<CartaJson>,
         val cartas_oponente: List<CartaJson>,
-        val carta_siguiente: List<CartaJson>
+        val carta_siguiente: List<CartaJson>,
+        val oponente_avatar_id: String? = null,
+        val tablero_eq1: String? = null,
+        val tablero_eq2: String? = null,
+        val turno: Int? = null,
+        val cartas_accion_jugador: List<CartaAccionJson>? = emptyList(),
+        val cartas_accion_oponente: List<CartaAccionJson>? = emptyList(),
+        val posTrampa_jugador: String? = null,
+        val posTrampa_oponente: String? = null
     ): MensajeServidor() {
         fun obtenerEquipoID(): EquipoID {
             return if (equipo == 1) EquipoID.AZUL else EquipoID.ROJO
         }
     }
+
+    @Serializable
+    @SerialName("PARTIDA_PRIVADA_ENCONTRADA")
+    data class RespuestaPartidaPrivadaEncontrada(
+        val partida_id: Int,
+        val equipo: Int,
+        val oponente: String,
+        val oponentePt: Int,
+        val cartas_jugador: List<CartaJson>,
+        val cartas_oponente: List<CartaJson>,
+        val carta_siguiente: List<CartaJson>,
+        val oponente_avatar_id: String? = null,
+        val tablero_eq1: String? = null,
+        val tablero_eq2: String? = null,
+        val turno: Int? = null,
+        val cartas_accion_jugador: List<CartaAccionJson>? = emptyList(),
+        val cartas_accion_oponente: List<CartaAccionJson>? = emptyList(),
+        val posTrampa_jugador: String? = null,
+        val posTrampa_oponente: String? = null
+    ): MensajeServidor()
 
     @Serializable
     @SerialName("TU_TURNO")
@@ -110,7 +194,8 @@ class Partida(
         val fila_origen: Int,
         val col_destino: Int,
         val fila_destino: Int,
-        val carta: String
+        val carta: String,
+        val trampa_activada: Boolean? = false
     ): MensajeServidor()
 
     @Serializable
@@ -130,6 +215,60 @@ class Partida(
     @Serializable
     @SerialName("DERROTA")
     object RespuestaDerrota : MensajeServidor() // Convertido a object
+
+    @Serializable
+    @SerialName("SOLICITUD_PAUSA")
+    data class RespuestaSolicitudPausa(
+        val remitente: String,
+        val idNotificacion: Int
+    ) : MensajeServidor()
+
+    @Serializable
+    @SerialName("PARTIDA_PAUSADA")
+    object RespuestaPartidaPausada : MensajeServidor()
+
+    @Serializable
+    @SerialName("PAUSA_RECHAZADA")
+    object RespuestaPausaRechazada : MensajeServidor()
+
+    @Serializable
+    @SerialName("SELECCIONE_CARTA_ACCION")
+    data class RespuestaSeleccioneCartaAccion(
+        val cartas_accion: List<CartaAccionJson>
+    ) : MensajeServidor()
+
+    @Serializable
+    @SerialName("PARTIDA_LISTA")
+    data class RespuestaPartidaLista(
+        val cartas_accion: List<CartaAccionJson>
+    ) : MensajeServidor()
+
+    @Serializable
+    @SerialName("TRAMPA_ACTIVADA")
+    data class RespuestaTrampaActivada(
+        val columna: Int,
+        val fila: Int
+    ) : MensajeServidor()
+
+    @Serializable
+    @SerialName("CARTA_ACCION_JUGADA")
+    data class RespuestaCartaAccionJugada(
+        val carta_accion: String,
+        val equipo: Int,
+        val x: Int,
+        val y: Int,
+        val x_op: Int,
+        val y_op: Int,
+        val carta_robar: String
+    ) : MensajeServidor()
+
+    @Serializable
+    @SerialName("TRAMPA_INVALIDA")
+    object RespuestaTrampaInvalida : MensajeServidor()
+
+    @Serializable
+    @SerialName("CARTA_ACCION_INVALIDA")
+    object RespuestaCartaAccionInvalida : MensajeServidor()    
 
     /**
      * Devuelve una función lambda () -> Unit que sirve para desconectar (limpiar).
@@ -231,6 +370,49 @@ class Partida(
     fun enviarAbandono(quien: Int):Boolean{
         val msg = MensajeAbandonar(equipo = quien)
         return enviar(msg)
+    }
+
+    fun enviarPonerTrampa(
+        equipo: Int,
+        fila: Int,
+        columna: Int
+    ) : Boolean {
+        return enviar(MensajePonerTrampa(equipo, fila, columna))
+    }
+
+    fun enviarSeleccionAccion(
+        nombreCartaAccion: String,
+        equipo: Int
+    ) : Boolean {
+        return enviar(MensajeSeleccionarCartaAccion(nombreCartaAccion, equipo))
+    }
+
+    fun enviarJugarCartaAccion(
+        datos: MensajeJugarCartaAccion
+    ) : Boolean {
+        return enviar(datos)
+    }
+
+    fun enviarSolicitudPausa(
+        remitente: String,
+        destinatario: String,
+        idPartida: Int
+    ) : Boolean {
+        return enviar(MensajeSolicitarPausa(remitente, destinatario, idPartida))
+    }
+
+    fun enviarAceptarPausa(
+        idNotificacion: Int,
+        miNombre: String
+    ) : Boolean {
+        return enviar(MensajeAceptarPausa(idNotificacion, miNombre))
+    }
+
+    fun enviarRechazarPausa(
+        idNotificacion: Int,
+        miNombre: String
+    ) : Boolean {
+        return enviar(MensajeRechazarPausa(idNotificacion, miNombre))
     }
 
 }
