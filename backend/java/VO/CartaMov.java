@@ -64,14 +64,13 @@ public class CartaMov {
         estado = "EQ"+eq;
     }
 
-    public boolena perteneceAlEquipo(int eq) {
+    public boolean perteneceAlEquipo(int eq) {
         String est = "EQ"+eq;
         return estado.equals(est);
     }
 
-    public boolena estaMazo(int eq) {
-        String est = "EQ"+eq;
-        return estado.equals(est);
+    public boolean estaMazo() {
+        return estado.equals("MAZO");
     }
 
     public void marcarMazo() {
