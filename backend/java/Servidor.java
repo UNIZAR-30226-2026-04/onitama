@@ -170,9 +170,9 @@ public class Servidor extends WebSocketServer {
             JSONCarta.put("nombre", carta.getNombre());
             JSONCarta.put("movimientos", arrayMovimientos);
 
-            if ("EQ1".equals(carta.getEstado())) {
+            if (carta.perteneceAlEquipo(1)) {
                 mazoJ1.put(JSONCarta);
-            } else if ("EQ2".equals(carta.getEstado())) {
+            } else if (carta.perteneceAlEquipo(2)) {
                 mazoJ2.put(JSONCarta);
             } else {
                 cola.put(JSONCarta);

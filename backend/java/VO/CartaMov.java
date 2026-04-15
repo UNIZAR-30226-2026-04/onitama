@@ -60,6 +60,24 @@ public class CartaMov {
         return img;
     }
 
+    public void marcarEquipo(int eq) {
+        estado = "EQ"+eq;
+    }
+
+    public boolena perteneceAlEquipo(int eq) {
+        String est = "EQ"+eq;
+        return estado.equals(est);
+    }
+
+    public boolena estaMazo(int eq) {
+        String est = "EQ"+eq;
+        return estado.equals(est);
+    }
+
+    public void marcarMazo() {
+        estado = "MAZO";
+    }
+
     public void setImg(String img) {
         this.img = img;
     }

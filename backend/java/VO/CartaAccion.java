@@ -63,6 +63,35 @@ public class CartaAccion {
         jdbc = new CartasAccionJDBC();
     }
 
+    //Comprueba si la carta puede ser usada (estado USABLE y no usada previamente)
+    public boolean puedeUsarse(){
+        return "USABLE".equals(estado);
+    }
+
+    public void marcarActivada(){
+        estado = "ACTIVA";
+    }
+
+    public void marcarUsable(){
+        estado = "USABLE";
+    }
+
+    public void marcarUsada(){
+        estado = "USADA";
+    }
+
+    public void marcarEsperando(){
+        estado = "ESPERANDO";
+    }
+
+    public void marcarNoUsable(){
+        estado = "NO_USABLE";
+    }
+
+    public boolean estaActiva(){
+        return estado.equals("ACTIVA");
+    }
+
     public String getImg() {
         return img;
     }
@@ -120,11 +149,11 @@ public class CartaAccion {
     }
 
     public boolean jugarCarta(Partida partida, int x, int y, int equipo, int xOp, int yOp, String nomCarta){
-        if (estado.equals("USABLE") &&  equipo == this.equipo && accion.equals("CEGAR")) {
+        if (puedeUsarse() &&  equipo == this.equipo && accion.equals("CEGAR")) {
             return true; //Como es un efecto visual, se manejara en el front (solo se mandara el mensaje avisando que se ha jugado)
-        }else if (estado.equals("USABLE") && accionEjecutable != null && equipo == this.equipo) {
+        }else if (puedeUsarse() && accionEjecutable != null && equipo == this.equipo) {
             if(accionEjecutable.ejecutar(partida, x, y, equipo, xOp, yOp, nomCarta)) {
-                estado = "USADA";
+                marcarActivada();
                 return true;
             }
         }
@@ -153,11 +182,7 @@ public class CartaAccion {
         }
     }
 
-    //Comprueba si la carta puede ser usada (estado USABLE y no usada previamente)
-    public boolean puedeUsarse(){
-        return "USABLE".equals(estado);
-    }
-
+    /*
     //Marca la carta como usada cambiando su estado
     public void marcarComoUsada(){
         this.estado = "USADA";
@@ -167,5 +192,5 @@ public class CartaAccion {
     public boolean marcarComoUsada(int IDPartida){
         this.estado = "USADA";
         return actualizarDatosPartida(IDPartida);
-    }
+    }*/
 }

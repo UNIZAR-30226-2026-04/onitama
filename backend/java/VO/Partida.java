@@ -201,7 +201,21 @@ public class Partida{
             this.cartasM = jdbcMov.sacarCartasPartida(IDPartida);
             this.cartasA = jdbcAccion.sacarCartasPartida(IDPartida);
             if (this.cartasM == null) this.cartasM = new java.util.ArrayList<>();
-            if (this.cartasA == null) this.cartasA = new java.util.ArrayList<>();
+            if (this.cartasA == null){
+                this.cartasA = new java.util.ArrayList<>();
+            }else{
+                for(CartaAccion ca : cartasA){
+                    if(ca.estaActiva()){
+                        if(ca.getEquipo() == 1){
+                            cartaAccionJugadaJ1 = ca;
+                            accionActivadaJ1 = true;
+                        }else{
+                            cartaAccionJugadaJ2 = ca;
+                            accionActivadaJ2 = true;
+                        }
+                    }
+                }
+            }
         } catch (java.sql.SQLException e) {
             System.err.println("cargarCartas: error al cargar cartas de la BD - " + e.getMessage());
             if (this.cartasM == null) this.cartasM = new java.util.ArrayList<>();
@@ -227,7 +241,7 @@ public class Partida{
         for (CartaAccion ca : cartasA) {
             if (ca.getNombre().equals(nomCarta) && ca.getEquipo() == -equipo) { //Comprobamos que la carta es del mazo (equipo -1 o -2) y que el equipo que la quiere coger es el correcto
                 ca.setEquipo(equipo);
-                ca.setEstado("USABLE");
+                ca.marcarUsable();
                 cartaEncontrada = true;
                 // si la partida se pausa antes de jugarla, se recupera con equipo y estado correctos al reanudar
                 ca.actualizarDatosPartida(IDPartida);
@@ -239,7 +253,7 @@ public class Partida{
         int equipoOp = (equipo == 1) ? 2 : 1;
         if (cartaEncontrada && cartaA != null) { //Asignamos la otra carta al oponente
             cartaA.setEquipo(equipoOp);
-            cartaA.setEstado("USABLE");
+            cartaA.marcarUsable();
             // lo mismo con la carta que se rechaza
             cartaA.actualizarDatosPartida(IDPartida);
         }
@@ -252,17 +266,13 @@ public class Partida{
         int i = 0;
         for (CartaAccion ca : cartasA) {
             ca.setEquipo(-(i%2 + 1)); //Sin equipo (el - representa que se le da la opcion de elegirla a ese equipo)
-            ca.setEstado("ESPERANDO"); //Esperando a ser seleccionada al inicio
+            ca.marcarEsperando(); //Esperando a ser seleccionada al inicio
             i++;
             ca.actualizarDatosPartida(IDPartida);    
         }
         i = 0;
         for (CartaMov cm : cartasM) {
-            if (i%2 == 0) {
-                cm.setEstado("EQ1"); //Que se asigna al equipo 1 (si se juega -> MAZO)
-            } else {
-                cm.setEstado("EQ2"); //Que se asigna al equipo 2 (si se juega -> MAZO)
-            }
+            cm.marcarEquipo(i%2 + 1);
             cm.actualizarDatosPartida(IDPartida);
             i++;
             if(i == 4) break; //Asignamos las primeras 4, el resto al mazo
@@ -486,7 +496,7 @@ public class Partida{
             }
         }
         if (cartaEncontrada && cartaA != null) {
-            cartaA.setEstado("USADA"); //Marcamos la otra carta como usada porque solo se puede usar una carta de accion por partida y equipo
+            cartaA.marcarNoUsable(); //Marcamos la otra carta como usada porque solo se puede usar una carta de accion por partida y equipo
         }
         return cartaEncontrada;
     }
@@ -611,15 +621,17 @@ public class Partida{
             }
 
             rotarCartas(carta.getNombre(), equipo);
-            turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado) AQUI
+            turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado) 
             if (accionActivadaJ1 && cartaAccionJugadaJ1 != null && equipo == 2) {
                 cartaAccionJugadaJ1.deshacerCarta(this);
                 cartaAccionJugadaJ1 = null;
+                cartaAccionJugadaJ1.marcarUsada();
                 accionActivadaJ1 = false;
             }
             if (accionActivadaJ2 && cartaAccionJugadaJ2 != null && equipo == 1) {
                 cartaAccionJugadaJ2.deshacerCarta(this);
                 cartaAccionJugadaJ2 = null;
+                cartaAccionJugadaJ2.marcarUsada();
                 accionActivadaJ2 = false;
             }
             return 0; //Movimiento realizado con exito
@@ -637,8 +649,7 @@ public class Partida{
 
         //Buscar la carta usada
         for (CartaMov cm : cartasM) {
-            if (cm.getNombre().equals(cartaUsada) && 
-                ((equipo == 1 && "EQ1".equals(cm.getEstado())) || (equipo == 2 && "EQ2".equals(cm.getEstado())))) {
+            if (cm.getNombre().equals(cartaUsada) && (cm.perteneceAlEquipo(1) || cm.perteneceAlEquipo(2))) {
                 usada = cm;
                 break;
             }
@@ -650,7 +661,7 @@ public class Partida{
 
         //Buscar una carta del mazo para darle al equipo
         for (CartaMov cm : cartasM) {
-            if ("MAZO".equals(cm.getEstado())) {
+            if (cm.estaMazo()) {
                 nuevaDelMazo = cm;
                 break;
             }
@@ -661,11 +672,11 @@ public class Partida{
         }
 
         //La carta usada pasa al mazo
-        usada.setEstado("MAZO");
+        usada.marcarMazo();
         usada.actualizarDatosPartida(IDPartida);
 
         //La carta del mazo pasa al equipo
-        nuevaDelMazo.setEstado(equipo == 1 ? "EQ1" : "EQ2");
+        nuevaDelMazo.marcarEquipo(equipo);
         nuevaDelMazo.actualizarDatosPartida(IDPartida);
 
         return true;
