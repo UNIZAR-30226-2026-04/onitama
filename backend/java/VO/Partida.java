@@ -7,6 +7,10 @@ import JDBC.CartasAccionJDBC;
 import JDBC.CartasMovJDBC;
 import JDBC.JugadorJDBC;
 import JDBC.PartidaJDBC;
+import DAO.PartidaDAO;
+import DAO.CartasAccionDAO;
+import DAO.CartasMovDAO;
+import DAO.JugadorDAO;
 
 public class Partida{
     /** Base de katanas (puntos) al ganar / perder; se ajusta ± (mis fichas − su fichas) en tablero al finalizar. */
@@ -22,19 +26,19 @@ public class Partida{
     private List<CartaAccion> cartasA;
     private List<CartaMov> cartasM;
     private Tablero tablero;
-    private PartidaJDBC jdbc;
-    private CartasAccionJDBC jdbcAccion;
-    private CartasMovJDBC jdbcMov;
-    private JugadorJDBC jdbcJugador;
+    private PartidaDAO dao;
+    private CartasAccionDAO daoAccion;
+    private CartasMovDAO daoMov;
+    private JugadorDAO daoJugador;
 
     public Posicion trampaActivada = null;
 
     public Partida(int IDPartida, String estado, int tiempo, String tipo, String p1, String p2, int m1, int m2, String jugador1, String jugador2, boolean g1, boolean g2, int turno, String trampaPosJ1, String trampaPosJ2) {
         this.IDPartida = IDPartida;
-        this.jdbc = new PartidaJDBC();
-        this.jdbcAccion = new CartasAccionJDBC();
-        this.jdbcMov = new CartasMovJDBC();
-        this.jdbcJugador = new JugadorJDBC();
+        this.dao = new PartidaJDBC();
+        this.daoAccion = new CartasAccionJDBC();
+        this.daoMov = new CartasMovJDBC();
+        this.daoJugador = new JugadorJDBC();
         cartaAccionJugadaJ1 = null;
         cartaAccionJugadaJ2 = null;
         accionActivadaJ2 = false;
@@ -67,8 +71,8 @@ public class Partida{
 
         try {
             // 1. Buscamos los objetos Jugador
-            this.jugador1 = jdbcJugador.buscarJugador(jugador1);
-            this.jugador2 = jdbcJugador.buscarJugador(jugador2);
+            this.jugador1 = daoJugador.buscarJugador(jugador1);
+            this.jugador2 = daoJugador.buscarJugador(jugador2);
 
         } catch (java.sql.SQLException e) {
             this.jugador1 = null;
@@ -87,7 +91,7 @@ public class Partida{
     public boolean registrarPartida(){
         try {
             turno = 0; //Ciro: Mi idea es que siempre uno de los jugadores (siempre J1 por ejemplo)
-            IDPartida = jdbc.registrarPartida(this);
+            IDPartida = dao.registrarPartida(this);
             return IDPartida >= 0; //Se devuelve el id que asigna la base a la partida, si hay algun problema devuelve -1
         } catch (SQLException e) {
             return false;
@@ -97,9 +101,9 @@ public class Partida{
     public void asignarCartas(){
         try {
             int puntosMin = Math.min(this.jugador1.getPuntos(), this.jugador2.getPuntos());
-            java.util.List<CartaAccion> ca = jdbcAccion.asignar4CartasPartida(IDPartida, puntosMin);
+            java.util.List<CartaAccion> ca = daoAccion.asignar4CartasPartida(IDPartida, puntosMin);
             this.cartasA = ca != null ? ca : new java.util.ArrayList<>();
-            java.util.List<CartaMov> cm = jdbcMov.asignar7CartasPartida(IDPartida, puntosMin);
+            java.util.List<CartaMov> cm = daoMov.asignar7CartasPartida(IDPartida, puntosMin);
             this.cartasM = cm != null ? cm : new java.util.ArrayList<>();
             if (this.cartasA.isEmpty()) {
                 System.err.println("asignarCartas: no se obtuvieron cartas de acción para IDPartida=" + IDPartida + " puntosMin=" + puntosMin);
@@ -198,8 +202,8 @@ public class Partida{
     /** Carga las cartas de movimiento y acción desde la BD (necesario al reanudar una partida pausada). */
     public void cargarCartas() {
         try {
-            this.cartasM = jdbcMov.sacarCartasPartida(IDPartida);
-            this.cartasA = jdbcAccion.sacarCartasPartida(IDPartida);
+            this.cartasM = daoMov.sacarCartasPartida(IDPartida);
+            this.cartasA = daoAccion.sacarCartasPartida(IDPartida);
             if (this.cartasM == null) this.cartasM = new java.util.ArrayList<>();
             if (this.cartasA == null){
                 this.cartasA = new java.util.ArrayList<>();
@@ -284,7 +288,7 @@ public class Partida{
         StringPorReferencia p2 = new StringPorReferencia("");
         tablero.getPosicionesEquipos(p1, p2);
         try {
-            return jdbc.updateTurno(IDPartida, turno) | jdbc.updateEstado(IDPartida, estado) | jdbc.updateMuertesFichas2(IDPartida, muertesJ2) | jdbc.updateMuertesFichas1(IDPartida, muertesJ1) | jdbc.updateTiempo(IDPartida, tiempo) | jdbc.updateGanadorJ2(IDPartida, j2Ganador) | jdbc.updateGanadorJ1(IDPartida, j1Ganador) | jdbc.updatePosFichas1(IDPartida, p1.getValor()) | jdbc.updatePosFichas2(IDPartida, p2.getValor()); //| para que se ejecuten todos
+            return dao.updateTurno(IDPartida, turno) | dao.updateEstado(IDPartida, estado) | dao.updateMuertesFichas2(IDPartida, muertesJ2) | dao.updateMuertesFichas1(IDPartida, muertesJ1) | dao.updateTiempo(IDPartida, tiempo) | dao.updateGanadorJ2(IDPartida, j2Ganador) | dao.updateGanadorJ1(IDPartida, j1Ganador) | dao.updatePosFichas1(IDPartida, p1.getValor()) | dao.updatePosFichas2(IDPartida, p2.getValor()); //| para que se ejecuten todos
         } catch (SQLException e) {
             return false;
         }
@@ -307,7 +311,7 @@ public class Partida{
         }
         this.estado = "PAUSADA";
         try {
-            return jdbc.updateEstado(IDPartida, estado);
+            return dao.updateEstado(IDPartida, estado);
         } catch (SQLException e) {
             return false;
         }
@@ -320,7 +324,7 @@ public class Partida{
         }
         this.estado = "JUGANDOSE";
         try {
-            return jdbc.updateEstado(IDPartida, estado);
+            return dao.updateEstado(IDPartida, estado);
         } catch (SQLException e) {
             return false;
         }
@@ -414,7 +418,7 @@ public class Partida{
             trampaPosJ1 = columna + "," + fila;
              try {
                 // único update, ocurre una sola vez
-                jdbc.updateTrampaJ1(IDPartida, trampaPosJ1);
+                dao.updateTrampaJ1(IDPartida, trampaPosJ1);
             } catch (SQLException e) {
                 System.err.println("Error al persistir trampa J1: " + e.getMessage());
             }
@@ -423,7 +427,7 @@ public class Partida{
             trampaJ2 = true;
             trampaPosJ2 = columna + "," + fila;
              try {
-                jdbc.updateTrampaJ2(IDPartida, trampaPosJ2);
+                dao.updateTrampaJ2(IDPartida, trampaPosJ2);
             } catch (SQLException e) {
                 System.err.println("Error al persistir trampa J2: " + e.getMessage());
             }

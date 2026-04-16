@@ -2,11 +2,12 @@ package VO;
 
 import JDBC.SkinJDBC;
 import java.sql.SQLException;
+import DAO.SkinDAO;
 
 public class Skin {
     private String nombre, colorTablero, colorAliado, colorEnemigo;
     private int precio;
-    private SkinJDBC jdbc;
+    private SkinDAO dao;
 
     public Skin(String nombre, String colorTablero, String colorAliado, String colorEnemigo, int precio){
         this.nombre = nombre;
@@ -14,12 +15,12 @@ public class Skin {
         this.colorAliado = colorAliado;
         this.colorEnemigo = colorEnemigo;
         this.precio = precio;
-        jdbc = new SkinJDBC();
+        dao = new SkinJDBC();
     }
 
     public boolean registrarSkin(){
         try {
-            return jdbc.crearSkin(this);
+            return dao.crearSkin(this);
         } catch (SQLException e) {
             return false;
         }
@@ -67,7 +68,7 @@ public class Skin {
 
     public boolean actualizarBD(){
         try {
-            return jdbc.updatePrecio(nombre, precio) | jdbc.updateTablero(nombre, colorTablero) | jdbc.updateAliadas(nombre, colorAliado) | jdbc.updateEnemigas(nombre, colorEnemigo); //| para que se ejecuten todos
+            return dao.updatePrecio(nombre, precio) | dao.updateTablero(nombre, colorTablero) | dao.updateAliadas(nombre, colorAliado) | dao.updateEnemigas(nombre, colorEnemigo); //| para que se ejecuten todos
         } catch (SQLException e) {
             return false;
         }
