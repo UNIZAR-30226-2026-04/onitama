@@ -8,7 +8,6 @@ import DAO.JugadorDAO;
 import DAO.SkinDAO;
 import JDBC.JugadorJDBC;
 import JDBC.SkinJDBC;
-import gestor.GestorNotificaciones;
 
 //Faltan las skins
 public class Jugador {
@@ -19,7 +18,6 @@ public class Jugador {
     private String skinActiva;
 
     private List<Jugador> amigos;
-    private List<Notificacion> notificacionesPendientes;
     private List<Skin> misSkines;
     private JugadorDAO dao;
     private SkinDAO daoSkin;
@@ -39,7 +37,6 @@ public class Jugador {
         this.skinActiva = skinActiva;
 
         amigos = new ArrayList<>();
-        notificacionesPendientes = new ArrayList<>();
         misSkines = new ArrayList<>();
         dao = new JugadorJDBC();
         daoSkin = new SkinJDBC();
@@ -169,66 +166,8 @@ public class Jugador {
         }
     }
 
-    public void cargarNotificaciones(){
-        try {
-            GestorNotificaciones gestor = new GestorNotificaciones();
-            notificacionesPendientes = gestor.obtenerPendientes(nombre);
-        } catch (SQLException e) {
-            notificacionesPendientes = new ArrayList<>();
-        }
-    }
-
     public List<Jugador> getAmigos(){
         return amigos;
-    }
-
-    public List<Notificacion> getNotificacionesPendientes(){
-        return notificacionesPendientes;
-    }
-
-    public boolean solicitarAmistad(String destinatario){
-        try {
-            GestorNotificaciones gestor = new GestorNotificaciones();
-            return gestor.enviarSolicitudAmistad(nombre, destinatario) > 0;
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
-    public boolean enviarInvitacionPartida(String destinatario){
-        try {
-            GestorNotificaciones gestor = new GestorNotificaciones();
-            return gestor.enviarInvitacionPartida(nombre, destinatario) > 0;
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
-    public boolean aceptarNotificacion(int idNotificacion){
-        try {
-            GestorNotificaciones gestor = new GestorNotificaciones();
-            if (gestor.aceptarNotificacion(idNotificacion, nombre)) {
-                cargarAmigos();
-                cargarNotificaciones();
-                return true;
-            }
-            return false;
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
-    public boolean rechazarNotificacion(int idNotificacion){
-        try {
-            GestorNotificaciones gestor = new GestorNotificaciones();
-            if (gestor.rechazarNotificacion(idNotificacion, nombre)) {
-                cargarNotificaciones();
-                return true;
-            }
-            return false;
-        } catch (SQLException e) {
-            return false;
-        }
     }
     
     public boolean borrarAmigo(Jugador amigo){

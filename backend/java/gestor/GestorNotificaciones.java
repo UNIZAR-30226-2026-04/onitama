@@ -1,15 +1,15 @@
 package gestor;
 
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.List;
+
 import JDBC.JugadorJDBC;
 import JDBC.NotificacionJDBC;
 import JDBC.PartidaJDBC;
 import VO.Notificacion;
 import VO.Partida;
-
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.util.Calendar;
-import java.util.List;
 
 /**
  * Coordina la lógica de aceptar y rechazar notificaciones según su tipo.
