@@ -3,13 +3,11 @@ package gestor;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Calendar;
-import java.util.List;
 
 import JDBC.JugadorJDBC;
 import JDBC.NotificacionJDBC;
 import JDBC.PartidaJDBC;
 import VO.Notificacion;
-import VO.Partida;
 
 /**
  * Coordina la lógica de aceptar y rechazar notificaciones según su tipo.
@@ -27,11 +25,6 @@ public class GestorNotificaciones {
         this.notifJdbc = new NotificacionJDBC();
         this.jugadorJdbc = new JugadorJDBC();
         this.partidaJdbc = new PartidaJDBC();
-    }
-
-    //Obtiene las notificaciones pendientes de un jugador.
-    public List<Notificacion> obtenerPendientes(String nombreUsuario) throws SQLException {
-        return notifJdbc.obtenerPendientes(nombreUsuario);
     }
 
     // Acepta una notificación. La acción depende del tipo.
@@ -52,13 +45,6 @@ public class GestorNotificaciones {
             case Notificacion.TIPO_SOLICITUD_AMISTAD:
                 jugadorJdbc.insertarAmistad(n.getRemitente(), n.getDestinatario());
                 return notifJdbc.actualizarEstado(idNotificacion, Notificacion.ESTADO_ACEPTADA);
-
-            case Notificacion.TIPO_INVITACION_PARTIDA:
-                Partida partida = crearPartidaPrivada(n.getRemitente(), n.getDestinatario());
-                if (partida != null && partida.registrarPartida() && partida.iniciarPartida()) {
-                    return notifJdbc.actualizarEstado(idNotificacion, Notificacion.ESTADO_ACEPTADA);
-                }
-                return false;
 
             case Notificacion.TIPO_SOLICITUD_PAUSA:
                 if (n.getIdPartida() != null) {
@@ -91,17 +77,6 @@ public class GestorNotificaciones {
             return false;
         }
         return notifJdbc.actualizarEstado(idNotificacion, Notificacion.ESTADO_RECHAZADA);
-    }
-
-    // Envía una solicitud de amistad (crea notificación).
-    public int enviarSolicitudAmistad(String remitente, String destinatario) throws SQLException {
-        if (remitente.equals(destinatario)) return -1;
-        if (jugadorJdbc.sonAmigos(remitente, destinatario)) return -1;
-        if (existeNotificacionPendiente(Notificacion.TIPO_SOLICITUD_AMISTAD, remitente, destinatario)) return -1;
-
-        Notificacion n = new Notificacion(0, Notificacion.TIPO_SOLICITUD_AMISTAD, remitente, destinatario,
-                Notificacion.ESTADO_PENDIENTE, null, null, null);
-        return notifJdbc.crear(n);
     }
 
     // Envía invitación a partida privada.
@@ -149,20 +124,5 @@ public class GestorNotificaciones {
         Notificacion n = new Notificacion(0, Notificacion.TIPO_REANUDAR_PARTIDA, remitente, destinatario,
                 Notificacion.ESTADO_PENDIENTE, null, expiracion, idPartida);
         return notifJdbc.crear(n);
-    }
-
-    private Partida crearPartidaPrivada(String j1, String j2) {
-        return new Partida(-1, "Esperando", 0, "PRIVADA",
-                "", "", 0, 0, j1, j2, false, false, 0, null, null);
-    }
-
-    private boolean existeNotificacionPendiente(String tipo, String remitente, String destinatario) throws SQLException {
-        List<Notificacion> pend = notifJdbc.obtenerPendientes(destinatario);
-        for (Notificacion n : pend) {
-            if (tipo.equals(n.getTipo()) && remitente.equals(n.getRemitente())) {
-                return true;
-            }
-        }
-        return false;
     }
 }
