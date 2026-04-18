@@ -31,13 +31,13 @@ import JDBC.SkinJDBC;
 import JDBC.NotificacionJDBC;
 import VO.Notificacion;
 import JDBC.CartasMovJDBC;
+import JDBC.PartidaJDBC;
 
 // imports añadidos para trabajar con partidas privadas
 import gestor.GestorNotificaciones;
 import gestor.GestorSkin;
 import gestor.GestorJugador;
-
-import JDBC.PartidaJDBC;
+import gestor.GestorPartida;
 
 import java.util.Comparator;
 
@@ -99,7 +99,7 @@ class Pareja {
         p2 = _p2;
 
         // Limpiamos partidas fantasma (abandonos por desconexión) antes de intentar crear una nueva
-        new JDBC.PartidaJDBC().terminarPartidasEnCurso(_p1.nombre, _p2.nombre);
+        new GestorPartida().terminarPartidasEnCurso(_p1.nombre, _p2.nombre);
 
         partida = new Partida(0, "JUGANDOSE", 0, tipo, null, null, 0, 0, _p1.nombre, _p2.nombre, false, false, 0, null, null);
         if (!partida.registrarPartida()) {
@@ -1398,12 +1398,12 @@ public class Servidor extends WebSocketServer {
 
     public void solicitarPartidas(WebSocket conn, JSONObject obj, String tipo) {
         String usuario = obj.getString("usuario");
-        PartidaJDBC jdbc = new PartidaJDBC();
+        GestorPartida gestorPartida = new GestorPartida();
         JSONObject msg = new JSONObject();
         if (tipo.equals("PRIVADA")) {
             String amigo = obj.getString("amigo");
             try {
-                List<Partida> partidas = jdbc.buscarPartidasJugadorPrivadas(usuario, amigo);
+                List<Partida> partidas = gestorPartida.buscarPartidasJugadorPrivadas(usuario, amigo);
                 msg.put("tipo", "PARTIDAS_PRIVADAS");
                 msg.put("oponente", amigo);
                 JSONArray partidasJSON = new JSONArray();
@@ -1435,7 +1435,7 @@ public class Servidor extends WebSocketServer {
             }
         } else if (tipo.equals("PUBLICA")) {
             try {
-                List<Partida> partidas = jdbc.buscarPartidasJugadorPublicas(usuario);
+                List<Partida> partidas = gestorPartida.buscarPartidasJugadorPublicas(usuario);
                 msg.put("tipo", "PARTIDAS_PUBLICAS");
                 JSONArray partidasJSON = new JSONArray();
                 for (Partida p : partidas) {
@@ -1793,7 +1793,7 @@ public class Servidor extends WebSocketServer {
                         if (!pausada) {
                             System.err.println("pausarPartida falló para partida " + pj.partida.getIDPartida() + " (estado=" + pj.partida.getEstado() + "). Forzando estado PAUSADA.");
                             // Forzar actualización directa en BD por si hay inconsistencia de mayúsculas
-                            try { new JDBC.PartidaJDBC().updateEstado(pj.partida.getIDPartida(), "PAUSADA"); } catch (Exception ex) { ex.printStackTrace(); }
+                            try { new GestorPartida().updateEstado(pj.partida.getIDPartida(), "PAUSADA"); } catch (Exception ex) { ex.printStackTrace(); }
                         }
                         pj.partida.actualizarBD();  // guarda tablero, fichas y turno
                         try {
@@ -1887,10 +1887,10 @@ public class Servidor extends WebSocketServer {
                 System.out.println("gestionarRespuestaReanudar: aceptarNotificacion ok=" + ok);
                 if (ok) {
                     // cargamos partida de la base
-                    PartidaJDBC partidaJdbc = new PartidaJDBC();
+                    GestorPartida gestorPartida = new GestorPartida();
                     Integer idPartida = notif.getIdPartida();
                     System.out.println("gestionarRespuestaReanudar: buscando partida id=" + idPartida);
-                    Partida partidaGuardada = idPartida != null ? partidaJdbc.buscarPorId(idPartida) : null;
+                    Partida partidaGuardada = idPartida != null ? gestorPartida.buscarPorId(idPartida) : null;
                     if (partidaGuardada == null) {
                         System.err.println("gestionarRespuestaReanudar: partida no encontrada id=" + idPartida);
                         conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());

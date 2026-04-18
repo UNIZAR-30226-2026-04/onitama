@@ -1,13 +1,12 @@
 package gestor;
-
+ 
 import java.sql.SQLException;
 import java.util.List;
-
+ 
 import JDBC.SkinJDBC;
 import JDBC.JugadorJDBC;
 import VO.Skin;
 import VO.Jugador;
-
 
 public class GestorJugador {
 

@@ -8,10 +8,6 @@ import JDBC.JugadorJDBC;
 import VO.Skin;
 import VO.Jugador;
 
-/**
- * Coordina la lógica de negocio relacionada con skins.
- * El servidor nunca llama a SkinJDBC directamente: usa este gestor.
- */
 public class GestorSkin {
  
     private final SkinJDBC skinJdbc;
