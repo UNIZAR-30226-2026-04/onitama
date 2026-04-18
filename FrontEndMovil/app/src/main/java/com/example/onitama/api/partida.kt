@@ -268,15 +268,13 @@ class Partida(
 
     @Serializable
     @SerialName("CARTA_ACCION_INVALIDA")
-    object RespuestaCartaAccionInvalida : MensajeServidor()    
+    object RespuestaCartaAccionInvalida : MensajeServidor()
 
     /**
      * Devuelve una función lambda () -> Unit que sirve para desconectar (limpiar).
      */
-    fun conectarPartida(onMensaje: (MensajeServidor) -> Unit): () -> Unit {
-        if(!usarServidor){
-            return {}
-        }
+    /*fun conectarPartida(onMensaje: (MensajeServidor) -> Unit): () -> Unit {
+
         val receptor: (String) -> Unit = { textoJson ->
             try {
                 val mensaje = jsonPartida.decodeFromString<MensajeServidor>(textoJson)
@@ -286,67 +284,21 @@ class Partida(
             }
         }
 
-        // Si la partida es nueva(será siempre el caso en las públicas): Reusar el WebSocket existente (inyectado desde buscarpartida)
-        if (PartidaActiva.wsActivo != null) {
-            PartidaActiva.onMensajeJuegoRecibido = receptor
 
-            // Retornamos la función de limpieza (cleanup)
-            return { PartidaActiva.onMensajeJuegoRecibido = null }
-        }
-        //Fallback (abrir conexión nueva si por alguna razón no existe)
-        try {
-            val client = OkHttpClient()
-            val solicitud = Request.Builder().url(wsUrl).build()
 
-            val wsFallback = client.newWebSocket(solicitud, object : WebSocketListener() {
-                override fun onMessage(webSocket: WebSocket, text: String) {
-                    Log.w("CHIVATO_WS", "El móvil acaba de recibir esto del servidor: $text")
-                    receptor(text)
-                }
-                override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
-                    Log.e("Partida", "Error en el WebSocket (Fallback)", t)
-                }
-                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                    Log.e("CHIVATO_WS", "¡EL SOCKET SE HA CERRADO! Razón: $reason")
-                    PartidaActiva.wsActivo = null
-                }
-            })
-
-            PartidaActiva.wsActivo = wsFallback
-
-            //devuelve una función lambda () -> Unit que sirve para desconectar (limpiar)
-            return {
-                wsFallback.cancel()
-                PartidaActiva.wsActivo = null
-            }
-        } catch (e: Exception) {
-            Log.e("Partida", "No se pudo abrir WebSocket.", e)
-            return {}
-        }
-
-    }
+    }*/
 
     fun desconectarPartida() {
-        if(PartidaActiva.wsActivo != null) {
-            PartidaActiva.wsActivo?.close(1000, "Cerrando conexión")
-            PartidaActiva.wsActivo = null
             PartidaActiva.wsEstoyListoEnviado = false
             PartidaActiva.datosPartida = null
-        }
     }
 
     fun enviar(msg: Partida.MensajeCliente): Boolean {
-        //si el websocket no está activo no se puede enviar nada
-        val ws = PartidaActiva.wsActivo
-
-        if (ws == null) {
-            Log.e( "Partida", "No se puede enviar mensaje, el WebSocket no está activo.")
-            return false
-        }
 
         return try {
             val jsonTexto = jsonPartida.encodeToString(msg)
-            ws.send(jsonTexto)
+            ManejadorGlobal.enviarMensaje(jsonTexto)
+            true
 
         } catch (e: Exception) {
             false

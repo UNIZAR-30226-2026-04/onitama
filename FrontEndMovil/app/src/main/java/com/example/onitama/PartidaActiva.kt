@@ -14,8 +14,5 @@ object PartidaActiva {
 
     var wsEstoyListoEnviado: Boolean = false
     var datosPartida: Partida.RespuestaPartidaEncontrada? = null
-    var wsActivo: WebSocket? = null
 
-    // Usaremos esto en la pantalla del juego para recibir los mensajes
-    var onMensajeJuegoRecibido: ((String) -> Unit)? = null
 }

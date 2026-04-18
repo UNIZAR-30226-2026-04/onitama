@@ -1,5 +1,6 @@
 package com.example.onitama.ui.activities
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -52,7 +53,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.onitama.R
 import com.example.onitama.AutoLogin
+import com.example.onitama.ui.activities.cartas.Cartas_activity
 import com.example.onitama.ui.activities.partida.PartidaActivity
+import com.example.onitama.ui.activities.profile.ProfileActivity
 
 class MenuPrincipalActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -330,65 +333,80 @@ fun MainMenuScreen(
                 .background(colorResource(id = R.color.azulFondo))
                 .padding(horizontal = 16.dp)
         ) {
-            Log.d("DEBUG", "Imagen: ${datosUsuario?.avatar_id}")
-            val imageResId = context.resources.getIdentifier(
-                datosUsuario?.avatar_id,
-                "drawable",
-                context.packageName
-            )
+            if(datosUsuario != null) {
+                Log.d("DEBUG", "Imagen: ${datosUsuario?.avatar_id}")
+                val imageResId = context.resources.getIdentifier(
+                    datosUsuario?.avatar_id,
+                    "drawable",
+                    context.packageName
+                )
 
 
-            //🛡️ PROTECCIÓN ANTI-CRASH: Si la imagen no existe (0), ponemos el logo por defecto
-            val idSeguro = if (imageResId != 0) imageResId else R.drawable.onitama_text
+                //🛡️ PROTECCIÓN ANTI-CRASH: Si la imagen no existe (0), ponemos el logo por defecto
+                val idSeguro = if (imageResId != 0) imageResId else R.drawable.onitama_text
 
-            // A) Botón de Perfil
-            /*IconButton(
-                onClick = { /* Acción perfil */ },
-                modifier = Modifier
-                    .size(80.dp)
-                    .align(Alignment.CenterEnd)
-                    .clip(CircleShape)
-                    .background(idSeguro)
-            ) {
+                Image(
+                    painterResource(idSeguro),
+                    contentDescription = "Imagen de perfil",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .align(Alignment.CenterEnd)
+                        .clip(CircleShape)
+                        .clickable(onClick = {
+                            val intent = Intent(context, ProfileActivity::class.java)
+                            context.startActivity(intent)
+                        })
+                )
 
-            }*/
-            Image(
-                painterResource(idSeguro),
-                contentDescription = "Imagen de perfil",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(80.dp)
-                    .align(Alignment.CenterEnd)
-                    .clip(CircleShape)
-            )
-
-            // B) Título del juego
-            Image(
-                painter = painterResource(id = R.drawable.onitama_text),
-                contentDescription = "Titulo",
-                modifier = Modifier
-                    .padding(start = 30.dp, top = 16.dp)
-                    .height(60.dp)
-                    .align(Alignment.TopStart)
+                // B) Título del juego
+                Image(
+                    painter = painterResource(id = R.drawable.onitama_text),
+                    contentDescription = "Titulo",
+                    modifier = Modifier
+                        .padding(start = 30.dp, top = 16.dp)
+                        .height(60.dp)
+                        .align(Alignment.TopStart)
 
 
-            )
+                )
 
-            // C) Contadores (Katanas y Core)
-            Row(
-                modifier = Modifier
-                    .padding(top = 30.dp, bottom = 10.dp)
-                    .align(Alignment.BottomCenter),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(painterResource(id = R.drawable.katanas), contentDescription = "Katanas", modifier = Modifier.size(30.dp))
-                    Text(datosUsuario?.puntos.toString(), color = Color.White, fontSize = 24.sp, fontFamily = quattrocentoBold, modifier = Modifier.padding(start = 4.dp))
-                }
+                // C) Contadores (Katanas y Core)
+                Row(
+                    modifier = Modifier
+                        .padding(top = 30.dp, bottom = 10.dp)
+                        .align(Alignment.BottomCenter),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painterResource(id = R.drawable.katanas),
+                            contentDescription = "Katanas",
+                            modifier = Modifier.size(30.dp)
+                        )
+                        Text(
+                            datosUsuario?.puntos.toString(),
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            fontFamily = quattrocentoBold,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(painterResource(id = R.drawable.core), contentDescription = "Core", modifier = Modifier.height(30.dp))
-                    Text(datosUsuario?.cores.toString(), color = Color.White, fontSize = 24.sp, fontFamily = quattrocentoBold, modifier = Modifier.padding(start = 4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painterResource(id = R.drawable.core),
+                            contentDescription = "Core",
+                            modifier = Modifier.height(30.dp)
+                        )
+                        Text(
+                            datosUsuario?.cores.toString(),
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            fontFamily = quattrocentoBold,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
                 }
             }
         }
@@ -421,7 +439,10 @@ fun MainMenuScreen(
                 IconButton(
                     onClick = {
                         val intent = Intent(context, Cartas_activity::class.java)
-                        context.startActivity(intent)},
+                        context.startActivity(intent)
+                        (context as? Activity)?.finish()
+                              },
+
                     modifier = Modifier.size(60.dp)
                 ) {
                     Image(painterResource(R.drawable.cards),

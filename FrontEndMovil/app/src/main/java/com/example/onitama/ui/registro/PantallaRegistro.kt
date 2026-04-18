@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.onitama.R
+import com.example.onitama.api.ManejadorGlobal
 import com.example.onitama.ui.components.*
 import java.util.concurrent.ThreadLocalRandom.current
 
@@ -47,7 +48,8 @@ import java.util.concurrent.ThreadLocalRandom.current
 @Composable
 fun PantallaRegistro(
     viewModel: ViewModelRegistro,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    onNavigateToMain: () -> Unit
 ) {
     val estado by viewModel.uiState.collectAsState()
 
@@ -55,7 +57,7 @@ fun PantallaRegistro(
 
     LaunchedEffect(estado.creada) {
         if (estado.creada) {
-            onNavigateToLogin()
+            onNavigateToMain()
         }
     }
 
@@ -270,7 +272,7 @@ fun PantallaRegistro(
                     }
                     Button(
                         onClick = {
-                            viewModel.registrarDelTodo()
+                            viewModel.registrarDelTodo(context)
                         },
                     ){
                         Text("Siguiente")

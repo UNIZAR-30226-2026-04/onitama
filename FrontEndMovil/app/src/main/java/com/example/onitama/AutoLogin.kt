@@ -113,5 +113,6 @@ object AutoLogin {
     fun cerrarSesion(context: Context){
         obtenerPreferences(context).edit().clear().apply()
         _sesion.value = null
+        //ws?.close(1000, "Sesión cerrada por el usuario")
     }
 }

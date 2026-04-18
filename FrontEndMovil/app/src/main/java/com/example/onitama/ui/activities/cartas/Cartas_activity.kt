@@ -1,7 +1,8 @@
-package com.example.onitama.ui.activities
+package com.example.onitama.ui.activities.cartas
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
@@ -20,13 +21,19 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,9 +49,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.onitama.R
 import com.example.onitama.AutoLogin
+import com.example.onitama.api.obtenerCartas
 import com.example.onitama.lib.Carta
 import com.example.onitama.lib.Cartas
 import com.example.onitama.lib.Movimiento
+import com.example.onitama.ui.activities.MenuPrincipalActivity
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 class Cartas_activity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +63,7 @@ class Cartas_activity: AppCompatActivity() {
         val nombreUsuario = AutoLogin.obtenerNombre(this) ?: "Jugador"
         val valorCores = AutoLogin.obtenerCores(this)
         val valorKatanas = AutoLogin.obtenerKatanas(this)
+
 
         setContent {
             // Un contenedor base opcional (útil para temas y colores de fondo por defecto)
@@ -77,7 +89,7 @@ fun CartasScreen(
 ) {
     val quattrocentoBold = FontFamily(Font(R.font.quattrocento_bold))
     val context = LocalContext.current
-
+    val datosUsuario by AutoLogin.sesion.collectAsState()
 
     Box(
         modifier = Modifier
@@ -109,10 +121,84 @@ fun CartasScreen(
                     )
                 )
         )
+        val cartas = runBlocking {
+            obtenerCartas()
+        }
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .align(Alignment.Center)
+        ){
+            Text(
+                "MIS CARTAS",
+                fontFamily = quattrocentoBold,
+                fontSize = 50.sp,
+                color = Color.Black,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+            )
 
-        // ==========================================
-        // 2. Parte que se desplegara al hacer click en el botón de partida privada
-        // ==========================================
+            if (cartas != null) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(600.dp)
+                        .padding(15.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ){
+                    items(cartas.size) { card ->
+                        val puntosNeeded = cartas[card].puntos_necesarios
+                        Log.d("DEBUG", "Puntos necesarios: $puntosNeeded")
+                        if(katanas >= puntosNeeded){
+                            CartaCatalogo(
+                                carta = Cartas.getCarta(cartas[card].nombre),
+                                onClick = {}
+                            )
+                        }
+                        else{
+                            Box(
+                                modifier = Modifier
+                                    .padding(start = 15.dp)
+                                    .height(200.dp)
+                                    .width(340.dp)
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                                    // 3. 🎨 Feedback visual: Si está seleccionada, se pone azul
+                                    .background( Color.LightGray)
+                            ){
+                                Column(
+                                    Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ){
+                                    Image(
+                                        painterResource(id = R.drawable.bloqueado),
+                                        contentDescription = "Imagen de candado",
+                                        alignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .padding(10.dp)
+                                            .height(90.dp)
+                                            .width(90.dp)
+                                    )
+                                    Row(
+
+                                    ){
+                                        Image(painterResource(id = R.drawable.katanas), contentDescription = "Katanas", modifier = Modifier.size(40.dp))
+                                        Text(
+                                            text = puntosNeeded.toString(),
+                                            fontFamily = quattrocentoBold,
+                                            fontSize = 30.sp,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+
 
 
         // ==========================================
@@ -126,17 +212,27 @@ fun CartasScreen(
                 .background(colorResource(id = R.color.azulFondo))
                 .padding(horizontal = 16.dp)
         ) {
-            // A) Botón de Perfil
-            IconButton(
-                onClick = { /* Acción perfil */ },
+            Log.d("DEBUG", "Imagen: ${datosUsuario?.avatar_id}")
+            val imageResId = context.resources.getIdentifier(
+                datosUsuario?.avatar_id,
+                "drawable",
+                context.packageName
+            )
+
+
+            //🛡️ PROTECCIÓN ANTI-CRASH: Si la imagen no existe (0), ponemos el logo por defecto
+            val idSeguro = if (imageResId != 0) imageResId else R.drawable.onitama_text
+
+
+            Image(
+                painterResource(idSeguro),
+                contentDescription = "Imagen de perfil",
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(80.dp)
                     .align(Alignment.CenterEnd)
                     .clip(CircleShape)
-                    .background(Color.White)
-            ) {
-
-            }
+            )
 
             // B) Título del juego
             Image(
@@ -159,12 +255,12 @@ fun CartasScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(painterResource(id = R.drawable.katanas), contentDescription = "Katanas", modifier = Modifier.size(30.dp))
-                    Text(katanas.toString(), color = Color.White, fontSize = 24.sp, fontFamily = quattrocentoBold, modifier = Modifier.padding(start = 4.dp))
+                    Text(datosUsuario?.puntos.toString(), color = Color.White, fontSize = 24.sp, fontFamily = quattrocentoBold, modifier = Modifier.padding(start = 4.dp))
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(painterResource(id = R.drawable.core), contentDescription = "Core", modifier = Modifier.height(30.dp))
-                    Text(cores.toString(), color = Color.White, fontSize = 24.sp, fontFamily = quattrocentoBold, modifier = Modifier.padding(start = 4.dp))
+                    Text(datosUsuario?.cores.toString(), color = Color.White, fontSize = 24.sp, fontFamily = quattrocentoBold, modifier = Modifier.padding(start = 4.dp))
                 }
             }
         }
@@ -244,14 +340,15 @@ fun CartasScreen(
                 )
             }
         }
+
     }
 }
 
 @Composable
-fun CartaCatalogo(carta: Carta, seleccionada: Boolean, onClick: () -> Unit) {
+fun CartaCatalogo(carta: Carta, onClick: () -> Unit) {
 
-    val ancho = if (seleccionada) 192.dp else 170.dp
-    val alto = if (seleccionada) 120.dp else 100.dp
+    val ancho = 340.dp
+    val alto = 200.dp
     val context = LocalContext.current
 
     // 1. Usamos tu función, pero por si acaso tiene espacios, le ponemos replace
@@ -273,9 +370,7 @@ fun CartaCatalogo(carta: Carta, seleccionada: Boolean, onClick: () -> Unit) {
             .width(ancho)
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
             // 3. 🎨 Feedback visual: Si está seleccionada, se pone azul
-            .background(if (seleccionada) Color(0xFFBBDEFB) else Color.LightGray)
-            // 4. 👆 INTERACTIVIDAD: Si no pones esto, ¡la carta no hace nada al tocarla!
-            .clickable { onClick() }
+            .background( Color.LightGray)
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(5.dp),
@@ -287,17 +382,17 @@ fun CartaCatalogo(carta: Carta, seleccionada: Boolean, onClick: () -> Unit) {
                     contentDescription = carta.nombre,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .padding(5.dp)
-                        .height(65.dp)
-                        .width(65.dp)
+                        .padding(10.dp)
+                        .height(130.dp)
+                        .width(130.dp)
                 )
                 Text(
                     carta.nombre,
                     fontFamily = FontFamily(Font(R.font.quattrocento_bold)),
-                    fontSize = 15.sp,
+                    fontSize = 30.sp,
                     modifier = Modifier
                         .offset(y = (-2).dp)
-                        .padding(start = 10.dp)
+                        .padding(start = 20.dp)
                 )
             }
 
@@ -313,11 +408,11 @@ fun MinigridCatalogo(movimientos: List<Movimiento>){
 
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = Modifier.padding(4.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.padding(8.dp)
     ) {
         for (f in 0 until tamanoGrid) {
-            Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 for (c in 0 until tamanoGrid) {
                     // Calculamos el desplazamiento relativo de esta celda respecto al centro
                     // En Onitama: df es filas (y), dc es columnas (x)
@@ -330,7 +425,7 @@ fun MinigridCatalogo(movimientos: List<Movimiento>){
 
                     Box(
                         modifier = Modifier
-                            .size(10.dp) // Tamaño de cada puntito del grid
+                            .size(20.dp) // Tamaño de cada puntito del grid
                             .clip(RoundedCornerShape(16))
                             .border(1.dp, Color.Black)
                             .background(
@@ -339,7 +434,7 @@ fun MinigridCatalogo(movimientos: List<Movimiento>){
                                     esMovimiento -> Color(0xFF2196F3) // Azul para movimientos
                                     else -> Color.White.copy(alpha = 0.3f) // Fondo tenue
                                 }
-                            )
+                        )
                     )
                 }
             }

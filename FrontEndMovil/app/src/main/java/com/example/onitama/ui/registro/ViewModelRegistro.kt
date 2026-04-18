@@ -1,8 +1,13 @@
 package com.example.onitama.ui.registro
 
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.onitama.AutoLogin
+import com.example.onitama.DatosPerfil
 import com.example.onitama.api.Auth
+import com.example.onitama.api.ManejadorGlobal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,25 +76,49 @@ class ViewModelRegistro() : ViewModel() {
 
     }
 
-    fun registrarDelTodo(){
+    fun registrarDelTodo(context: Context){
         val estadoActual = _estadoUI.value
         viewModelScope.launch {
             _estadoUI.value = estadoActual.copy(isLoading = true, error = null)
             try {
-                authClient.registrarUsuario(
-                    estadoActual.correo,
-                    estadoActual.nombre,
-                    estadoActual.contrasenya,
-                    estadoActual.avatar
-                )
+                val conectado = ManejadorGlobal.conectarYMantener()
+                if(conectado) {
+                    authClient.registrarUsuario(
+                        estadoActual.correo,
+                        estadoActual.nombre,
+                        estadoActual.contrasenya,
+                        estadoActual.avatar
+                    )
 
-                _estadoUI.value = _estadoUI.value.copy(isLoading = false, creada = true)
+                    val datos = authClient.obtenerPerfil(estadoActual.nombre)
+
+                    // Guardamos la sesión en el Singleton 'AutoLogin'
+                    AutoLogin.inicioSesion(
+                        context,
+                        datos!!.nombre,
+                        datos.puntos,
+                        datos.cores,
+                        datos.avatar_id
+                    )
+                    AutoLogin.actualizar(context, datos as DatosPerfil?)
+
+                    _estadoUI.value = _estadoUI.value.copy(isLoading = false, creada = true)
+                }
+                else{
+                    _estadoUI.value = _estadoUI.value.copy(
+                        isLoading = false,
+                        error =  "Error al conectar al servidor"
+                    )
+                    Log.e("ERROR", "No se pudo conectar al servidor")
+                    ManejadorGlobal.desconectar()
+                }
             } catch (e: Exception) {
-                _estadoUI.value = _estadoUI.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Error al registrar"
-                )
-            }
+            _estadoUI.value = _estadoUI.value.copy(
+                isLoading = false,
+                error = e.message ?: "Error al registrar"
+            )
+            ManejadorGlobal.desconectar()
+        }
         }
     }
 }

@@ -4,6 +4,9 @@ import android.util.Log
 import com.example.onitama.Config
 import com.example.onitama.DatosPerfil
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.*
@@ -54,7 +57,7 @@ class Auth(
      * Abre un WebSocket, envía el [mensajeJson], espera una respuesta,
      * devuelve el JSONObject y cierra la conexión.
      */
-    private suspend fun enviarYEsperarRespuesta(mensajeJson: String): JSONObject {
+    suspend fun enviarYEsperarRespuesta(mensajeJson: String): JSONObject {
         return suspendCancellableCoroutine { continuation ->
             val request = Request.Builder().url(wsUrl).build()
 
@@ -66,13 +69,16 @@ class Auth(
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
                     Log.d("WS_CLIENT", "Mensaje recibido del servidor: $text")
-                    webSocket.close(1000, "Cierre normal") // Cierra temporalmente como en la web
                     if (continuation.isActive) {
                         try {
                             val json = JSONObject(text)
                             continuation.resume(json)
                         } catch (e: Exception) {
                             continuation.resumeWithException(Exception("Respuesta inválida del servidor."))
+                        }finally {
+                            // ¡CLAVE! Cerramos la conexión inmediatamente después de recibir el dato.
+                            // 1000 es el código estándar para un cierre normal y exitoso.
+                            webSocket.close(1000, "Transacción completada")
                         }
                     }
                 }
@@ -111,18 +117,22 @@ class Auth(
             return u
         }
 
-        // ── Servidor ──
-        // Envolvemos en un timeout de 10 segundos
-        val respuesta = withTimeoutOrNull(100_000L) {
-            val requestJson = JSONObject().apply {
-                put("tipo", "INICIAR_SESION")
-                put("nombre", nombre)
-                put("password", password)
-            }
-
-            enviarYEsperarRespuesta(requestJson.toString())
-        } ?: throw Exception("El servidor no respondió a tiempo.")
-
+        val requestJson = JSONObject().apply {
+            put("tipo", "INICIAR_SESION")
+            put("nombre", nombre)
+            put("password", password)
+        }
+        val mensajeIni = requestJson.toString()
+        ManejadorGlobal.enviarMensaje(mensajeIni)
+        val respuesta = withTimeoutOrNull(10_000L) {
+            ManejadorGlobal.mensajesEntrantes
+                .filter { json ->
+                    val tipo = json.optString("tipo")
+                    // Solo dejamos pasar si es ENCONTRADA o ERROR
+                    tipo == "INICIO_SESION_EXITOSO" || tipo == "ERROR_SESION_USS" || tipo == "ERROR_SESION_PSSWD"
+                }
+                .first()
+        }?: throw Exception("El servidor no respondió a tiempo.")// Nos quedamos con el PRIMERO que cumpla la condición y dejamos de mirar
         val tipo = respuesta.optString("tipo")
         return when (tipo) {
             "INICIO_SESION_EXITOSO" -> DatosSesion(
@@ -133,6 +143,7 @@ class Auth(
                 partidas_jugadas = respuesta.optInt("partidas_jugadas"),
                 cores = respuesta.optInt("cores")
             )
+
             "ERROR_SESION_USS" -> throw Exception("Usuario no encontrado.")
             "ERROR_SESION_PSSWD" -> throw Exception("Contraseña incorrecta.")
             else -> throw Exception("Respuesta inesperada del servidor.")
@@ -146,17 +157,23 @@ class Auth(
             return // Simulamos éxito en modo desarrollo
         }
 
+        val requestJson = JSONObject().apply {
+            put("tipo", "REGISTRARSE")
+            put("correo", correo)
+            put("nombre", nombre)
+            put("password", password)
+            put("avatar_id", avatar)
+        }
+        ManejadorGlobal.enviarMensaje(requestJson.toString())
         // ── Servidor ──
         val respuesta = withTimeoutOrNull(10_000L) {
-            val requestJson = JSONObject().apply {
-                put("tipo", "REGISTRARSE")
-                put("correo", correo)
-                put("nombre", nombre)
-                put("password", password)
-                put("avatar_id", avatar)
-            }
-
-            enviarYEsperarRespuesta(requestJson.toString())
+            ManejadorGlobal.mensajesEntrantes
+                .filter { json ->
+                    val tipo = json.optString("tipo")
+                    // Solo dejamos pasar si es ENCONTRADA o ERROR
+                    tipo == "REGISTRO_EXITOSO" || tipo == "REGISTRO_ERRONEO"
+                }
+                .first()
         } ?: throw Exception("El servidor no respondió a tiempo.")
 
         when (respuesta.optString("tipo")) {
@@ -166,17 +183,27 @@ class Auth(
         }
     }
 
+    // ─── Obtención de perfil en caso de actualización ─────────────────────────────────────────────────────────────────
     suspend fun obtenerPerfil(nombre: String): DatosPerfil? {
         if (!usarServidor) {
             return null
         }
 
-        val respuesta = withTimeoutOrNull(100_000L) {
-            val requestJson = JSONObject().apply {
-                put("tipo", "OBTENER_PERFIL")
-                put("nombre", nombre)
-            }
-            enviarYEsperarRespuesta(requestJson.toString())
+
+        val requestJson = JSONObject().apply {
+            put("tipo", "OBTENER_PERFIL")
+            put("nombre", nombre)
+        }
+        ManejadorGlobal.enviarMensaje(requestJson.toString())
+
+        val respuesta = withTimeoutOrNull(10_000L) {
+            ManejadorGlobal.mensajesEntrantes
+                .filter { json ->
+                    val tipo = json.optString("tipo")
+                    // Solo dejamos pasar si es ENCONTRADA o ERROR
+                    tipo == "PERFIL_ACTUALIZADO" || tipo == "ERROR"
+                }
+                .first()
         } ?: throw Exception("El servidor no respondió a tiempo.")
         val tipo = respuesta.optString("tipo")
         when(tipo){
@@ -196,6 +223,8 @@ class Auth(
         }
         return null
     }
+
+
 
 
 }

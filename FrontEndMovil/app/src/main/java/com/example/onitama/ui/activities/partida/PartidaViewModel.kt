@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.onitama.PartidaActiva
+import com.example.onitama.api.ManejadorGlobal
 import com.example.onitama.api.Partida
 import com.example.onitama.lib.Carta
 import com.example.onitama.lib.Cartas
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 
 class PartidaViewModel : ViewModel() {
 
@@ -73,57 +75,71 @@ class PartidaViewModel : ViewModel() {
     }
 
     private fun conectarAlServidor() {
-        Log.w("CHIVATO_WS", "¿El socket está vivo al iniciar?: ${PartidaActiva.wsActivo != null}")
+
 
         val sePudoEnviar = partida.enviarEstoyListo()
         Log.w("CHIVATO_WS", "¿Se pudo enviar ESTOY_LISTO?: $sePudoEnviar")
 
         if (sePudoEnviar) {
-            limpiar = partida.conectarPartida { mensaje ->
-                Log.w("CHIVATO_WS", "El ViewModel está procesando: $mensaje")
-                when (mensaje) {
-                    is Partida.RespuestaTuTurno -> {
-                        _estado.value = _estado.value.copy(turnoActual = equipoPropio)
+            viewModelScope.launch {
+                ManejadorGlobal.mensajesEntrantes.collect { json ->
+                    val jsonTolerante = Json {
+                        ignoreUnknownKeys = true
+                        classDiscriminator = "tipo"
                     }
-                    is Partida.RespuestaMover -> {
-                        val filaOrigen = END - mensaje.fila_origen
-                        val colOrigen = END -mensaje.col_origen
-                        val origen = Posicion(filaOrigen, colOrigen)
 
-                        val filaDestino = END - mensaje.fila_destino
-                        val colDestino = END - mensaje.col_destino
-                        val destino = Posicion(filaDestino, colDestino)
-                        val carta = Cartas.getCarta(mensaje.carta)
-                        Log.i("conexion servidor", "Mensaje de movimiento recibido")
-                        val resultado = ejecutarMovimiento(_estado.value, origen, destino, carta, equipoPropio)
-                        if(resultado.victoriaPorTrono){
-                            razon = "TRONO"
-                        }
-                        if(resultado.esReyCapturado) {
-                            razon = "REY CAPTURADO"
-                        }
-                        _estado.value = resultado.nuevoEstado
+                    try {
 
-                    }
-                    is Partida.RespuestaDerrota -> {
-                        _estado.value = _estado.value.copy(ganador = if (equipoPropio == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL)
+                        val mensaje = jsonTolerante.decodeFromString<Partida.MensajeServidor>(json.toString())
 
-                    }
-                    is Partida.RespuestaVictoria -> {
-                        if(mensaje.motivo == "ABANDONO"){
-                            razon = "ABANDONO"
+                        Log.w("CHIVATO_WS", "El ViewModel está procesando: $mensaje")
+
+                        when (mensaje) {
+                            is Partida.RespuestaTuTurno -> {
+                                _estado.value = _estado.value.copy(turnoActual = equipoPropio)
+                            }
+                            is Partida.RespuestaMover -> {
+                                val filaOrigen = END - mensaje.fila_origen
+                                val colOrigen = END - mensaje.col_origen
+                                val origen = Posicion(filaOrigen, colOrigen)
+
+                                val filaDestino = END - mensaje.fila_destino
+                                val colDestino = END - mensaje.col_destino
+                                val destino = Posicion(filaDestino, colDestino)
+                                val carta = Cartas.getCarta(mensaje.carta)
+
+                                Log.i("conexion servidor", "Mensaje de movimiento recibido")
+
+                                val resultado = ejecutarMovimiento(_estado.value, origen, destino, carta, equipoPropio)
+                                if(resultado.victoriaPorTrono){
+                                    razon = "TRONO"
+                                }
+                                if(resultado.esReyCapturado) {
+                                    razon = "REY CAPTURADO"
+                                }
+                                _estado.value = resultado.nuevoEstado
+                            }
+                            is Partida.RespuestaDerrota -> {
+                                _estado.value = _estado.value.copy(ganador = if (equipoPropio == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL)
+                            }
+                            is Partida.RespuestaVictoria -> {
+                                if(mensaje.motivo == "ABANDONO"){
+                                    razon = "ABANDONO"
+                                }
+                                _estado.value = _estado.value.copy(ganador = if (equipoPropio == EquipoID.ROJO) EquipoID.ROJO else EquipoID.AZUL)
+                                Log.i("conexion servidor", "Mensaje de victoria recibido")
+                            }
+                            is Partida.RespuestaTerminarPartida ->{
+                                if (mensaje.razon == "ABANDONO"){ razon ="ABANDONO" }
+                                Log.i("conexion servidor", "Mensaje de terminar partida recibido")
+                                _estado.value = _estado.value.copy(ganador = if (mensaje.ganador == EquipoID.ROJO.id.toString()) EquipoID.ROJO else EquipoID.AZUL)
+                            }
+                            else -> {
+                                println("LOG: Mensaje recibido no reconocido: $mensaje")
+                            }
                         }
-                        _estado.value = _estado.value.copy(ganador = if (equipoPropio == EquipoID.ROJO) EquipoID.ROJO else EquipoID.AZUL)
-                        Log.i("conexion servidor", "Mensaje de victoria recibido")
-                    }
-                    is Partida.RespuestaTerminarPartida ->{
-                       if (mensaje.razon == "ABANDONO"){ razon ="ABANDONO" }
-                        Log.i("conexion servidor", "Mensaje de terminar partida recibido")
-                        _estado.value =
-                            _estado.value.copy(ganador = if (mensaje.ganador == EquipoID.ROJO.id.toString()) EquipoID.ROJO else EquipoID.AZUL)
-                    }
-                    else -> {
-                        println("LOG: Mensaje recibido no reconocido: $mensaje")
+                    } catch (e: Exception) {
+                        println("Mensaje ignorado (no pertenece a la lógica de partida)")
                     }
                 }
             }
@@ -268,8 +284,6 @@ class PartidaViewModel : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        // Ejecutamos la función de limpieza que nos devolvió conectarPartida()
-        limpiar?.invoke()
         partida.desconectarPartida()
         println("LOG: ViewModel destruido, conexión WebSocket limpiada.")
     }
