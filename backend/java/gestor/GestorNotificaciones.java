@@ -3,6 +3,7 @@ package gestor;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Calendar;
+import java.util.List;
 
 import JDBC.JugadorJDBC;
 import JDBC.NotificacionJDBC;
@@ -124,5 +125,23 @@ public class GestorNotificaciones {
         Notificacion n = new Notificacion(0, Notificacion.TIPO_REANUDAR_PARTIDA, remitente, destinatario,
                 Notificacion.ESTADO_PENDIENTE, null, expiracion, idPartida);
         return notifJdbc.crear(n);
+    }
+
+    // añadidas para no usar lógica de negocio en server, faltaban
+
+    public java.util.List<VO.Notificacion> obtenerPendientes(String nombreUsuario) throws SQLException {
+        return notifJdbc.obtenerPendientes(nombreUsuario);
+    }
+
+    public VO.Notificacion obtenerPorId(int idNotificacion) throws SQLException {
+        return notifJdbc.obtenerPorId(idNotificacion);
+    }
+
+    public boolean actualizarEstado(int idNotificacion, String nuevoEstado) throws SQLException {
+        return notifJdbc.actualizarEstado(idNotificacion, nuevoEstado);
+    }
+
+    public void borrar(int idNotificacion) throws SQLException {
+        notifJdbc.borrar(idNotificacion);
     }
 }

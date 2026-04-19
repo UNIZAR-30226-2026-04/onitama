@@ -26,7 +26,6 @@ import VO.Tablero;
 import VO.Jugador;
 import VO.Skin;
 import VO.Autenticacion;
-import JDBC.NotificacionJDBC;
 import VO.Notificacion;
 
 import gestor.GestorNotificaciones;
@@ -713,9 +712,9 @@ public class Servidor extends WebSocketServer {
                 // fuera de una búsqueda o partida activa, así que aprovechamos el login para
                 // volcar
                 // todo lo que se perdió mientras estaba desconectado.
-                NotificacionJDBC notificacionJDBC = new NotificacionJDBC();
+                GestorNotificaciones gestorNotif = new GestorNotificaciones();
                 try {
-                    List<Notificacion> pendientes = notificacionJDBC.obtenerPendientes(nombre);
+                    List<Notificacion> pendientes = gestorNotif.obtenerPendientes(nombre);
                     for (Notificacion n : pendientes) {
                         JSONObject notif = new JSONObject();
                         notif.put("tipo", n.getTipo());
@@ -823,9 +822,9 @@ public class Servidor extends WebSocketServer {
     }
 
     private void aceptarAmistad(WebSocket conn, JSONObject obj) {
-        NotificacionJDBC notificacionJDBC = new NotificacionJDBC();
+        GestorNotificaciones gestorNotif = new GestorNotificaciones();
         try {
-            notificacionJDBC.borrar(obj.getInt("idNotificacion")); // DUDA, ARREGLAR
+            gestorNotif.borrar(obj.getInt("idNotificacion")); // DUDA, ARREGLAR
             GestorJugador gestorJugador = new GestorJugador();
             if (gestorJugador.insertarAmistad(obj.getString("remitente"), obj.getString("destinatario"))) {
                 System.out.println("Amistad registrada entre " + obj.getString("remitente") + " y "
@@ -848,13 +847,13 @@ public class Servidor extends WebSocketServer {
 
     // nuevo: rechazar solicitud de amistad eliminando la notificación de la BD
     private void rechazarAmistad(WebSocket conn, JSONObject obj) {
-        NotificacionJDBC notificacionJDBC = new NotificacionJDBC();
+        GestorNotificaciones gestorNotif = new GestorNotificaciones();
         try {
             int idNotificacion = obj.getInt("idNotificacion");
-            Notificacion notif = notificacionJDBC.obtenerPorId(idNotificacion);
+            Notificacion notif = gestorNotif.obtenerPorId(idNotificacion);
 
             if (notif != null) {
-                notificacionJDBC.borrar(idNotificacion);
+                gestorNotif.borrar(idNotificacion);
 
                 // notificamos al que envía
                 WebSocket ws = buscarConexion(notif.getRemitente());
@@ -931,7 +930,7 @@ public class Servidor extends WebSocketServer {
             // para que aceptarInvitacion() rechace cualquier intento de aceptar
             // después de los 2 minutos.
             try {
-                new NotificacionJDBC().actualizarEstado(idNotifFinal, Notificacion.ESTADO_RECHAZADA);
+                gestor.actualizarEstado(idNotifFinal, Notificacion.ESTADO_RECHAZADA);
             } catch (SQLException e) {
                 System.err.println("Error al marcar invitación expirada: " + e.getMessage());
             }
@@ -961,8 +960,7 @@ public class Servidor extends WebSocketServer {
 
         GestorNotificaciones gestor = new GestorNotificaciones();
         try {
-            NotificacionJDBC notifJdbc = new NotificacionJDBC();
-            Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
+            Notificacion notif = gestor.obtenerPorId(idNotificacion);
             if (notif == null) {
                 System.err.println("aceptarInvitacion: notificación no encontrada id=" + idNotificacion);
                 conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
@@ -975,15 +973,14 @@ public class Servidor extends WebSocketServer {
                 return;
             }
             if (notif.haExpirado()) {
-                notifJdbc.actualizarEstado(idNotificacion, Notificacion.ESTADO_RECHAZADA);
+                gestor.actualizarEstado(idNotificacion, Notificacion.ESTADO_RECHAZADA);
                 conn.send(new JSONObject().put("tipo", "ERROR_NO_UNIDO").toString());
                 return;
             }
             System.out.println("Invitación aceptada: " + notif.getRemitente() + " -> " + notif.getDestinatario());
 
             // actualizamos el estado de la notificación a ACEPTADA
-            notifJdbc.actualizarEstado(idNotificacion, Notificacion.ESTADO_ACEPTADA);
-
+            gestor.actualizarEstado(idNotificacion, Notificacion.ESTADO_ACEPTADA);
             InfoJugador j1 = buscarJugadorConectado(notif.getRemitente());
             InfoJugador j2 = buscarJugadorConectado(notif.getDestinatario());
 
@@ -1027,8 +1024,7 @@ public class Servidor extends WebSocketServer {
         // rechazamos la notificación en BD
         GestorNotificaciones gestor = new GestorNotificaciones();
         try {
-            NotificacionJDBC notifJdbc = new NotificacionJDBC();
-            Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
+            Notificacion notif = gestor.obtenerPorId(idNotificacion);
             if (notif == null) {
                 conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
                 return;
@@ -1729,10 +1725,10 @@ public class Servidor extends WebSocketServer {
             if (timer != null) timer.cancel(false);
 
             // Marcar notificación como rechazada en BD
-            NotificacionJDBC notifJdbc = new NotificacionJDBC();
-            VO.Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
+            GestorNotificaciones gestorNotif = new GestorNotificaciones();
+            Notificacion notif = gestorNotif.obtenerPorId(idNotificacion);
             if (notif != null) {
-                notifJdbc.actualizarEstado(idNotificacion, VO.Notificacion.ESTADO_RECHAZADA);
+                gestorNotif.actualizarEstado(idNotificacion, Notificacion.ESTADO_RECHAZADA);
                 // Notificar al destinatario que fue cancelada
                 WebSocket wsDestino = buscarConexion(notif.getDestinatario());
                 if (wsDestino != null && wsDestino.isOpen()) {
@@ -1794,11 +1790,9 @@ public class Servidor extends WebSocketServer {
             int idNotificacion = obj.getInt("idNotificacion");
             String nombreQuienResponde = obj.getString("nombre");
 
-            NotificacionJDBC notifJdbc = new NotificacionJDBC();
-            Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
-            if (notif == null) return;
-
             GestorNotificaciones gestor = new GestorNotificaciones();
+            Notificacion notif = gestor.obtenerPorId(idNotificacion);
+            if (notif == null) return;
 
             if (aceptar) {
                 boolean ok = gestor.aceptarNotificacion(idNotificacion, nombreQuienResponde);
@@ -1896,11 +1890,9 @@ public class Servidor extends WebSocketServer {
             ScheduledFuture<?> timer = timersReanudar.remove(idNotificacion);
             if (timer != null) timer.cancel(false);
 
-            NotificacionJDBC notifJdbc = new NotificacionJDBC();
-            Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
-            if (notif == null) return;
-
             GestorNotificaciones gestor = new GestorNotificaciones();
+            Notificacion notif = gestor.obtenerPorId(idNotificacion);
+            if (notif == null) return;
 
             if (aceptar) {
                 boolean ok = gestor.aceptarNotificacion(idNotificacion, nombreQuienResponde);
