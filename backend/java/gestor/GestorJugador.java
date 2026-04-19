@@ -101,4 +101,8 @@ public class GestorJugador {
     public boolean borrarAmigo(String miNombre, String nombreAmigo) throws SQLException {
         return jugadorJdbc.borrarAmigo(miNombre, nombreAmigo);
     }
+
+    public Jugador buscarJugadorPorCorreo(String correo) throws SQLException {
+        return jugadorJdbc.buscarJugadorPorCorreo(correo);
+    }
 }

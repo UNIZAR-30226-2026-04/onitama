@@ -295,6 +295,18 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    public Jugador buscarJugadorPorCorreo(String correo) throws SQLException {
+        final String sql = "SELECT Correo, Nombre_US, Contrasena_Hash, Puntos, Cores, Partidas_Ganadas, Partidas_Jugadas, avatar_id, skin_activa FROM Jugador WHERE Correo = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, correo);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return montarJugador(rs);
+            }
+        }
+    }
+
     //Metodo auxiliar que saca los campos de la BD y crea un objeto de tipo Jugador
     private Jugador montarJugador(ResultSet rs) throws SQLException {
         return new Jugador(

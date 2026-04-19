@@ -18,6 +18,7 @@ import FondoPantalla from "@/components/FondoPantalla";
 import { iniciarSesion } from "@/api/auth";
 import { guardarSesion } from "@/lib/sesion";
 import { validarContrasena } from "@/lib/validacion";
+import * as WS from "@/api/ws";
 
 export default function IniciarSesionPage() {
   const router = useRouter();
@@ -28,6 +29,45 @@ export default function IniciarSesionPage() {
   const [errorGeneral, setErrorGeneral] = useState("");
   const [cargando, setCargando] = useState(false);
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
+
+  // ── Modal recuperar contraseña ───────────────────────────────────────────
+  const [mostrarModalRecuperar, setMostrarModalRecuperar] = useState(false);
+  const [correoRecuperar, setCorreoRecuperar] = useState("");
+  const [estadoRecuperar, setEstadoRecuperar] = useState<
+    "idle" | "enviando" | "enviado" | "error_noexiste" | "error_email" | "error_timeout"
+  >("idle");
+
+  const handleRecuperarContrasena = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const correo = correoRecuperar.trim();
+    if (!correo) return;
+    setEstadoRecuperar("enviando");
+
+    try {
+      await WS.conectar();
+      await new Promise<void>((resolve, reject) => {
+        const limpiar = () => { unsubOk(); unsubNoExiste(); unsubEmailErr(); };
+        const unsubOk       = WS.suscribir("CONTRASENA_ENVIADA",   () => { limpiar(); resolve(); });
+        const unsubNoExiste = WS.suscribir("CORREO_NO_ENCONTRADO", () => { limpiar(); reject(new Error("no_existe")); });
+        const unsubEmailErr = WS.suscribir("ERROR_EMAIL",          () => { limpiar(); reject(new Error("email")); });
+        const enviado = WS.enviar({ tipo: "RECUPERAR_CONTRASENA", correo });
+        if (!enviado) { limpiar(); reject(new Error("sin_conexion")); }
+        setTimeout(() => { limpiar(); reject(new Error("timeout")); }, 20_000);
+      });
+      setEstadoRecuperar("enviado");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg === "email")    setEstadoRecuperar("error_email");
+      else if (msg === "timeout") setEstadoRecuperar("error_timeout");
+      else                    setEstadoRecuperar("error_noexiste");
+    }
+  };
+
+  const cerrarModalRecuperar = () => {
+    setMostrarModalRecuperar(false);
+    setCorreoRecuperar("");
+    setEstadoRecuperar("idle");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +115,77 @@ export default function IniciarSesionPage() {
     <div className="min-h-screen flex flex-col">
       <FondoPantalla />
       <HeaderLogo />
+
+      {/* ── Modal: recuperar contraseña ───────────────────────────────── */}
+      {mostrarModalRecuperar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm flex flex-col gap-5">
+            <h2 className="text-xl font-bold text-gray-900 uppercase text-center">
+              Recuperar contraseña
+            </h2>
+
+            {estadoRecuperar === "enviado" ? (
+              <>
+                <p className="text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-center">
+                  ✅ ¡Listo! Revisa tu correo — te hemos enviado tu nueva contraseña. Mira también la carpeta de spam.
+                </p>
+                <button
+                  type="button"
+                  onClick={cerrarModalRecuperar}
+                  className="w-full py-3 rounded-xl font-semibold bg-gray-800 text-white hover:bg-gray-700 transition-colors"
+                >
+                  Cerrar
+                </button>
+              </>
+            ) : (
+              <form onSubmit={handleRecuperarContrasena} className="flex flex-col gap-4">
+                <p className="text-gray-600 text-sm text-center">
+                  Introduce tu correo y haz click en el botón para recibir tu nueva contraseña.
+                </p>
+                <input
+                  type="email"
+                  required
+                  placeholder="tu@correo.com"
+                  value={correoRecuperar}
+                  onChange={(e) => { setCorreoRecuperar(e.target.value); setEstadoRecuperar("idle" as "idle"); }}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a]"
+                />
+                {estadoRecuperar === "error_noexiste" && (
+                  <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-center">
+                    No encontramos ninguna cuenta con ese correo.
+                  </p>
+                )}
+                {estadoRecuperar === "error_email" && (
+                  <p className="text-orange-600 text-sm bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 text-center">
+                    Cuenta encontrada pero no se pudo enviar el email. Inténtalo de nuevo.
+                  </p>
+                )}
+                {estadoRecuperar === "error_timeout" && (
+                  <p className="text-yellow-700 text-sm bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 text-center">
+                    El servidor tardó demasiado. Comprueba tu conexión e inténtalo de nuevo.
+                  </p>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={cerrarModalRecuperar}
+                    className="flex-1 py-3 rounded-xl font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={estadoRecuperar === "enviando"}
+                    className="flex-1 py-3 rounded-xl font-semibold bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                  >
+                    {estadoRecuperar === "enviando" ? "Enviando…" : "Recibir nueva contraseña"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
@@ -165,7 +276,11 @@ export default function IniciarSesionPage() {
 
             {/* Links secundarios */}
             <div className="flex justify-between text-sm pt-1">
-              <button type="button" className="text-blue-600 hover:underline">
+              <button
+                type="button"
+                className="text-blue-600 hover:underline"
+                onClick={() => setMostrarModalRecuperar(true)}
+              >
                 ¿Olvidaste tu contraseña?
               </button>
               <Link href="/registro" className="text-blue-600 hover:underline">

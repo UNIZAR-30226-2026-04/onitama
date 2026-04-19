@@ -23,4 +23,6 @@ public interface JugadorDAO {
     boolean sonAmigos(String jugadorA, String jugadorB) throws SQLException;
     List<Jugador> sacarAmigos(String nombreUS) throws SQLException;
     boolean borrarAmigo(String miNombre, String nombreAmigo) throws SQLException;
+    /** Devuelve el jugador cuyo correo coincide, o null si no existe. */
+    Jugador buscarJugadorPorCorreo(String correo) throws SQLException;
 }

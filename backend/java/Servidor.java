@@ -34,6 +34,7 @@ import gestor.GestorJugador;
 import gestor.GestorPartida;
 import gestor.GestorCartasMov;
 import gestor.GestorCartasAccion;
+import gestor.GestorEmail;
 
 import java.util.Comparator;
 
@@ -1626,8 +1627,9 @@ public class Servidor extends WebSocketServer {
                 case "CARTA_ACCION"          -> seleccionarCartaAccion(conn, obj);
                 case "JUGAR_CARTA_ACCION"    -> jugarCartaAccion(conn, obj);
                 case "OBTENER_TIENDA_SKINS"  -> obtenerTiendaSkins(conn, obj);
-                case "COMPRAR_SKIN"          -> comprarSkin(conn, obj);
-                case "ACTIVAR_SKIN"          -> activarSkin(conn, obj);
+                case "COMPRAR_SKIN"           -> comprarSkin(conn, obj);
+                case "ACTIVAR_SKIN"           -> activarSkin(conn, obj);
+                case "RECUPERAR_CONTRASENA"   -> recuperarContrasena(conn, obj);
             }
         });
     }
@@ -2116,6 +2118,78 @@ public class Servidor extends WebSocketServer {
                     .put("skin_id", skinId)
                     .put("codigo", "ERROR_BD")
                     .toString());
+        }
+    }
+
+    /**
+     * RECUPERAR_CONTRASENA – El cliente envía el correo del jugador.
+     * El servidor:
+     *   1. Busca el jugador por correo en la BD.
+     *   2. Si no existe → responde CORREO_NO_ENCONTRADO.
+     *   3. Si existe   → genera contraseña aleatoria, la hashea, actualiza la BD
+     *                    y envía un email con JavaMail.
+     *
+     * Mensaje cliente:  { "tipo": "RECUPERAR_CONTRASENA", "correo": "user@ejemplo.com" }
+     * Respuesta OK:     { "tipo": "CONTRASENA_ENVIADA" }
+     * Respuesta error:  { "tipo": "CORREO_NO_ENCONTRADO" }
+     */
+    private void recuperarContrasena(WebSocket conn, JSONObject obj) {
+        String correo = obj.optString("correo", "").trim();
+        if (correo.isEmpty()) {
+            conn.send(new JSONObject().put("tipo", "CORREO_NO_ENCONTRADO").toString());
+            return;
+        }
+
+        try {
+            GestorJugador gestorJugador = new GestorJugador();
+            Jugador jugador = gestorJugador.buscarJugadorPorCorreo(correo);
+            System.out.println("RECUPERAR_CONTRASENA: buscando correo '" + correo + "' → " + (jugador != null ? "encontrado (" + jugador.getNombre() + ")" : "NO encontrado"));
+
+            if (jugador == null) {
+                conn.send(new JSONObject().put("tipo", "CORREO_NO_ENCONTRADO").toString());
+                return;
+            }
+
+            // Generar contraseña aleatoria en texto plano
+            String nuevaContrasena = GestorEmail.generarContrasennaAleatoria();
+
+            // Hashear con bcrypt (mismo proceso que en el registro)
+            String hash = org.mindrot.jbcrypt.BCrypt.hashpw(nuevaContrasena, org.mindrot.jbcrypt.BCrypt.gensalt());
+
+            // Actualizar la BD
+            boolean actualizado = gestorJugador.updateContrasenya(jugador.getNombre(), hash);
+            if (!actualizado) {
+                System.err.println("RECUPERAR_CONTRASENA: fallo al actualizar contraseña de " + jugador.getNombre());
+                conn.send(new JSONObject().put("tipo", "CORREO_NO_ENCONTRADO").toString());
+                return;
+            }
+
+            // Enviar el email en un hilo separado para no bloquear el hilo WS
+            final String nombreFinal   = jugador.getNombre();
+            final String correoFinal   = correo;
+            final String nuevaPswFinal = nuevaContrasena;
+            new Thread(() -> {
+                try {
+                    System.out.println("RECUPERAR_CONTRASENA: enviando email a " + correoFinal + "…");
+                    GestorEmail.enviarContrasennaReset(correoFinal, nuevaPswFinal, nombreFinal);
+                    conn.send(new JSONObject().put("tipo", "CONTRASENA_ENVIADA").toString());
+                    System.out.println("RECUPERAR_CONTRASENA: OK → email enviado a " + correoFinal);
+                } catch (javax.mail.MessagingException e) {
+                    System.err.println("RECUPERAR_CONTRASENA [MessagingException]: " + e.getMessage());
+                    conn.send(new JSONObject().put("tipo", "ERROR_EMAIL").toString());
+                } catch (Exception e) {
+                    System.err.println("RECUPERAR_CONTRASENA [email thread error]: " + e.getMessage());
+                    conn.send(new JSONObject().put("tipo", "ERROR_EMAIL").toString());
+                }
+            }, "email-sender").start();
+
+        } catch (java.sql.SQLException e) {
+            System.err.println("RECUPERAR_CONTRASENA [SQLException]: " + e.getMessage());
+            conn.send(new JSONObject().put("tipo", "CORREO_NO_ENCONTRADO").toString());
+        } catch (Exception e) {
+            System.err.println("RECUPERAR_CONTRASENA [Exception inesperada]: " + e.getClass().getSimpleName() + " – " + e.getMessage());
+            e.printStackTrace();
+            conn.send(new JSONObject().put("tipo", "CORREO_NO_ENCONTRADO").toString());
         }
     }
 
