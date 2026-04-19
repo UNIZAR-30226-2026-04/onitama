@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 import java.util.concurrent.*;
-import java.util.Map; // añadido para gestionar timers de partidas privadas
+import java.util.Map;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -26,19 +26,15 @@ import VO.Tablero;
 import VO.Jugador;
 import VO.Skin;
 import VO.Autenticacion;
-import JDBC.JugadorJDBC;
-import JDBC.SkinJDBC;
 import JDBC.NotificacionJDBC;
-import JDBC.CartasAccionJDBC;
 import VO.Notificacion;
-import JDBC.CartasMovJDBC;
-import JDBC.PartidaJDBC;
 
-// imports añadidos para trabajar con partidas privadas
 import gestor.GestorNotificaciones;
 import gestor.GestorSkin;
 import gestor.GestorJugador;
 import gestor.GestorPartida;
+import gestor.GestorCartasMov;
+import gestor.GestorCartasAccion;
 
 import java.util.Comparator;
 
@@ -1682,8 +1678,8 @@ public class Servidor extends WebSocketServer {
 
     private void obtenerCartas(WebSocket conn, JSONObject obj) {
         try {
-            CartasMovJDBC jdbc = new CartasMovJDBC();
-            List<CartaMov> cartasData = jdbc.sacarCartas();
+            GestorCartasMov gestorCartas = new GestorCartasMov();
+            List<CartaMov> cartasData = gestorCartas.sacarCartas();
             JSONArray arregloCartas = new JSONArray();
             for (CartaMov c : cartasData) {
                 JSONObject cJson = new JSONObject();
@@ -1703,8 +1699,8 @@ public class Servidor extends WebSocketServer {
 
     private void obtenerCartasAccion(WebSocket conn, JSONObject obj) {
         try {
-            CartasAccionJDBC jdbc = new CartasAccionJDBC();
-            List<CartaAccion> cartasData = jdbc.sacarCartas();
+            GestorCartasAccion gestorCartas = new GestorCartasAccion();
+            List<CartaAccion> cartasData = gestorCartas.sacarCartas();
             JSONArray arregloCartas = new JSONArray();
             for (CartaAccion c : cartasData) {
                 JSONObject cJson = new JSONObject();
