@@ -340,13 +340,18 @@ function tableroDesdeServidor(eq1: string, eq2: string): Celda[][] {
       if (fila >= 0 && fila < DIM && col >= 0 && col < DIM)
         tablero[fila][col].ficha = { equipo, esRey: false };
     }
-    // Trampas: |x,y,activa|
+    // Trampas: |x,y,activa|  activa=1 → sin disparar, activa=0 → disparada (injugable)
     const trampaRe = /\|(-?\d+),(-?\d+),(\d+)\|/g;
     while ((m = trampaRe.exec(str)) !== null) {
       const col = parseInt(m[1]), fila = parseInt(m[2]);
-      const activa = parseInt(m[3]) === 1;
-      if (activa && fila >= 0 && fila < DIM && col >= 0 && col < DIM)
-        tablero[fila][col].esTrampaEquipo = equipo;
+      const activa = parseInt(m[3]);
+      if (fila >= 0 && fila < DIM && col >= 0 && col < DIM) {
+        if (activa === 1) {
+          tablero[fila][col].esTrampaEquipo = equipo; // trampa activa, aún no disparada
+        } else if (activa === 0) {
+          tablero[fila][col].esTrampaEquipo = -1; // trampa disparada → casilla injugable
+        }
+      }
     }
   };
 
@@ -364,6 +369,11 @@ export function crearEstadoDesdeServidor(datos: {
   tablero_eq2?: string;
   /** Turno numérico del servidor: par=equipo1, impar=equipo2 */
   turno?: number;
+  /** Cartas de acción (para partidas reanudadas). Puede venir como array [propia, rival]
+   *  o como campos individuales carta_accion_propia / carta_accion_rival. */
+  cartas_accion?: { nombre: string; accion: string }[];
+  carta_accion_propia?: { nombre: string; accion: string } | null;
+  carta_accion_rival?: { nombre: string; accion: string } | null;
 }): EstadoJuego {
   const tieneTableroGuardado = datos.tablero_eq1 && datos.tablero_eq2;
   const tablero = tieneTableroGuardado
@@ -374,11 +384,21 @@ export function crearEstadoDesdeServidor(datos: {
   const turnoActual: EquipoID =
     datos.turno !== undefined ? (datos.turno % 2 === 0 ? 1 : 2) : 1;
 
+  // Restaurar cartas de acción para partidas reanudadas
+  const cartaAccionPropia =
+    datos.carta_accion_propia ??
+    datos.cartas_accion?.[0] ??
+    null;
+  const cartaAccionRival =
+    datos.carta_accion_rival ??
+    datos.cartas_accion?.[1] ??
+    null;
+
   return {
     fasePartida: tieneTableroGuardado ? "JUGANDO" : "COLOCAR_TRAMPA",
     opcionesCartasAccion: [],
-    cartaAccionPropia: null,
-    cartaAccionRival: null,
+    cartaAccionPropia,
+    cartaAccionRival,
     cartaAccionParaModo: null,
     tablero,
     turnoActual,
@@ -467,30 +487,49 @@ export function ejecutarMovimiento(
       (fichaMovida.equipo === 1 && destinoFila === DIM - 1 && destinoCol === CENTRO));
 
   // ─── Rotación de la cola ──────────────────────────────────────────────────
-  // El jugador recibe la primera carta de la cola; la carta usada va al final.
-  const cartaRecibida = estado.cartasSiguientes[0];
-  const nuevasSiguientes: CartaMovDef[] = [
-    estado.cartasSiguientes[1],
-    estado.cartasSiguientes[2],
-    carta, // La carta jugada pasa al final de la cola
-  ];
-
   const equipoActual = estado.turnoActual;
+
+  // Detectar si el jugador que mueve tiene 3 cartas (situación post-Atrapasueños/ROBAR).
+  // En ese caso la carta usada va al final del mazo (que tenía 2 → queda con 3),
+  // y el jugador no recibe ninguna carta nueva (ya tenía una extra).
+  const cartasMovedor =
+    equipoActual === equipoLocal ? estado.cartasJugador : estado.cartasOponente;
+  const tieneCartaExtra = cartasMovedor.length > 2;
+
+  let cartaRecibida: CartaMovDef | undefined;
+  let nuevasSiguientes: CartaMovDef[];
+
+  if (tieneCartaExtra) {
+    // Post-ROBAR: la carta usada pasa al final; nadie recibe carta del mazo (2→3 cartas en cola).
+    nuevasSiguientes = [...estado.cartasSiguientes, carta];
+  } else {
+    // Rotación normal FIFO: el jugador recibe la primera de la cola; la usada va al final.
+    cartaRecibida = estado.cartasSiguientes[0];
+    nuevasSiguientes = [
+      estado.cartasSiguientes[1],
+      estado.cartasSiguientes[2],
+      carta,
+    ];
+  }
 
   // Si el equipo que mueve ahora ES el jugador local → actualizar cartasJugador.
   // Si el equipo que mueve ahora ES el oponente      → actualizar cartasOponente.
   const nuevasCartasJugador =
     equipoActual === equipoLocal
-      ? estado.cartasJugador.map((c) =>
-          c.nombre === carta.nombre ? cartaRecibida : c
-        )
+      ? tieneCartaExtra
+        ? estado.cartasJugador.filter((c) => c.nombre !== carta.nombre)
+        : estado.cartasJugador.map((c) =>
+            c.nombre === carta.nombre ? cartaRecibida! : c
+          )
       : [...estado.cartasJugador];
 
   const nuevasCartasOponente =
     equipoActual !== equipoLocal
-      ? estado.cartasOponente.map((c) =>
-          c.nombre === carta.nombre ? cartaRecibida : c
-        )
+      ? tieneCartaExtra
+        ? estado.cartasOponente.filter((c) => c.nombre !== carta.nombre)
+        : estado.cartasOponente.map((c) =>
+            c.nombre === carta.nombre ? cartaRecibida! : c
+          )
       : [...estado.cartasOponente];
 
   const ganador: EquipoID | null =

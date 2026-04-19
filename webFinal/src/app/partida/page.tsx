@@ -505,8 +505,19 @@ function PartidaInterna({
           tablero_eq2?: string;
           turno?: number;
           partida_nueva?: boolean;
+          /** Cartas de acción para partidas reanudadas (array [propia, rival] o campos individuales) */
+          cartas_accion?: { nombre: string; accion: string }[];
+          carta_accion_propia?: { nombre: string; accion: string } | null;
+          carta_accion_rival?: { nombre: string; accion: string } | null;
         };
-        const estadoInicial = crearEstadoDesdeServidor(datos as RespuestaPartidaEncontrada & { tablero_eq1?: string; tablero_eq2?: string; turno?: number });
+        const estadoInicial = crearEstadoDesdeServidor(datos as RespuestaPartidaEncontrada & {
+          tablero_eq1?: string;
+          tablero_eq2?: string;
+          turno?: number;
+          cartas_accion?: { nombre: string; accion: string }[];
+          carta_accion_propia?: { nombre: string; accion: string } | null;
+          carta_accion_rival?: { nombre: string; accion: string } | null;
+        });
         // Si es partida nueva (flag puesto por buscarpartida/partidas), siempre arrancamos en
         // COLOCAR_TRAMPA aunque el servidor haya mandado tablero (posición inicial de piezas).
         if (datos.partida_nueva && !modoEntrenamiento) {
@@ -647,42 +658,55 @@ function PartidaInterna({
         if (y >= 0 && x >= 0) nuevoTablero[y][x].ficha = null;
         if (y_op >= 0 && x_op >= 0) nuevoTablero[y_op][x_op].ficha = null;
       } else if (c === "ROBAR") {
+        // Atrapasueños: el ejecutor roba una carta al rival.
+        // El rival recibe inmediatamente la primera carta del mazo como reemplazo.
+        // IMPORTANTE: el turno NO pasa — el ejecutor debe mover aún con sus 3 cartas.
+        // Cuando mueva, la carta usada irá al mazo y volverá a tener 2 (ver ejecutarMovimiento).
         const miEquipo = miEquipoActual;
-        const opEquipo = miEquipo === 1 ? 2 : 1;
-        
-        // El ejecutor es equipoEjecutor. 
-        // Si el ejecutor es MI equipo: yo robo una del rival y el rival coge del mazo.
-        // Si el ejecutor es el RIVAL: el rival me roba una y yo cojo del mazo.
-        
+
         const misCartas = equipoEjecutor === miEquipo ? base.cartasJugador : base.cartasOponente;
         const susCartas = equipoEjecutor === miEquipo ? base.cartasOponente : base.cartasJugador;
         const mazo = [...base.cartasSiguientes];
-        
+
         if (cartaRobar !== "ninguna") {
-           const robadaIdx = susCartas.findIndex(ca => ca.nombre === cartaRobar);
-           if (robadaIdx !== -1) {
-              const robada = susCartas[robadaIdx];
-              const nuevaDelMazo = mazo.shift(); // Saca la primera
-              
-              const nuevasMias = [...misCartas, robada];
-              const nuevasSuyas = [...susCartas];
-              nuevasSuyas.splice(robadaIdx, 1);
-              if (nuevaDelMazo) nuevasSuyas.push(nuevaDelMazo);
-              
-              if (equipoEjecutor === miEquipo) {
-                return {
-                  ...base,
-                  ...limpiezaTurno,
-                  cartasJugador: nuevasMias,
-                  cartasOponente: nuevasSuyas,
-                  cartasSiguientes: mazo,
-                  cartaAccionPropia: null,
-                  cartaAccionRival: null,
-                };
-              } else {
-                return { ...base, ...limpiezaTurno, cartasJugador: nuevasSuyas, cartasOponente: nuevasMias, cartasSiguientes: mazo };
-              }
-           }
+          const robadaIdx = susCartas.findIndex(ca => ca.nombre === cartaRobar);
+          if (robadaIdx !== -1) {
+            const robada = susCartas[robadaIdx];
+            const nuevaDelMazo = mazo.shift(); // el rival recibe la primera del mazo
+
+            const nuevasMias = [...misCartas, robada]; // ejecutor: 3 cartas
+            const nuevasSuyas = susCartas.filter((_, i) => i !== robadaIdx); // rival pierde la robada
+            if (nuevaDelMazo) nuevasSuyas.push(nuevaDelMazo); // rival recupera del mazo → 2
+
+            // Limpieza sin cambio de turno: el ejecutor sigue jugando
+            const limpiezaSinPasarTurno = {
+              turnoActual: equipoEjecutor as EquipoID,
+              fichaSeleccionada: null as null,
+              cartaSeleccionada: null as null,
+              movimientosValidos: [] as { fila: number; col: number }[],
+              cartaAccionParaModo: null as null,
+            };
+
+            if (equipoEjecutor === miEquipo) {
+              return {
+                ...base,
+                ...limpiezaSinPasarTurno,
+                cartasJugador: nuevasMias,
+                cartasOponente: nuevasSuyas,
+                cartasSiguientes: mazo,
+                cartaAccionPropia: null, // carta de acción usada
+                cartaAccionRival: base.cartaAccionRival,
+              };
+            } else {
+              return {
+                ...base,
+                ...limpiezaSinPasarTurno,
+                cartasJugador: nuevasSuyas,
+                cartasOponente: nuevasMias,
+                cartasSiguientes: mazo,
+              };
+            }
+          }
         }
       } else if (c === "CEGAR") {
           // Brujería: el equipo que jugó la carta queda "opaco" para el rival durante toda la partida
@@ -1410,7 +1434,9 @@ function PartidaInterna({
   if (!mounted) ayuda = "Sincronizando partida…";
   else if (aguardandoInicio) ayuda = "Esperando al servidor para comenzar…";
   else if (esTurnoJugador) {
-    if (!estado.fichaSeleccionada && !estado.cartaSeleccionada) ayuda = `Selecciona una de tus piezas (${nombreEquipoJugador.toLowerCase()})`;
+    if (estado.cartasJugador.length > 2 && !estado.fichaSeleccionada && !estado.cartaSeleccionada)
+      ayuda = "¡Carta robada! Ahora elige cómo mover con tus 3 cartas";
+    else if (!estado.fichaSeleccionada && !estado.cartaSeleccionada) ayuda = `Selecciona una de tus piezas (${nombreEquipoJugador.toLowerCase()})`;
     else if (estado.fichaSeleccionada && !estado.cartaSeleccionada) ayuda = "Ahora elige una carta del panel derecho";
     else if (estado.movimientosValidos.length === 0) ayuda = "Sin movimientos válidos. Prueba otra carta o pieza.";
     else ayuda = "Haz clic en una casilla blanca para mover";
@@ -1834,9 +1860,15 @@ function PartidaInterna({
           <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pr-0.5">
             {/* Cartas de movimiento — arriba */}
             <div className="flex flex-col gap-1 shrink-0">
-              <p className="text-white/40 text-[9px] uppercase tracking-widest text-center">
-                {esTurnoJugador ? "Elige una carta" : "Tus cartas"}
-              </p>
+              {estado.cartasJugador.length > 2 && esTurnoJugador ? (
+                <p className="text-yellow-300 text-[9px] uppercase tracking-widest text-center font-bold animate-pulse">
+                  🃏 3 cartas — ¡elige con cuál mover!
+                </p>
+              ) : (
+                <p className="text-white/40 text-[9px] uppercase tracking-widest text-center">
+                  {esTurnoJugador ? "Elige una carta" : "Tus cartas"}
+                </p>
+              )}
               {estado.cartasJugador.map((carta, i) => (
                 <CartaBtn
                   key={`${carta.nombre}-jugador-${i}`}
