@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.ArrayList;
 import VO.Notificacion;
 
-public final class NotificacionJDBC {
+import DAO.NotificacionDAO;
+
+public final class NotificacionJDBC implements NotificacionDAO {
 
     private final DataSource dataSource;
 

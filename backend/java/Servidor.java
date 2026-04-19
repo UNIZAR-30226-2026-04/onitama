@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 import java.util.concurrent.*;
-import java.util.Map; // añadido para gestionar timers de partidas privadas
+import java.util.Map;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -26,15 +26,14 @@ import VO.Tablero;
 import VO.Jugador;
 import VO.Skin;
 import VO.Autenticacion;
-import JDBC.JugadorJDBC;
-import JDBC.SkinJDBC;
-import JDBC.NotificacionJDBC;
 import VO.Notificacion;
-import JDBC.CartasMovJDBC;
 
-// imports añadidos para trabajar con partidas privadas
 import gestor.GestorNotificaciones;
-import JDBC.PartidaJDBC;
+import gestor.GestorSkin;
+import gestor.GestorJugador;
+import gestor.GestorPartida;
+import gestor.GestorCartasMov;
+import gestor.GestorCartasAccion;
 
 import java.util.Comparator;
 
@@ -96,7 +95,7 @@ class Pareja {
         p2 = _p2;
 
         // Limpiamos partidas fantasma (abandonos por desconexión) antes de intentar crear una nueva
-        new JDBC.PartidaJDBC().terminarPartidasEnCurso(_p1.nombre, _p2.nombre);
+        new GestorPartida().terminarPartidasEnCurso(_p1.nombre, _p2.nombre);
 
         partida = new Partida(0, "JUGANDOSE", 0, tipo, null, null, 0, 0, _p1.nombre, _p2.nombre, false, false, 0, null, null);
         if (!partida.registrarPartida()) {
@@ -170,9 +169,9 @@ public class Servidor extends WebSocketServer {
             JSONCarta.put("nombre", carta.getNombre());
             JSONCarta.put("movimientos", arrayMovimientos);
 
-            if ("EQ1".equals(carta.getEstado())) {
+            if (carta.perteneceAlEquipo(1)) {
                 mazoJ1.put(JSONCarta);
-            } else if ("EQ2".equals(carta.getEstado())) {
+            } else if (carta.perteneceAlEquipo(2)) {
                 mazoJ2.put(JSONCarta);
             } else {
                 cola.put(JSONCarta);
@@ -257,7 +256,7 @@ public class Servidor extends WebSocketServer {
             // consultamos la base para obtener el avatarId del jugador
             String avatarId = null;
             try {
-                Jugador j = new JugadorJDBC().buscarJugador(nombre);
+                Jugador j = new GestorJugador().buscarJugador(nombre);
                 if (j != null) avatarId = j.getAvatarId();
             } catch (SQLException e) {
                 System.err.println("Error al obtener avatarId en búsqueda: " + e.getMessage());
@@ -635,7 +634,14 @@ public class Servidor extends WebSocketServer {
             mutexParejas.release(); // SIGNAL
         }
 
-        if (pj != null) {
+        if (pj != null) { 
+            final int idPartida = pj.partida.getIDPartida();
+
+            ScheduledFuture<?> timerAntiguo = esperaPartida.remove(idPartida);
+            if (timerAntiguo != null) {
+                timerAntiguo.cancel(false);
+            }
+
             InfoJugador oponente = pj.getOponente(conn);
             JSONObject msg = new JSONObject();
 
@@ -660,10 +666,10 @@ public class Servidor extends WebSocketServer {
     }
 
     public void iniciarSesion(WebSocket conn, JSONObject obj) {
-        JugadorJDBC jdbc = new JugadorJDBC();
+        GestorJugador gestorJugador = new GestorJugador();
         String nombre = obj.getString("nombre");
         try {
-            Jugador j = jdbc.buscarJugador(nombre);
+            Jugador j = gestorJugador.buscarJugador(nombre);
 
             if (j == null || estaConectado(nombre)) {
                 conn.send(new JSONObject().put("tipo", "ERROR_SESION_USS").toString());
@@ -706,9 +712,9 @@ public class Servidor extends WebSocketServer {
                 // fuera de una búsqueda o partida activa, así que aprovechamos el login para
                 // volcar
                 // todo lo que se perdió mientras estaba desconectado.
-                NotificacionJDBC notificacionJDBC = new NotificacionJDBC();
+                GestorNotificaciones gestorNotif = new GestorNotificaciones();
                 try {
-                    List<Notificacion> pendientes = notificacionJDBC.obtenerPendientes(nombre);
+                    List<Notificacion> pendientes = gestorNotif.obtenerPendientes(nombre);
                     for (Notificacion n : pendientes) {
                         JSONObject notif = new JSONObject();
                         notif.put("tipo", n.getTipo());
@@ -816,11 +822,11 @@ public class Servidor extends WebSocketServer {
     }
 
     private void aceptarAmistad(WebSocket conn, JSONObject obj) {
-        NotificacionJDBC notificacionJDBC = new NotificacionJDBC();
+        GestorNotificaciones gestorNotif = new GestorNotificaciones();
         try {
-            notificacionJDBC.borrar(obj.getInt("idNotificacion")); // DUDA, ARREGLAR
-            JugadorJDBC jugadorJDBC = new JugadorJDBC();
-            if (jugadorJDBC.insertarAmistad(obj.getString("remitente"), obj.getString("destinatario"))) {
+            gestorNotif.borrar(obj.getInt("idNotificacion")); // DUDA, ARREGLAR
+            GestorJugador gestorJugador = new GestorJugador();
+            if (gestorJugador.insertarAmistad(obj.getString("remitente"), obj.getString("destinatario"))) {
                 System.out.println("Amistad registrada entre " + obj.getString("remitente") + " y "
                         + obj.getString("destinatario"));
                 WebSocket ws = buscarConexion(obj.getString("remitente"));
@@ -841,13 +847,13 @@ public class Servidor extends WebSocketServer {
 
     // nuevo: rechazar solicitud de amistad eliminando la notificación de la BD
     private void rechazarAmistad(WebSocket conn, JSONObject obj) {
-        NotificacionJDBC notificacionJDBC = new NotificacionJDBC();
+        GestorNotificaciones gestorNotif = new GestorNotificaciones();
         try {
             int idNotificacion = obj.getInt("idNotificacion");
-            Notificacion notif = notificacionJDBC.obtenerPorId(idNotificacion);
+            Notificacion notif = gestorNotif.obtenerPorId(idNotificacion);
 
             if (notif != null) {
-                notificacionJDBC.borrar(idNotificacion);
+                gestorNotif.borrar(idNotificacion);
 
                 // notificamos al que envía
                 WebSocket ws = buscarConexion(notif.getRemitente());
@@ -924,7 +930,7 @@ public class Servidor extends WebSocketServer {
             // para que aceptarInvitacion() rechace cualquier intento de aceptar
             // después de los 2 minutos.
             try {
-                new NotificacionJDBC().actualizarEstado(idNotifFinal, Notificacion.ESTADO_RECHAZADA);
+                gestor.actualizarEstado(idNotifFinal, Notificacion.ESTADO_RECHAZADA);
             } catch (SQLException e) {
                 System.err.println("Error al marcar invitación expirada: " + e.getMessage());
             }
@@ -954,8 +960,7 @@ public class Servidor extends WebSocketServer {
 
         GestorNotificaciones gestor = new GestorNotificaciones();
         try {
-            NotificacionJDBC notifJdbc = new NotificacionJDBC();
-            Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
+            Notificacion notif = gestor.obtenerPorId(idNotificacion);
             if (notif == null) {
                 System.err.println("aceptarInvitacion: notificación no encontrada id=" + idNotificacion);
                 conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
@@ -968,15 +973,14 @@ public class Servidor extends WebSocketServer {
                 return;
             }
             if (notif.haExpirado()) {
-                notifJdbc.actualizarEstado(idNotificacion, Notificacion.ESTADO_RECHAZADA);
+                gestor.actualizarEstado(idNotificacion, Notificacion.ESTADO_RECHAZADA);
                 conn.send(new JSONObject().put("tipo", "ERROR_NO_UNIDO").toString());
                 return;
             }
             System.out.println("Invitación aceptada: " + notif.getRemitente() + " -> " + notif.getDestinatario());
 
             // actualizamos el estado de la notificación a ACEPTADA
-            notifJdbc.actualizarEstado(idNotificacion, Notificacion.ESTADO_ACEPTADA);
-
+            gestor.actualizarEstado(idNotificacion, Notificacion.ESTADO_ACEPTADA);
             InfoJugador j1 = buscarJugadorConectado(notif.getRemitente());
             InfoJugador j2 = buscarJugadorConectado(notif.getDestinatario());
 
@@ -1020,8 +1024,7 @@ public class Servidor extends WebSocketServer {
         // rechazamos la notificación en BD
         GestorNotificaciones gestor = new GestorNotificaciones();
         try {
-            NotificacionJDBC notifJdbc = new NotificacionJDBC();
-            Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
+            Notificacion notif = gestor.obtenerPorId(idNotificacion);
             if (notif == null) {
                 conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
                 return;
@@ -1092,8 +1095,8 @@ public class Servidor extends WebSocketServer {
     public void buscarJugadores(WebSocket conn, JSONObject obj) {
         String raiz = obj.getString("raiz");
         try {
-            JugadorJDBC jdbc = new JugadorJDBC();
-            List<Jugador> jugadores = jdbc.buscarJugadoresPorRaiz(raiz);
+            GestorJugador gestorJugador = new GestorJugador();
+            List<Jugador> jugadores = gestorJugador.buscarJugadoresPorRaiz(raiz);
             if (jugadores.isEmpty()) {
                 conn.send(new JSONObject().put("tipo", "NO_ENCONTRADOS").toString());
                 return;
@@ -1123,8 +1126,8 @@ public class Servidor extends WebSocketServer {
     public void buscarAmigos(WebSocket conn, JSONObject obj) {
         String usuario = obj.getString("usuario");
         try {
-            JugadorJDBC jdbc = new JugadorJDBC();
-            List<Jugador> jugadores = jdbc.sacarAmigos(usuario);
+            GestorJugador gestorJugador = new GestorJugador();
+            List<Jugador> jugadores = gestorJugador.sacarAmigos(usuario);
             if (jugadores.isEmpty()) {
                 conn.send(new JSONObject().put("tipo", "NO_AMIGOS").toString());
                 return;
@@ -1155,9 +1158,9 @@ public class Servidor extends WebSocketServer {
         String usuario = obj.getString("usuario");
         String amigo = obj.getString("amigo");
         try {
-            JugadorJDBC jdbc = new JugadorJDBC();
+            GestorJugador gestorJugador = new GestorJugador();
             JSONObject msg = new JSONObject();
-            if (jdbc.borrarAmigo(usuario, amigo)) {
+            if (gestorJugador.borrarAmigo(usuario, amigo)) {
                 msg.put("tipo", "AMIGO_BORRADO");
                 conn.send(msg.toString());
             } else {
@@ -1255,6 +1258,48 @@ public class Servidor extends WebSocketServer {
         }
 
         if(pj != null){
+            final int idPartida = pj.partida.getIDPartida();
+
+            ScheduledFuture<?> timerAntiguo = esperaPartida.remove(idPartida);
+            if (timerAntiguo != null) {
+                timerAntiguo.cancel(false);
+            }
+
+            final Pareja pjFinal = pj;
+            final WebSocket connFinal = conn;
+            final int equipoFinal = equipo;
+
+            ScheduledFuture<?> timerNuevo = temporizador.schedule(() -> {
+                JSONObject msg1 = new JSONObject();
+                JSONObject msg2 = new JSONObject();
+                System.out.print("TIEMPO!!!");
+                int eq = equipoFinal;
+                if(eq == 1){
+                    eq = 2;
+                }else{
+                    eq = 1;
+                }
+                
+                msg1.put("tipo", "DERROTA");
+                msg2.put("tipo", "VICTORIA");
+                msg2.put("motivo", "FIN_PARTIDA");
+                msg2.put("equipo_responsable", eq);
+
+                InfoJugador oponente = pjFinal.getOponente(connFinal);
+                oponente.ws.send(msg1.toString());
+                connFinal.send(msg2.toString());
+
+                pjFinal.partida.abandonarPartida(eq);
+                try {
+                    mutexParejas.acquire();
+                    parejas.remove(pjFinal);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    mutexParejas.release();
+                }
+            }, 2, TimeUnit.MINUTES);
+            
             boolean estado = pj.partida.jugarAccion(nomCartaAcc, x, y, equipo, xOp, yOp, cartaRobar);
             if(!estado){
                 JSONObject msg = new JSONObject();
@@ -1346,12 +1391,12 @@ public class Servidor extends WebSocketServer {
 
     public void solicitarPartidas(WebSocket conn, JSONObject obj, String tipo) {
         String usuario = obj.getString("usuario");
-        PartidaJDBC jdbc = new PartidaJDBC();
+        GestorPartida gestorPartida = new GestorPartida();
         JSONObject msg = new JSONObject();
         if (tipo.equals("PRIVADA")) {
             String amigo = obj.getString("amigo");
             try {
-                List<Partida> partidas = jdbc.buscarPartidasJugadorPrivadas(usuario, amigo);
+                List<Partida> partidas = gestorPartida.buscarPartidasJugadorPrivadas(usuario, amigo);
                 msg.put("tipo", "PARTIDAS_PRIVADAS");
                 msg.put("oponente", amigo);
                 JSONArray partidasJSON = new JSONArray();
@@ -1383,7 +1428,7 @@ public class Servidor extends WebSocketServer {
             }
         } else if (tipo.equals("PUBLICA")) {
             try {
-                List<Partida> partidas = jdbc.buscarPartidasJugadorPublicas(usuario);
+                List<Partida> partidas = gestorPartida.buscarPartidasJugadorPublicas(usuario);
                 msg.put("tipo", "PARTIDAS_PUBLICAS");
                 JSONArray partidasJSON = new JSONArray();
                 for (Partida p : partidas) {
@@ -1458,7 +1503,7 @@ public class Servidor extends WebSocketServer {
             mutexConectados.release();
         }
     }
-
+/* 
     @Override
     public void onMessage(WebSocket conn, String message) {
         System.out.println("Mensaje recibido: " + message);
@@ -1538,6 +1583,55 @@ public class Servidor extends WebSocketServer {
         });
     }
 
+*/
+
+// VERSIÓN PARA JAVA 14 O SUPERIORES QUE CON -> EVITA FALL THROUGH EN LUGAR DE CASE "HOLA": funcion(); break;
+        @Override
+        public void onMessage(WebSocket conn, String message) {
+        System.out.println("Mensaje recibido: " + message);
+
+        hilos.submit(() -> {
+            JSONObject obj = new JSONObject(message);
+            String tipoMSG = obj.getString("tipo");
+            System.out.println("HOLA");
+            switch (tipoMSG) {
+                case "BUSCAR_PARTIDA"        -> gestionarBusquedaPartida(conn, obj);
+                case "MOVER"                 -> gestionarPartida(conn, obj);
+                case "INICIAR_SESION"        -> iniciarSesion(conn, obj);
+                case "REGISTRARSE"           -> registrarJugador(conn, obj);
+                case "ABANDONAR"             -> abandonarPartida(conn, obj);
+                case "CANCELAR"              -> cancelarBusqueda(conn);
+                case "SOLICITUD_AMISTAD"     -> notificarAmistad(conn, obj);
+                case "ACEPTAR_AMISTAD"       -> aceptarAmistad(conn, obj);
+                case "RECHAZAR_AMISTAD"      -> rechazarAmistad(conn, obj);
+                case "INVITACION_PARTIDA"    -> gestionarInvitacionPartida(conn, obj);
+                case "ACEPTAR_INVITACION"    -> aceptarInvitacion(conn, obj);
+                case "RECHAZAR_INVITACION"   -> rechazarInvitacion(conn, obj);
+                case "OBTENER_PERFIL"        -> obtenerPerfil(conn, obj);
+                case "BUSCAR_JUGADORES"      -> buscarJugadores(conn, obj);
+                case "OBTENER_AMIGOS"        -> buscarAmigos(conn, obj);
+                case "BORRAR_AMIGO"          -> borrarAmigo(conn, obj);
+                case "SOLICITAR_PARTIDAS_PUB"-> solicitarPartidas(conn, obj, "PUBLICA");
+                case "SOLICITAR_PARTIDAS_PRIV"-> solicitarPartidas(conn, obj, "PRIVADA");
+                case "OBTENER_CARTAS"        -> obtenerCartas(conn, obj);
+                case "OBTENER_CARTAS_ACCION" -> obtenerCartasAccion(conn, obj);
+                case "CANCELAR_NOTIFICACION" -> cancelarNotificacion(conn, obj);
+                case "SOLICITAR_PAUSA"       -> gestionarSolicitudPausa(conn, obj);
+                case "ACEPTAR_PAUSA"         -> gestionarRespuestaPausa(conn, obj, true);
+                case "RECHAZAR_PAUSA"        -> gestionarRespuestaPausa(conn, obj, false);
+                case "SOLICITAR_REANUDAR"    -> gestionarSolicitudReanudar(conn, obj);
+                case "ACEPTAR_REANUDAR"      -> gestionarRespuestaReanudar(conn, obj, true);
+                case "RECHAZAR_REANUDAR"     -> gestionarRespuestaReanudar(conn, obj, false);
+                case "PONER_TRAMPA"          -> setTrampa(conn, obj);
+                case "CARTA_ACCION"          -> seleccionarCartaAccion(conn, obj);
+                case "JUGAR_CARTA_ACCION"    -> jugarCartaAccion(conn, obj);
+                case "OBTENER_TIENDA_SKINS"  -> obtenerTiendaSkins(conn, obj);
+                case "COMPRAR_SKIN"          -> comprarSkin(conn, obj);
+                case "ACTIVAR_SKIN"          -> activarSkin(conn, obj);
+            }
+        });
+    }
+
     @Override
     public void onError(WebSocket conn, Exception ex) {
         ex.printStackTrace();
@@ -1551,7 +1645,7 @@ public class Servidor extends WebSocketServer {
     private void obtenerPerfil(WebSocket conn, JSONObject obj) {
         try {
             String nombre = obj.getString("nombre");
-            Jugador j = new JugadorJDBC().buscarJugador(nombre);
+            Jugador j = new GestorJugador().buscarJugador(nombre);
             if (j == null) {
                 System.out.println("OBTENER_PERFIL: jugador no encontrado -> " + nombre);
                 return;
@@ -1580,8 +1674,8 @@ public class Servidor extends WebSocketServer {
 
     private void obtenerCartas(WebSocket conn, JSONObject obj) {
         try {
-            CartasMovJDBC jdbc = new CartasMovJDBC();
-            List<CartaMov> cartasData = jdbc.sacarCartas();
+            GestorCartasMov gestorCartas = new GestorCartasMov();
+            List<CartaMov> cartasData = gestorCartas.sacarCartas();
             JSONArray arregloCartas = new JSONArray();
             for (CartaMov c : cartasData) {
                 JSONObject cJson = new JSONObject();
@@ -1599,6 +1693,28 @@ public class Servidor extends WebSocketServer {
         }
     }
 
+    private void obtenerCartasAccion(WebSocket conn, JSONObject obj) {
+        try {
+            GestorCartasAccion gestorCartas = new GestorCartasAccion();
+            List<CartaAccion> cartasData = gestorCartas.sacarCartas();
+            JSONArray arregloCartas = new JSONArray();
+            for (CartaAccion c : cartasData) {
+                JSONObject cJson = new JSONObject();
+                cJson.put("nombre", c.getNombre());
+                cJson.put("puntos_necesarios", c.getPuntosMin());
+                cJson.put("descripcion", c.getAccion());
+                arregloCartas.put(cJson);
+            }
+            JSONObject msg = new JSONObject();
+            msg.put("tipo", "LISTA_CARTAS_ACCION");
+            msg.put("cartas", arregloCartas);
+            conn.send(msg.toString());
+        } catch (SQLException e) {
+            System.err.println("Error al obtener cartas de accion: " + e.getMessage());
+            conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
+        }
+    }
+
     private void cancelarNotificacion(WebSocket conn, JSONObject obj) {
         try {
             int idNotificacion = obj.getInt("idNotificacion");
@@ -1609,10 +1725,10 @@ public class Servidor extends WebSocketServer {
             if (timer != null) timer.cancel(false);
 
             // Marcar notificación como rechazada en BD
-            NotificacionJDBC notifJdbc = new NotificacionJDBC();
-            VO.Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
+            GestorNotificaciones gestorNotif = new GestorNotificaciones();
+            Notificacion notif = gestorNotif.obtenerPorId(idNotificacion);
             if (notif != null) {
-                notifJdbc.actualizarEstado(idNotificacion, VO.Notificacion.ESTADO_RECHAZADA);
+                gestorNotif.actualizarEstado(idNotificacion, Notificacion.ESTADO_RECHAZADA);
                 // Notificar al destinatario que fue cancelada
                 WebSocket wsDestino = buscarConexion(notif.getDestinatario());
                 if (wsDestino != null && wsDestino.isOpen()) {
@@ -1674,11 +1790,9 @@ public class Servidor extends WebSocketServer {
             int idNotificacion = obj.getInt("idNotificacion");
             String nombreQuienResponde = obj.getString("nombre");
 
-            NotificacionJDBC notifJdbc = new NotificacionJDBC();
-            Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
-            if (notif == null) return;
-
             GestorNotificaciones gestor = new GestorNotificaciones();
+            Notificacion notif = gestor.obtenerPorId(idNotificacion);
+            if (notif == null) return;
 
             if (aceptar) {
                 boolean ok = gestor.aceptarNotificacion(idNotificacion, nombreQuienResponde);
@@ -1693,7 +1807,7 @@ public class Servidor extends WebSocketServer {
                         if (!pausada) {
                             System.err.println("pausarPartida falló para partida " + pj.partida.getIDPartida() + " (estado=" + pj.partida.getEstado() + "). Forzando estado PAUSADA.");
                             // Forzar actualización directa en BD por si hay inconsistencia de mayúsculas
-                            try { new JDBC.PartidaJDBC().updateEstado(pj.partida.getIDPartida(), "PAUSADA"); } catch (Exception ex) { ex.printStackTrace(); }
+                            try { new GestorPartida().updateEstado(pj.partida.getIDPartida(), "PAUSADA"); } catch (Exception ex) { ex.printStackTrace(); }
                         }
                         pj.partida.actualizarBD();  // guarda tablero, fichas y turno
                         try {
@@ -1776,21 +1890,19 @@ public class Servidor extends WebSocketServer {
             ScheduledFuture<?> timer = timersReanudar.remove(idNotificacion);
             if (timer != null) timer.cancel(false);
 
-            NotificacionJDBC notifJdbc = new NotificacionJDBC();
-            Notificacion notif = notifJdbc.obtenerPorId(idNotificacion);
-            if (notif == null) return;
-
             GestorNotificaciones gestor = new GestorNotificaciones();
+            Notificacion notif = gestor.obtenerPorId(idNotificacion);
+            if (notif == null) return;
 
             if (aceptar) {
                 boolean ok = gestor.aceptarNotificacion(idNotificacion, nombreQuienResponde);
                 System.out.println("gestionarRespuestaReanudar: aceptarNotificacion ok=" + ok);
                 if (ok) {
                     // cargamos partida de la base
-                    PartidaJDBC partidaJdbc = new PartidaJDBC();
+                    GestorPartida gestorPartida = new GestorPartida();
                     Integer idPartida = notif.getIdPartida();
                     System.out.println("gestionarRespuestaReanudar: buscando partida id=" + idPartida);
-                    Partida partidaGuardada = idPartida != null ? partidaJdbc.buscarPorId(idPartida) : null;
+                    Partida partidaGuardada = idPartida != null ? gestorPartida.buscarPorId(idPartida) : null;
                     if (partidaGuardada == null) {
                         System.err.println("gestionarRespuestaReanudar: partida no encontrada id=" + idPartida);
                         conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
@@ -1886,17 +1998,17 @@ public class Servidor extends WebSocketServer {
     private void obtenerTiendaSkins(WebSocket conn, JSONObject obj) {
         String usuario = obj.getString("usuario");
         try {
-            JugadorJDBC jugadorJdbc = new JugadorJDBC();
-            SkinJDBC skinJdbc = new SkinJDBC();
+            GestorJugador gestorJugador = new GestorJugador();
+            GestorSkin gestorSkin = new GestorSkin();
 
-            Jugador j = jugadorJdbc.buscarJugador(usuario);
+            Jugador j = gestorJugador.buscarJugador(usuario);
             if (j == null) {
                 conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
                 return;
             }
 
-            List<Skin> todasLasSkins = skinJdbc.sacarSkinDisp();
-            List<Skin> skinsDelJugador = skinJdbc.sacarSkinJugador(usuario);
+            List<Skin> todasLasSkins = gestorSkin.sacarSkinDisp();
+            List<Skin> skinsDelJugador = gestorSkin.sacarSkinJugador(usuario);
 
             JSONArray skinsJSON = new JSONArray();
             for (Skin s : todasLasSkins) {
@@ -1930,72 +2042,28 @@ public class Servidor extends WebSocketServer {
         String usuario = obj.getString("usuario");
         String skinId = obj.getString("skin_id");
         try {
-            JugadorJDBC jugadorJdbc = new JugadorJDBC();
-            SkinJDBC skinJdbc = new SkinJDBC();
+            GestorSkin gestorSkin = new GestorSkin();
+            String resultado = gestorSkin.comprarSkin(skinId, usuario);
 
-            Jugador j = jugadorJdbc.buscarJugador(usuario);
-            if (j == null) {
+            // ahora que se gestiona toda la lógica con gestores, solo toca enviar el mensaje
+            // correspondiente a raíz de lo que devuelve la llamada a comprarSkin, método
+            // implementado en gestorSKin
+            if (resultado.equals("OK")) {
+                Jugador jActualizado = new GestorJugador().buscarJugador(usuario);
+                int nuevosCores = jActualizado != null ? jActualizado.getCores() : -1;
+                JSONObject msg = new JSONObject();
+                msg.put("tipo", "COMPRA_SKIN_OK");
+                msg.put("skin_id", skinId);
+                msg.put("cores", nuevosCores);
+                conn.send(msg.toString());
+                System.out.println("COMPRA_SKIN_OK: " + usuario + " compró " + skinId + " | cores restantes: " + nuevosCores);
+            } else {
                 conn.send(new JSONObject()
                         .put("tipo", "COMPRA_SKIN_ERROR")
                         .put("skin_id", skinId)
-                        .put("codigo", "ERROR_BD")
+                        .put("codigo", resultado)
                         .toString());
-                return;
             }
-
-            Skin skin = skinJdbc.buscarSkin(skinId);
-            if (skin == null) {
-                conn.send(new JSONObject()
-                        .put("tipo", "COMPRA_SKIN_ERROR")
-                        .put("skin_id", skinId)
-                        .put("codigo", "SKIN_NO_EXISTE")
-                        .toString());
-                return;
-            }
-
-            // Comprobar si ya la posee
-            List<Skin> skinsDelJugador = skinJdbc.sacarSkinJugador(usuario);
-            boolean yaComprada = skinsDelJugador.stream()
-                    .anyMatch(sk -> sk.getNombre().equals(skinId));
-            if (yaComprada) {
-                conn.send(new JSONObject()
-                        .put("tipo", "COMPRA_SKIN_ERROR")
-                        .put("skin_id", skinId)
-                        .put("codigo", "YA_COMPRADA")
-                        .toString());
-                return;
-            }
-
-            // Comprobar cores suficientes
-            if (j.getCores() < skin.getPrecio()) {
-                conn.send(new JSONObject()
-                        .put("tipo", "COMPRA_SKIN_ERROR")
-                        .put("skin_id", skinId)
-                        .put("codigo", "CORES_INSUFICIENTES")
-                        .toString());
-                return;
-            }
-
-            // Realizar la compra: descontar cores y registrar relación
-            int nuevosCores = j.getCores() - skin.getPrecio();
-            boolean coresOk = jugadorJdbc.updateCores(usuario, nuevosCores);
-            boolean skinOk = jugadorJdbc.desbloquearSkin(usuario, skinId);
-
-            if (!coresOk || !skinOk) {
-                conn.send(new JSONObject()
-                        .put("tipo", "COMPRA_SKIN_ERROR")
-                        .put("skin_id", skinId)
-                        .put("codigo", "ERROR_BD")
-                        .toString());
-                return;
-            }
-
-            JSONObject msg = new JSONObject();
-            msg.put("tipo", "COMPRA_SKIN_OK");
-            msg.put("skin_id", skinId);
-            msg.put("cores", nuevosCores);
-            conn.send(msg.toString());
-            System.out.println("COMPRA_SKIN_OK: " + usuario + " compró " + skinId + " | cores restantes: " + nuevosCores);
 
         } catch (SQLException e) {
             System.err.println("Error al comprar skin: " + e.getMessage());
@@ -2011,12 +2079,11 @@ public class Servidor extends WebSocketServer {
         String usuario = obj.getString("usuario");
         String skinId = obj.getString("skin_id");
         try {
-            JugadorJDBC jugadorJdbc = new JugadorJDBC();
-            SkinJDBC skinJdbc = new SkinJDBC();
+            GestorJugador gestorJugador = new GestorJugador();
+            GestorSkin gestorSkin = new GestorSkin();
 
             // Comprobar que la skin existe
-            Skin skin = skinJdbc.buscarSkin(skinId);
-            if (skin == null) {
+            if (gestorSkin.buscarSkin(skinId) == null) {
                 conn.send(new JSONObject()
                         .put("tipo", "ACTIVAR_SKIN_ERROR")
                         .put("skin_id", skinId)
@@ -2025,27 +2092,13 @@ public class Servidor extends WebSocketServer {
                 return;
             }
 
-            // Comprobar que el jugador la posee (Skin0 siempre disponible)
-            if (!skinId.equals("Skin0")) {
-                List<Skin> skinsDelJugador = skinJdbc.sacarSkinJugador(usuario);
-                boolean posee = skinsDelJugador.stream()
-                        .anyMatch(sk -> sk.getNombre().equals(skinId));
-                if (!posee) {
-                    conn.send(new JSONObject()
-                            .put("tipo", "ACTIVAR_SKIN_ERROR")
-                            .put("skin_id", skinId)
-                            .put("codigo", "NO_POSEIDA")
-                            .toString());
-                    return;
-                }
-            }
-
-            boolean ok = jugadorJdbc.updateSkinActiva(usuario, skinId);
+            // updateSkinActiva ya comprueba internamente que el jugador posee la skin
+            boolean ok = gestorJugador.updateSkinActiva(usuario, skinId);
             if (!ok) {
                 conn.send(new JSONObject()
                         .put("tipo", "ACTIVAR_SKIN_ERROR")
                         .put("skin_id", skinId)
-                        .put("codigo", "ERROR_BD")
+                        .put("codigo", "NO_POSEIDA")
                         .toString());
                 return;
             }

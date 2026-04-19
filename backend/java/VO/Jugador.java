@@ -4,9 +4,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import DAO.JugadorDAO;
+import DAO.SkinDAO;
 import JDBC.JugadorJDBC;
 import JDBC.SkinJDBC;
-import gestor.GestorNotificaciones;
 
 //Faltan las skins
 public class Jugador {
@@ -17,10 +18,9 @@ public class Jugador {
     private String skinActiva;
 
     private List<Jugador> amigos;
-    private List<Notificacion> notificacionesPendientes;
     private List<Skin> misSkines;
-    private JugadorJDBC jdbc;
-    private SkinJDBC jdbcSkin;
+    private JugadorDAO dao;
+    private SkinDAO daoSkin;
     
     //Constructor necesario para la BD (usado por JugadorJDBC.montarJugador)
     //IMPORTANTE: Este constructor espera que la contraseña YA esté hasheada
@@ -37,10 +37,9 @@ public class Jugador {
         this.skinActiva = skinActiva;
 
         amigos = new ArrayList<>();
-        notificacionesPendientes = new ArrayList<>();
         misSkines = new ArrayList<>();
-        jdbc = new JugadorJDBC();
-        jdbcSkin = new SkinJDBC();
+        dao = new JugadorJDBC();
+        daoSkin = new SkinJDBC();
     }
     
     //Constructor simplificado para registro (valores por defecto)
@@ -52,7 +51,7 @@ public class Jugador {
 
     public boolean registrarse(){
         try {
-            return jdbc.registrarse(this);
+            return dao.registrarse(this);
         } catch (SQLException e) {
             return false;
         }
@@ -76,8 +75,8 @@ public class Jugador {
      */
     public static Jugador iniciarSesion(String nombreUsuario, String passwordTextoPlano){
         try {
-            JugadorJDBC jdbc = new JugadorJDBC();
-            Jugador jugador = jdbc.buscarJugador(nombreUsuario);
+            JugadorDAO dao = new JugadorJDBC();
+            Jugador jugador = dao.buscarJugador(nombreUsuario);
             
             if (jugador == null) {
                 return null; // Usuario no existe
@@ -154,7 +153,7 @@ public class Jugador {
 
     public boolean actualizarBD(){
         try {
-            return jdbc.updateContrasenya(nombre, password) | jdbc.updateCorreo(nombre, correo) | jdbc.updatePuntos(nombre, puntos) | jdbc.updateCores(nombre, cores) | jdbc.updatePartidasGanadas(nombre, partidasGanadas) | jdbc.updatePartidasJugadas(nombre, partidasJugadas); //| para que se ejecuten todos
+            return dao.updateContrasenya(nombre, password) | dao.updateCorreo(nombre, correo) | dao.updatePuntos(nombre, puntos) | dao.updateCores(nombre, cores) | dao.updatePartidasGanadas(nombre, partidasGanadas) | dao.updatePartidasJugadas(nombre, partidasJugadas); //| para que se ejecuten todos
         } catch (SQLException e) {
             return false;
         }
@@ -162,76 +161,18 @@ public class Jugador {
 
     public void cargarAmigos(){
         try {
-            amigos = jdbc.sacarAmigos(nombre);
+            amigos = dao.sacarAmigos(nombre);
         } catch (SQLException e) {
-        }
-    }
-
-    public void cargarNotificaciones(){
-        try {
-            GestorNotificaciones gestor = new GestorNotificaciones();
-            notificacionesPendientes = gestor.obtenerPendientes(nombre);
-        } catch (SQLException e) {
-            notificacionesPendientes = new ArrayList<>();
         }
     }
 
     public List<Jugador> getAmigos(){
         return amigos;
     }
-
-    public List<Notificacion> getNotificacionesPendientes(){
-        return notificacionesPendientes;
-    }
-
-    public boolean solicitarAmistad(String destinatario){
-        try {
-            GestorNotificaciones gestor = new GestorNotificaciones();
-            return gestor.enviarSolicitudAmistad(nombre, destinatario) > 0;
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
-    public boolean enviarInvitacionPartida(String destinatario){
-        try {
-            GestorNotificaciones gestor = new GestorNotificaciones();
-            return gestor.enviarInvitacionPartida(nombre, destinatario) > 0;
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
-    public boolean aceptarNotificacion(int idNotificacion){
-        try {
-            GestorNotificaciones gestor = new GestorNotificaciones();
-            if (gestor.aceptarNotificacion(idNotificacion, nombre)) {
-                cargarAmigos();
-                cargarNotificaciones();
-                return true;
-            }
-            return false;
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
-    public boolean rechazarNotificacion(int idNotificacion){
-        try {
-            GestorNotificaciones gestor = new GestorNotificaciones();
-            if (gestor.rechazarNotificacion(idNotificacion, nombre)) {
-                cargarNotificaciones();
-                return true;
-            }
-            return false;
-        } catch (SQLException e) {
-            return false;
-        }
-    }
     
     public boolean borrarAmigo(Jugador amigo){
         try {
-            if(jdbc.borrarAmigo(nombre, amigo.getNombre())) {
+            if(dao.borrarAmigo(nombre, amigo.getNombre())) {
                 amigos.remove(amigo); 
                 return true;
             }
@@ -244,7 +185,7 @@ public class Jugador {
 
     public void cargarSkins(){
         try {
-            misSkines = jdbcSkin.sacarSkinJugador(nombre);
+            misSkines = daoSkin.sacarSkinJugador(nombre);
         } catch (SQLException e) {
         }
     }
@@ -265,9 +206,9 @@ public class Jugador {
         misSkines.add(nueva); //Añadimos en la lista para evitar tener que estar cargando de la BD
         try {
             // Actualizar cores en la BD
-            boolean coresActualizados = jdbc.updateCores(nombre, cores);
+            boolean coresActualizados = dao.updateCores(nombre, cores);
             // Registrar la compra de la skin
-            boolean skinComprada = jdbcSkin.comprarSkin(nueva.getNombre(), nombre);
+            boolean skinComprada = daoSkin.comprarSkin(nueva.getNombre(), nombre);
             
             return coresActualizados && skinComprada;
         } catch (SQLException e) {

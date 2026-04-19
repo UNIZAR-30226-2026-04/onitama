@@ -47,7 +47,7 @@ import { obtenerJugadorActivo, guardarSesion } from "@/lib/sesion";
 import { obtenerPerfil } from "@/api/auth";
 import { calcularMejorMovimientoIA, type Dificultad } from "@/lib/ia";
 import { getBoardStyle, getColorMovimiento, getEquipoNombre, getPiezaSrc, normalizarSkinId } from "@/lib/skins";
-import { CartaAccionFicha } from "@/lib/cartasAccionVisual";
+import { CartaAccionFicha, getDescripcionCartaAccion } from "@/lib/cartasAccionVisual";
 import { AvatarCircle } from "@/lib/avatar";
 import { usarServidor } from "@/api/ws";
 import {
@@ -79,22 +79,7 @@ const NOMBRE_DIFICULTAD: Record<Dificultad, string> = {
   dificil: "Difícil",
 };
 
-const DESCRIPCION_CARTA_ACCION: Record<string, string> = {
-  ESPEJO: "Invierte en espejo los movimientos de todas las cartas del tablero durante este turno.",
-  REVIVIR: "Añade un peón extra a una casilla vacía de tu mitad del campo.",
-  SALVAR_REY: "Mueve a tu Rey a una casilla vacía de tu mitad del campo.",
-  SACRIFICIO: "Selecciona un peón tuyo y un peón rival; ambos mueren.",
-  SOLO_PARA_ADELANTE:
-    "Solo se pueden hacer movimientos para  adelante. Dura hasta que el rival realice un movimiento.",
-  SOLO_PARA_ATRAS:
-    "Solo se pueden hacer movimientos para atrás. Dura hasta que el rival realice un movimiento.",
-  ROBAR: "Elige una carta de movimiento del oponente y añádela a tu mano.",
-  CEGAR: "Durante toda la partida tu rival no verá qué cartas de movimiento tienes.",
-};
 
-function getDescripcionCartaAccion(accion: string): string {
-  return DESCRIPCION_CARTA_ACCION[accion?.toUpperCase()] ?? "Carta de efecto especial.";
-}
 
 function getMockOponente(dificultad: Dificultad) {
   return {

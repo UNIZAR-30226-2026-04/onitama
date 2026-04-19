@@ -7,12 +7,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import JDBC.CartasMovJDBC;
+import DAO.CartasMovDAO;
 
 public class CartaMov {
     private String nombre, estado, img;
     private int puntosMin;
     private List<Posicion> movimientos;
-    private CartasMovJDBC jdbc;
+    private CartasMovDAO dao;
 
     public CartaMov(String nombre, String mov, int puntosMin, String img){
         this.nombre = nombre;
@@ -20,7 +21,7 @@ public class CartaMov {
         this.puntosMin = puntosMin;
         this.img = img;
         movimientos = new ArrayList<>();
-        jdbc = new CartasMovJDBC();
+        dao = new CartasMovJDBC();
         
         // Esta expresión regular busca grupos de dígitos separados por una coma
         // \d+ coincide con uno o más números, -? para decir que pueden ser negativos
@@ -41,7 +42,7 @@ public class CartaMov {
         this.puntosMin = puntosMin;
         this.img = img;
         movimientos = new ArrayList<>();
-        jdbc = new CartasMovJDBC();
+        dao = new CartasMovJDBC();
         
         // Esta expresión regular busca grupos de dígitos separados por una coma
         // \d+ coincide con uno o más números, -? para decir que pueden ser negativos
@@ -58,6 +59,23 @@ public class CartaMov {
 
     public String getImg() {
         return img;
+    }
+
+    public void marcarEquipo(int eq) {
+        estado = "EQ"+eq;
+    }
+
+    public boolean perteneceAlEquipo(int eq) {
+        String est = "EQ"+eq;
+        return estado.equals(est);
+    }
+
+    public boolean estaMazo() {
+        return estado.equals("MAZO");
+    }
+
+    public void marcarMazo() {
+        estado = "MAZO";
     }
 
     public void setImg(String img) {
@@ -82,7 +100,7 @@ public class CartaMov {
 
     public boolean registrarCartaMov(){
         try {
-            return jdbc.crearCarta(this);
+            return dao.crearCarta(this);
         } catch (SQLException e) {
             return false;
         }
@@ -132,7 +150,7 @@ public class CartaMov {
 
     public boolean cambiarImg(){
         try {
-            return jdbc.updateImg(nombre, img); 
+            return dao.updateImg(nombre, img); 
         } catch (SQLException e) {
             return false;
         }
@@ -140,7 +158,7 @@ public class CartaMov {
 
     public boolean actualizarBD(){
         try {
-            return jdbc.updateMovimientos(nombre, getMovimientos()) | jdbc.updatePuntosMin(nombre, puntosMin); //| para que se ejecuten todos
+            return dao.updateMovimientos(nombre, getMovimientos()) | dao.updatePuntosMin(nombre, puntosMin); //| para que se ejecuten todos
         } catch (SQLException e) {
             return false;
         }
@@ -148,7 +166,7 @@ public class CartaMov {
 
     public boolean actualizarDatosPartida(int IDPartida){
         try {
-            return jdbc.updateEstadoEnPartida(IDPartida, nombre, estado);
+            return dao.updateEstadoEnPartida(IDPartida, nombre, estado);
         } catch (SQLException e) {
             return false;
         }

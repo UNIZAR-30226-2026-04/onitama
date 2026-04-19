@@ -2,6 +2,23 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+const DESCRIPCION_CARTA_ACCION: Record<string, string> = {
+  ESPEJO: "Invierte en espejo los movimientos de todas las cartas del tablero durante este turno.",
+  REVIVIR: "Añade un peón extra a una casilla vacía de tu mitad del campo.",
+  SALVAR_REY: "Mueve a tu Rey a una casilla vacía de tu mitad del campo.",
+  SACRIFICIO: "Selecciona un peón tuyo y un peón rival; ambos mueren.",
+  SOLO_PARA_ADELANTE:
+    "Solo se pueden hacer movimientos para  adelante. Dura hasta que el rival realice un movimiento.",
+  SOLO_PARA_ATRAS:
+    "Solo se pueden hacer movimientos para atrás. Dura hasta que el rival realice un movimiento.",
+  ROBAR: "Elige una carta de movimiento del oponente y añádela a tu mano.",
+  CEGAR: "Durante toda la partida tu rival no verá qué cartas de movimiento tienes.",
+};
+
+export function getDescripcionCartaAccion(accion: string): string {
+  return DESCRIPCION_CARTA_ACCION[accion?.toUpperCase()] ?? "Carta de efecto especial.";
+}
+
 /**
  * Imágenes en la raíz de `public/` con el mismo nombre que en BD + `.jpg`
  * Ej.: `/Pensatorium.jpg`, `/Santo%20Grial.jpg`, `/La%20Dama%20del%20Mar.jpg`

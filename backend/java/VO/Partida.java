@@ -7,44 +7,42 @@ import JDBC.CartasAccionJDBC;
 import JDBC.CartasMovJDBC;
 import JDBC.JugadorJDBC;
 import JDBC.PartidaJDBC;
+import DAO.PartidaDAO;
+import DAO.CartasAccionDAO;
+import DAO.CartasMovDAO;
+import DAO.JugadorDAO;
 
 public class Partida{
     /** Base de katanas (puntos) al ganar / perder; se ajusta ± (mis fichas − su fichas) en tablero al finalizar. */
     private static final int BASE_PUNTOS_VICTORIA = 30;
     private static final int BASE_PUNTOS_DERROTA = 30;
 
-    private int IDPartida, tiempo, muertesJ1, muertesJ2, turno, turnoAccionJ1, turnoAccionJ2;
+    private int IDPartida, tiempo, muertesJ1, muertesJ2, turno;
     private String estado, tipo, trampaPosJ1, trampaPosJ2; //Cambiar fichas por su correspondiente clase
-    private boolean j1Ganador, j2Ganador, trampaJ1, trampaJ2, eleccionCartaAccionJ1, eleccionCartaAccionJ2;
+    private boolean j1Ganador, j2Ganador, trampaJ1, trampaJ2, eleccionCartaAccionJ1, eleccionCartaAccionJ2, accionActivadaJ2, accionActivadaJ1;
     private Jugador jugador1, jugador2;
-    private CartaAccion cartaAccionActivaJ1, cartaAccionActivaJ2;
-    /** Restricción Dama del Mar / Finisterre: no se mutan cartas; solo validación por turno */
-    private String restriccionSoloTipo;
-    private int restriccionSoloEquipoAfectado;
-    private int restriccionSoloCaster;
+    private CartaAccion cartaAccionJugadaJ1, cartaAccionJugadaJ2;
+    /** Restricción Dama del Mar / Finisterre: no se mutan cartas; solo validación por turno -> QUITADO POR CIRO, lo veia muy extraño (esa informacion la tenias ya en cartaActiva) */
     private List<CartaAccion> cartasA;
     private List<CartaMov> cartasM;
     private Tablero tablero;
-    private PartidaJDBC jdbc;
-    private CartasAccionJDBC jdbcAccion;
-    private CartasMovJDBC jdbcMov;
-    private JugadorJDBC jdbcJugador;
+    private PartidaDAO dao;
+    private CartasAccionDAO daoAccion;
+    private CartasMovDAO daoMov;
+    private JugadorDAO daoJugador;
 
     public Posicion trampaActivada = null;
 
     public Partida(int IDPartida, String estado, int tiempo, String tipo, String p1, String p2, int m1, int m2, String jugador1, String jugador2, boolean g1, boolean g2, int turno, String trampaPosJ1, String trampaPosJ2) {
         this.IDPartida = IDPartida;
-        this.jdbc = new PartidaJDBC();
-        this.jdbcAccion = new CartasAccionJDBC();
-        this.jdbcMov = new CartasMovJDBC();
-        this.jdbcJugador = new JugadorJDBC();
-        cartaAccionActivaJ1 = null;
-        cartaAccionActivaJ2 = null;
-        restriccionSoloTipo = null;
-        restriccionSoloEquipoAfectado = 0;
-        restriccionSoloCaster = 0;
-        turnoAccionJ1 = -1;
-        turnoAccionJ2 = -1;
+        this.dao = new PartidaJDBC();
+        this.daoAccion = new CartasAccionJDBC();
+        this.daoMov = new CartasMovJDBC();
+        this.daoJugador = new JugadorJDBC();
+        cartaAccionJugadaJ1 = null;
+        cartaAccionJugadaJ2 = null;
+        accionActivadaJ2 = false;
+        accionActivadaJ2 = false; //CAMBIAR POR UNA FUNCION QUE DEVUELVA TRUE SI NO HAY NINGUNA CARTA USADA Y FALSE EN CASO CONTRARIO
         boolean esNueva = (p1 == null || p1.isEmpty()) && (p2 == null || p2.isEmpty());
         eleccionCartaAccionJ1 = estado != null && (estado.equals("JUGANDOSE") || estado.equals("FINALIZADA")) && !esNueva; 
         eleccionCartaAccionJ2 = estado != null && (estado.equals("JUGANDOSE") || estado.equals("FINALIZADA")) && !esNueva; 
@@ -73,8 +71,8 @@ public class Partida{
 
         try {
             // 1. Buscamos los objetos Jugador
-            this.jugador1 = jdbcJugador.buscarJugador(jugador1);
-            this.jugador2 = jdbcJugador.buscarJugador(jugador2);
+            this.jugador1 = daoJugador.buscarJugador(jugador1);
+            this.jugador2 = daoJugador.buscarJugador(jugador2);
 
         } catch (java.sql.SQLException e) {
             this.jugador1 = null;
@@ -83,13 +81,17 @@ public class Partida{
     }
 
     public int getTurno() {
-    return turno;
+        return turno;
+    }
+
+    public void decrementarTurno() {
+        turno--;
     }
 
     public boolean registrarPartida(){
         try {
             turno = 0; //Ciro: Mi idea es que siempre uno de los jugadores (siempre J1 por ejemplo)
-            IDPartida = jdbc.registrarPartida(this);
+            IDPartida = dao.registrarPartida(this);
             return IDPartida >= 0; //Se devuelve el id que asigna la base a la partida, si hay algun problema devuelve -1
         } catch (SQLException e) {
             return false;
@@ -99,9 +101,9 @@ public class Partida{
     public void asignarCartas(){
         try {
             int puntosMin = Math.min(this.jugador1.getPuntos(), this.jugador2.getPuntos());
-            java.util.List<CartaAccion> ca = jdbcAccion.asignar4CartasPartida(IDPartida, puntosMin);
+            java.util.List<CartaAccion> ca = daoAccion.asignar4CartasPartida(IDPartida, puntosMin);
             this.cartasA = ca != null ? ca : new java.util.ArrayList<>();
-            java.util.List<CartaMov> cm = jdbcMov.asignar7CartasPartida(IDPartida, puntosMin);
+            java.util.List<CartaMov> cm = daoMov.asignar7CartasPartida(IDPartida, puntosMin);
             this.cartasM = cm != null ? cm : new java.util.ArrayList<>();
             if (this.cartasA.isEmpty()) {
                 System.err.println("asignarCartas: no se obtuvieron cartas de acción para IDPartida=" + IDPartida + " puntosMin=" + puntosMin);
@@ -200,10 +202,24 @@ public class Partida{
     /** Carga las cartas de movimiento y acción desde la BD (necesario al reanudar una partida pausada). */
     public void cargarCartas() {
         try {
-            this.cartasM = jdbcMov.sacarCartasPartida(IDPartida);
-            this.cartasA = jdbcAccion.sacarCartasPartida(IDPartida);
+            this.cartasM = daoMov.sacarCartasPartida(IDPartida);
+            this.cartasA = daoAccion.sacarCartasPartida(IDPartida);
             if (this.cartasM == null) this.cartasM = new java.util.ArrayList<>();
-            if (this.cartasA == null) this.cartasA = new java.util.ArrayList<>();
+            if (this.cartasA == null){
+                this.cartasA = new java.util.ArrayList<>();
+            }else{
+                for(CartaAccion ca : cartasA){
+                    if(ca.estaActiva()){
+                        if(ca.getEquipo() == 1){
+                            cartaAccionJugadaJ1 = ca;
+                            accionActivadaJ1 = true;
+                        }else{
+                            cartaAccionJugadaJ2 = ca;
+                            accionActivadaJ2 = true;
+                        }
+                    }
+                }
+            }
         } catch (java.sql.SQLException e) {
             System.err.println("cargarCartas: error al cargar cartas de la BD - " + e.getMessage());
             if (this.cartasM == null) this.cartasM = new java.util.ArrayList<>();
@@ -229,7 +245,7 @@ public class Partida{
         for (CartaAccion ca : cartasA) {
             if (ca.getNombre().equals(nomCarta) && ca.getEquipo() == -equipo) { //Comprobamos que la carta es del mazo (equipo -1 o -2) y que el equipo que la quiere coger es el correcto
                 ca.setEquipo(equipo);
-                ca.setEstado("USABLE");
+                ca.marcarUsable();
                 cartaEncontrada = true;
                 // si la partida se pausa antes de jugarla, se recupera con equipo y estado correctos al reanudar
                 ca.actualizarDatosPartida(IDPartida);
@@ -241,7 +257,7 @@ public class Partida{
         int equipoOp = (equipo == 1) ? 2 : 1;
         if (cartaEncontrada && cartaA != null) { //Asignamos la otra carta al oponente
             cartaA.setEquipo(equipoOp);
-            cartaA.setEstado("USABLE");
+            cartaA.marcarUsable();
             // lo mismo con la carta que se rechaza
             cartaA.actualizarDatosPartida(IDPartida);
         }
@@ -254,17 +270,13 @@ public class Partida{
         int i = 0;
         for (CartaAccion ca : cartasA) {
             ca.setEquipo(-(i%2 + 1)); //Sin equipo (el - representa que se le da la opcion de elegirla a ese equipo)
-            ca.setEstado("ESPERANDO"); //Esperando a ser seleccionada al inicio
+            ca.marcarEsperando(); //Esperando a ser seleccionada al inicio
             i++;
             ca.actualizarDatosPartida(IDPartida);    
         }
         i = 0;
         for (CartaMov cm : cartasM) {
-            if (i%2 == 0) {
-                cm.setEstado("EQ1"); //Que se asigna al equipo 1 (si se juega -> MAZO)
-            } else {
-                cm.setEstado("EQ2"); //Que se asigna al equipo 2 (si se juega -> MAZO)
-            }
+            cm.marcarEquipo(i%2 + 1);
             cm.actualizarDatosPartida(IDPartida);
             i++;
             if(i == 4) break; //Asignamos las primeras 4, el resto al mazo
@@ -276,7 +288,7 @@ public class Partida{
         StringPorReferencia p2 = new StringPorReferencia("");
         tablero.getPosicionesEquipos(p1, p2);
         try {
-            return jdbc.updateTurno(IDPartida, turno) | jdbc.updateEstado(IDPartida, estado) | jdbc.updateMuertesFichas2(IDPartida, muertesJ2) | jdbc.updateMuertesFichas1(IDPartida, muertesJ1) | jdbc.updateTiempo(IDPartida, tiempo) | jdbc.updateGanadorJ2(IDPartida, j2Ganador) | jdbc.updateGanadorJ1(IDPartida, j1Ganador) | jdbc.updatePosFichas1(IDPartida, p1.getValor()) | jdbc.updatePosFichas2(IDPartida, p2.getValor()); //| para que se ejecuten todos
+            return dao.updateTurno(IDPartida, turno) | dao.updateEstado(IDPartida, estado) | dao.updateMuertesFichas2(IDPartida, muertesJ2) | dao.updateMuertesFichas1(IDPartida, muertesJ1) | dao.updateTiempo(IDPartida, tiempo) | dao.updateGanadorJ2(IDPartida, j2Ganador) | dao.updateGanadorJ1(IDPartida, j1Ganador) | dao.updatePosFichas1(IDPartida, p1.getValor()) | dao.updatePosFichas2(IDPartida, p2.getValor()); //| para que se ejecuten todos
         } catch (SQLException e) {
             return false;
         }
@@ -299,7 +311,7 @@ public class Partida{
         }
         this.estado = "PAUSADA";
         try {
-            return jdbc.updateEstado(IDPartida, estado);
+            return dao.updateEstado(IDPartida, estado);
         } catch (SQLException e) {
             return false;
         }
@@ -312,7 +324,7 @@ public class Partida{
         }
         this.estado = "JUGANDOSE";
         try {
-            return jdbc.updateEstado(IDPartida, estado);
+            return dao.updateEstado(IDPartida, estado);
         } catch (SQLException e) {
             return false;
         }
@@ -406,7 +418,7 @@ public class Partida{
             trampaPosJ1 = columna + "," + fila;
              try {
                 // único update, ocurre una sola vez
-                jdbc.updateTrampaJ1(IDPartida, trampaPosJ1);
+                dao.updateTrampaJ1(IDPartida, trampaPosJ1);
             } catch (SQLException e) {
                 System.err.println("Error al persistir trampa J1: " + e.getMessage());
             }
@@ -415,7 +427,7 @@ public class Partida{
             trampaJ2 = true;
             trampaPosJ2 = columna + "," + fila;
              try {
-                jdbc.updateTrampaJ2(IDPartida, trampaPosJ2);
+                dao.updateTrampaJ2(IDPartida, trampaPosJ2);
             } catch (SQLException e) {
                 System.err.println("Error al persistir trampa J2: " + e.getMessage());
             }
@@ -430,13 +442,14 @@ public class Partida{
         }
     }
 
+    /* 
     private void activarRestriccionSolo(int casterEquipo, String tipoAccion) {
         restriccionSoloCaster = casterEquipo;
         restriccionSoloTipo = tipoAccion;
         restriccionSoloEquipoAfectado = (casterEquipo == 1) ? 2 : 1;
     }
 
-    /** Si quien juega la acción debía mover bajo restricción, la pasa al rival sin mover. */
+     Si quien juega la acción debía mover bajo restricción, la pasa al rival sin mover. 
     private void transferirRestriccionSoloSiJuegaAccion(int equipo) {
         if (restriccionSoloTipo != null && restriccionSoloEquipoAfectado == equipo) {
             restriccionSoloEquipoAfectado = (equipo == 1) ? 2 : 1;
@@ -448,41 +461,36 @@ public class Partida{
         restriccionSoloTipo = null;
         restriccionSoloEquipoAfectado = 0;
         restriccionSoloCaster = 0;
-        if (c == 1 && cartaAccionActivaJ1 != null) {
-            String acc = cartaAccionActivaJ1.getAccion();
+        if (c == 1 && cartaAccionJugadaJ1 != null) {
+            String acc = cartaAccionJugadaJ1.getAccion();
             if ("SOLO_PARA_ADELANTE".equals(acc) || "SOLO_PARA_ATRAS".equals(acc)) {
-                cartaAccionActivaJ1 = null;
+                cartaAccionJugadaJ1 = null;
                 turnoAccionJ1 = -1;
             }
-        } else if (c == 2 && cartaAccionActivaJ2 != null) {
-            String acc = cartaAccionActivaJ2.getAccion();
+        } else if (c == 2 && cartaAccionJugadaJ2 != null) {
+            String acc = cartaAccionJugadaJ2.getAccion();
             if ("SOLO_PARA_ADELANTE".equals(acc) || "SOLO_PARA_ATRAS".equals(acc)) {
-                cartaAccionActivaJ2 = null;
+                cartaAccionJugadaJ2 = null;
                 turnoAccionJ2 = -1;
             }
         }
-    }
+    }*/
 
     //true -> exito en la accion
     //false -> error (carta no del equipo, carta ya usada ...)
     public boolean jugarAccion(String nomCartaAcc, int x, int y, int equipo, int xOp, int yOp, String nomCarta) {
         boolean cartaEncontrada = false;
         CartaAccion cartaA = null;
-        if (equipo - 1 == turno % 2 && ((cartaAccionActivaJ1 == null && equipo == 1) || (cartaAccionActivaJ2 == null && equipo == 2))) { // Turno correcto y aún no hay otra acción activa de ese equipo
+        if (equipo - 1 == turno % 2 && ((cartaAccionJugadaJ1 == null && equipo == 1) || (cartaAccionJugadaJ2 == null && equipo == 2))) { // Turno correcto y aún no hay otra acción activa de ese equipo
             for (CartaAccion ca : cartasA) {
                 if (ca.getNombre().equals(nomCartaAcc)) {
                     if (ca.jugarCarta(this, x, y, equipo, xOp, yOp, nomCarta)) {
-                        transferirRestriccionSoloSiJuegaAccion(equipo);
                         turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado)
                         cartaEncontrada = true;
-                        String acc = ca.getAccion();
-                        if ("SOLO_PARA_ADELANTE".equals(acc) || "SOLO_PARA_ATRAS".equals(acc)) {
-                            activarRestriccionSolo(equipo, acc);
-                        }
-                        cartaAccionActivaJ1 = (equipo == 1) ? ca : null;
-                        cartaAccionActivaJ2 = (equipo == 2) ? ca : null;
-                        turnoAccionJ1 = (equipo == 1) ? turno : turnoAccionJ1;
-                        turnoAccionJ2 = (equipo == 2) ? turno : turnoAccionJ2;
+                        cartaAccionJugadaJ1 = (equipo == 1) ? ca : null;
+                        cartaAccionJugadaJ2 = (equipo == 2) ? ca : null;
+                        accionActivadaJ1 = true;
+                        accionActivadaJ2 = true;
                     } else {
                         cartaEncontrada = false;
                     }
@@ -492,7 +500,7 @@ public class Partida{
             }
         }
         if (cartaEncontrada && cartaA != null) {
-            cartaA.setEstado("USADA"); //Marcamos la otra carta como usada porque solo se puede usar una carta de accion por partida y equipo
+            cartaA.marcarNoUsable(); //Marcamos la otra carta como usada porque solo se puede usar una carta de accion por partida y equipo
         }
         return cartaEncontrada;
     }
@@ -536,12 +544,14 @@ public class Partida{
                     break;
                 }
             }
-            if (movExiste && restriccionSoloTipo != null && restriccionSoloEquipoAfectado == equipo) {
-                if ("SOLO_PARA_ADELANTE".equals(restriccionSoloTipo) && normDy < 0) {
+            if (movExiste) {
+                if(equipo == 1 && accionActivadaJ2 && cartaAccionJugadaJ2 != null && !cartaAccionJugadaJ2.permiteMovimiento(normDx, normDy)){
                     movExiste = false;
+                    return -2;
                 }
-                if ("SOLO_PARA_ATRAS".equals(restriccionSoloTipo) && normDy > 0) {
+                if(equipo == 2 && accionActivadaJ1 && cartaAccionJugadaJ1 != null && !cartaAccionJugadaJ1.permiteMovimiento(normDx, normDy)){
                     movExiste = false;
+                    return -2;
                 }
             }
             //Por si acaso comprobamos que el movimiento existe y que se hayan puesto las trampas
@@ -615,24 +625,18 @@ public class Partida{
             }
 
             rotarCartas(carta.getNombre(), equipo);
-            turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado)
-            if (restriccionSoloTipo != null && restriccionSoloEquipoAfectado == equipo) {
-                int rivalDelCaster = restriccionSoloCaster == 1 ? 2 : 1;
-                if (equipo == rivalDelCaster) {
-                    limpiarRestriccionSolo();
-                } else if (equipo == restriccionSoloCaster) {
-                    restriccionSoloEquipoAfectado = rivalDelCaster;
-                }
+            turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado) 
+            if (accionActivadaJ1 && cartaAccionJugadaJ1 != null && equipo == 2) {
+                cartaAccionJugadaJ1.deshacerCarta(this);
+                cartaAccionJugadaJ1 = null;
+                cartaAccionJugadaJ1.marcarUsada();
+                accionActivadaJ1 = false;
             }
-            if (cartaAccionActivaJ1 != null && turnoAccionJ1 != -1 && turno > turnoAccionJ1 && equipo == 2 && "ESPEJO".equals(cartaAccionActivaJ1.getAccion())) {
-                cartaAccionActivaJ1.deshacerCarta(this);
-                cartaAccionActivaJ1 = null;
-                turnoAccionJ1 = -1;
-            }
-            if (cartaAccionActivaJ2 != null && turnoAccionJ2 != -1 && turno > turnoAccionJ2 && equipo == 1 && "ESPEJO".equals(cartaAccionActivaJ2.getAccion())) {
-                cartaAccionActivaJ2.deshacerCarta(this);
-                cartaAccionActivaJ2 = null;
-                turnoAccionJ2 = -1;
+            if (accionActivadaJ2 && cartaAccionJugadaJ2 != null && equipo == 1) {
+                cartaAccionJugadaJ2.deshacerCarta(this);
+                cartaAccionJugadaJ2 = null;
+                cartaAccionJugadaJ2.marcarUsada();
+                accionActivadaJ2 = false;
             }
             return 0; //Movimiento realizado con exito
         }else{
@@ -649,8 +653,7 @@ public class Partida{
 
         //Buscar la carta usada
         for (CartaMov cm : cartasM) {
-            if (cm.getNombre().equals(cartaUsada) && 
-                ((equipo == 1 && "EQ1".equals(cm.getEstado())) || (equipo == 2 && "EQ2".equals(cm.getEstado())))) {
+            if (cm.getNombre().equals(cartaUsada) && (cm.perteneceAlEquipo(1) || cm.perteneceAlEquipo(2))) {
                 usada = cm;
                 break;
             }
@@ -662,7 +665,7 @@ public class Partida{
 
         //Buscar una carta del mazo para darle al equipo
         for (CartaMov cm : cartasM) {
-            if ("MAZO".equals(cm.getEstado())) {
+            if (cm.estaMazo()) {
                 nuevaDelMazo = cm;
                 break;
             }
@@ -673,11 +676,11 @@ public class Partida{
         }
 
         //La carta usada pasa al mazo
-        usada.setEstado("MAZO");
+        usada.marcarMazo();
         usada.actualizarDatosPartida(IDPartida);
 
         //La carta del mazo pasa al equipo
-        nuevaDelMazo.setEstado(equipo == 1 ? "EQ1" : "EQ2");
+        nuevaDelMazo.marcarEquipo(equipo);
         nuevaDelMazo.actualizarDatosPartida(IDPartida);
 
         return true;

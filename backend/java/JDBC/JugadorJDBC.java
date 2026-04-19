@@ -9,7 +9,9 @@ import java.util.List;
 import java.util.ArrayList;
 import VO.Jugador;
 
-public final class JugadorJDBC{
+import DAO.JugadorDAO;
+
+public final class JugadorJDBC implements JugadorDAO {
 
     private final DataSource dataSource;
 

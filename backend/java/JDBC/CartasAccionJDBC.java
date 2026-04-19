@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public final class CartasAccionJDBC {
+import DAO.CartasAccionDAO;
+
+public final class CartasAccionJDBC implements CartasAccionDAO {
 
     private final DataSource dataSource;
 

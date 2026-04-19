@@ -13,6 +13,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.onitama.R
+import com.example.onitama.api.ManejadorGlobal
 import com.example.onitama.ui.components.*
 
 /**
@@ -125,7 +126,9 @@ fun PantallaInicioSesion(
                     // Botón 'Entrar' para acceder con el correo y la contraseña
                     BotonPrincipal(
                         texto = "Entrar",
-                        onClick = { viewModel.onEntrarClick(context) }
+                        onClick = {
+                            viewModel.onEntrarClick(context)
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))

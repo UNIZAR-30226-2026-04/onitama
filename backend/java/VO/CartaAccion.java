@@ -11,11 +11,12 @@ import ACCIONES.SalvarRey;
 import ACCIONES.SoloAdelante;
 import ACCIONES.SoloAtras;
 import JDBC.CartasAccionJDBC;
+import DAO.CartasAccionDAO;
 
 public class CartaAccion {
     private String nombre, accion, estado, img;
     private int puntosMin, equipo;
-    private CartasAccionJDBC jdbc;
+    private CartasAccionDAO dao;
     private Accion accionEjecutable;
     
     public CartaAccion(String nombre, String accion, int puntosMin, String img){
@@ -25,7 +26,7 @@ public class CartaAccion {
         this.img = img;
         this.estado = "VISION"; //Esta en modo vision (Para ver en la tienda)
         this.equipo = -1;
-        jdbc = new CartasAccionJDBC();
+        dao = new CartasAccionJDBC();
         switch (accion) {
             case "ESPEJO":
                 accionEjecutable = new Espejo();
@@ -60,7 +61,36 @@ public class CartaAccion {
         this.img = img;
         this.estado = estado;
         this.equipo = equipo;
-        jdbc = new CartasAccionJDBC();
+        dao = new CartasAccionJDBC();
+    }
+
+    //Comprueba si la carta puede ser usada (estado USABLE y no usada previamente)
+    public boolean puedeUsarse(){
+        return "USABLE".equals(estado);
+    }
+
+    public void marcarActivada(){
+        estado = "ACTIVA";
+    }
+
+    public void marcarUsable(){
+        estado = "USABLE";
+    }
+
+    public void marcarUsada(){
+        estado = "USADA";
+    }
+
+    public void marcarEsperando(){
+        estado = "ESPERANDO";
+    }
+
+    public void marcarNoUsable(){
+        estado = "NO_USABLE";
+    }
+
+    public boolean estaActiva(){
+        return estado.equals("ACTIVA");
     }
 
     public String getImg() {
@@ -89,7 +119,7 @@ public class CartaAccion {
 
     public boolean registrarCartaAccion(){
         try {
-            return jdbc.crearCarta(this);
+            return dao.crearCarta(this);
         } catch (SQLException e) {
             return false;
         }
@@ -115,12 +145,16 @@ public class CartaAccion {
         this.puntosMin = puntosMin;
     }
 
+    public boolean permiteMovimiento(int x, int y){
+        return accionEjecutable.esMovPermitido(x, y);
+    }
+
     public boolean jugarCarta(Partida partida, int x, int y, int equipo, int xOp, int yOp, String nomCarta){
-        if (estado.equals("USABLE") &&  equipo == this.equipo && accion.equals("CEGAR")) {
+        if (puedeUsarse() &&  equipo == this.equipo && accion.equals("CEGAR")) {
             return true; //Como es un efecto visual, se manejara en el front (solo se mandara el mensaje avisando que se ha jugado)
-        }else if (estado.equals("USABLE") && accionEjecutable != null && equipo == this.equipo) {
+        }else if (puedeUsarse() && accionEjecutable != null && equipo == this.equipo) {
             if(accionEjecutable.ejecutar(partida, x, y, equipo, xOp, yOp, nomCarta)) {
-                estado = "USADA";
+                marcarActivada();
                 return true;
             }
         }
@@ -135,7 +169,7 @@ public class CartaAccion {
 
     public boolean actualizarBD(){
         try {
-            return jdbc.updatePuntosMin(nombre, puntosMin) | jdbc.updateAccion(nombre, accion);
+            return dao.updatePuntosMin(nombre, puntosMin) | dao.updateAccion(nombre, accion);
         } catch (SQLException e) {
             return false;
         }
@@ -143,17 +177,13 @@ public class CartaAccion {
 
     public boolean actualizarDatosPartida(int IDPartida){
         try {
-            return jdbc.updateEstadoEnPartida(IDPartida, nombre, estado) | jdbc.asignarEquipo(IDPartida, nombre, equipo);
+            return dao.updateEstadoEnPartida(IDPartida, nombre, estado) | dao.asignarEquipo(IDPartida, nombre, equipo);
         } catch (SQLException e) {
             return false;
         }
     }
 
-    //Comprueba si la carta puede ser usada (estado USABLE y no usada previamente)
-    public boolean puedeUsarse(){
-        return "USABLE".equals(estado);
-    }
-
+    /*
     //Marca la carta como usada cambiando su estado
     public void marcarComoUsada(){
         this.estado = "USADA";
@@ -163,5 +193,5 @@ public class CartaAccion {
     public boolean marcarComoUsada(int IDPartida){
         this.estado = "USADA";
         return actualizarDatosPartida(IDPartida);
-    }
+    }*/
 }

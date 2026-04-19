@@ -19,7 +19,8 @@ import { useRouter } from "next/navigation";
 import { obtenerJugadorActivo, guardarSesion, cerrarSesion, type DatosSesion } from "@/lib/sesion";
 import { obtenerPerfil } from "@/api/auth";
 import { activarSkin, comprarSkin, obtenerTiendaSkins, type SkinEstado } from "@/api/skins";
-import { obtenerCartas, type CartaEstado } from "@/api/cartas";
+import { obtenerCartas, obtenerCartasAccion, type CartaEstado } from "@/api/cartas";
+import { CartaAccionFicha, getDescripcionCartaAccion } from "@/lib/cartasAccionVisual";
 import {
   leerNotificaciones,
   eliminarNotificacion,
@@ -191,6 +192,8 @@ export default function PartidasPage() {
 
   const [cartas, setCartas] = useState<CartaEstado[]>([]);
   const [cargandoCartas, setCargandoCartas] = useState(false);
+  const [cartasAccion, setCartasAccion] = useState<CartaEstado[]>([]);
+  const [cargandoCartasAccion, setCargandoCartasAccion] = useState(false);
 
 
   // ── Efectos ─────────────────────────────────────────────────────────────────
@@ -314,6 +317,14 @@ export default function PartidasPage() {
       })
       .catch(() => {})
       .finally(() => setCargandoCartas(false));
+
+    setCargandoCartasAccion(true);
+    obtenerCartasAccion()
+      .then((res) => {
+        setCartasAccion(res.cartas);
+      })
+      .catch(() => {})
+      .finally(() => setCargandoCartasAccion(false));
   }, [panelActivo]);
 
   /** Cargar amigos desde backend al abrir el panel de amigos. */
@@ -869,6 +880,8 @@ export default function PartidasPage() {
               jugador={jugador}
               cartas={cartas}
               cargando={cargandoCartas}
+              cartasAccion={cartasAccion}
+              cargandoAccion={cargandoCartasAccion}
             />
           )}
 
@@ -1997,7 +2010,18 @@ const FRASES_EPICAS: Record<string, string> = {
   Grulla: "Equilibrio perfecto, se eleva con gracia y pica al descender.",
   Oso: "Fuerza abrumadora, protege su territorio con zarpazos brutales.",
   Aguila: "Desde los cielos domina todo, cae en picado y no deja escapatoria.",
-  Cobra: "Letal y sigilosa, un solo toque basta para acabar el combate."
+  Cobra: "Letal y sigilosa, un solo toque basta para acabar el combate.",
+  
+  // Cartas de Acción / Poderes
+  "Pensatorium": "Un reflejo etéreo distorsiona la realidad de la batalla.",
+  "Santo Grial": "El cáliz vital devuelve la esperanza a los caídos del templo.",
+  "Illusia": "El engaño mágico aparta a tu líder de las garras de la muerte.",
+  "Requiem": "Un canto fúnebre arrastra un tributo igualitario de sangre.",
+  "La Dama del Mar": "Las olas tempestuosas empujan sin piedad hacia el este.",
+  "Kelpie": "El espíritu de las aguas emerge cobrándose su justa venganza.",
+  "Atrapasueños": "Las intenciones del adversario quedan tejidas en tu propia mente.",
+  "Brujeria": "Una niebla ponzoñosa oculta los hilos del destino al forastero.",
+  "Finisterra": "El borde del abismo fuerza al enemigo hacia la oscuridad."
 };
 
 const ENFOQUES_CARTAS: Record<string, { enfoque: string; alcance: string; icon: string }> = {
@@ -2023,12 +2047,16 @@ interface PanelMisCartasProps {
   jugador: DatosSesion;
   cartas: CartaEstado[];
   cargando: boolean;
+  cartasAccion: CartaEstado[];
+  cargandoAccion: boolean;
 }
 
 function PanelMisCartas({
   jugador,
   cartas,
   cargando,
+  cartasAccion,
+  cargandoAccion,
 }: PanelMisCartasProps) {
   const [cartaAmpliada, setCartaAmpliada] = useState<CartaEstado | null>(null);
   const [tabCartas, setTabCartas] = useState<"movimientos" | "poderes">("movimientos");
@@ -2036,9 +2064,12 @@ function PanelMisCartas({
   const [filtroTexto, setFiltroTexto] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"todas" | "desbloqueadas" | "bloqueadas">("todas");
 
+  const cartasActuales = tabCartas === "poderes" ? cartasAccion : cartas;
+  const cargandoActual = tabCartas === "poderes" ? cargandoAccion : cargando;
+
   // Maestría
-  const cartasDesbloqueadasOriginal = cartas.filter((c) => jugador.puntos >= c.puntos_necesarios);
-  const porcentajeDesbloqueado = cartas.length > 0 ? (cartasDesbloqueadasOriginal.length / cartas.length) * 100 : 0;
+  const cartasDesbloqueadasOriginal = cartasActuales.filter((c) => jugador.puntos >= c.puntos_necesarios);
+  const porcentajeDesbloqueado = cartasActuales.length > 0 ? (cartasDesbloqueadasOriginal.length / cartasActuales.length) * 100 : 0;
   
   const tituloMaestria = (() => {
     const p = porcentajeDesbloqueado;
@@ -2049,7 +2080,7 @@ function PanelMisCartas({
     return "Aprendiz de la Arena";
   })();
 
-  const cartasFiltradasGlobal = cartas.filter(c => c.nombre.toLowerCase().includes(filtroTexto.toLowerCase()));
+  const cartasFiltradasGlobal = cartasActuales.filter(c => c.nombre.toLowerCase().includes(filtroTexto.toLowerCase()));
 
   // Las cartas disponibles limitadas al ELO del jugador (ordenadas de mayor exigencia a menor)
   const desbloqueadas = cartasFiltradasGlobal
@@ -2091,25 +2122,16 @@ function PanelMisCartas({
           }`}
         >
           <span>Poderes</span>
-          <span className="bg-yellow-100 text-yellow-800 text-[9px] px-1.5 py-0.5 rounded uppercase tracking-widest">Pronto</span>
           {tabCartas === "poderes" && (
             <span className="absolute bottom-0 left-0 w-full h-0.5 bg-stone-800 rounded-t-full" />
           )}
         </button>
       </div>
 
-      {tabCartas === "poderes" ? (
-         <div className="flex flex-col items-center justify-center p-12 text-center bg-stone-50 rounded-3xl border border-stone-200 border-dashed animate-in fade-in duration-300">
-            <h3 className="text-xl font-bold text-stone-700 uppercase tracking-wider mb-2">Poderes y Habilidades</h3>
-            <p className="text-stone-500 max-w-sm">
-              Próximamente podrás desbloquear cartas que alterarán las leyes del combate. ¡Mantén tu nivel de ELO alto!
-            </p>
-         </div>
-      ) : (
-        <>
+      <>
           <div className="flex items-start md:items-center justify-between mb-6 gap-4">
             <p className="text-stone-500 text-sm flex flex-wrap items-center gap-2">
-              <span>Cartas que pueden aparecer en tus partidas según tu ELO actual (</span>
+              <span>{tabCartas === "poderes" ? "Poderes que pueden" : "Cartas que pueden"} aparecer en tus partidas según tu ELO actual (</span>
               <Image src="/katanas.png" alt="Katanas" width={16} height={16} className="object-contain" />
               <span className="font-semibold">{jugador.puntos.toLocaleString()}</span>
               <span>):</span>
@@ -2126,7 +2148,7 @@ function PanelMisCartas({
             </button>
           </div>
           
-          {cargando ? (
+          {cargandoActual ? (
             <p className="text-stone-500 animate-pulse">Cargando catálogo...</p>
           ) : (
             <div className="space-y-8 animate-in fade-in duration-300">
@@ -2141,7 +2163,7 @@ function PanelMisCartas({
                   </div>
                   <div className="text-right text-sm">
                     <span className="font-extrabold text-emerald-600">{cartasDesbloqueadasOriginal.length}</span>
-                    <span className="text-stone-400 font-semibold text-[10px]"> / {cartas.length}</span>
+                    <span className="text-stone-400 font-semibold text-[10px]"> / {cartasActuales.length}</span>
                   </div>
                 </div>
                 <div className="w-full bg-stone-100 rounded-full h-1.5 overflow-hidden shadow-inner">
@@ -2203,13 +2225,32 @@ function PanelMisCartas({
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     {desbloqueadas.map((c) => {
+                      if (tabCartas === "poderes") {
+                        return (
+                          <div key={c.nombre} className="relative group cursor-pointer" onClick={() => setCartaAmpliada(c)}>
+                            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-200"></div>
+                            <div className="relative h-full flex flex-col justify-between">
+                              <CartaAccionFicha 
+                                nombre={c.nombre} 
+                                descripcion={getDescripcionCartaAccion(c.descripcion ?? "")} 
+                                variante="mano"
+                                className="h-full pointer-events-none" 
+                              />
+                            </div>
+                            <div className="absolute top-2 right-2 bg-emerald-100/90 backdrop-blur-sm text-emerald-800 text-[9px] font-bold px-2 py-1 rounded-full shadow-sm flex items-center gap-1 z-20">
+                              {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} className="object-contain" />
+                            </div>
+                          </div>
+                        );
+                      }
+                      
                       const cartaDef = TODAS_LAS_CARTAS.find(cd => cd.nombre === c.nombre);
                       return (
                       <button 
                         key={c.nombre} 
                         type="button"
                         onClick={() => setCartaAmpliada(c)}
-                        className="rounded-2xl border border-emerald-200 bg-emerald-50/30 p-4 shadow-sm flex flex-col items-center hover:scale-[1.03] hover:shadow-md transition-all cursor-pointer text-left relative overflow-hidden group"
+                        className="rounded-2xl border border-emerald-200 bg-emerald-50/30 p-4 shadow-sm flex flex-col items-center hover:scale-[1.03] hover:shadow-md transition-all cursor-pointer text-left relative overflow-hidden group h-full"
                       >
                         <div className="absolute top-0 left-0 w-1 h-0 bg-emerald-500 transition-all duration-300 group-hover:h-full"></div>
                         <p className="text-sm font-bold text-stone-800 uppercase tracking-wider mb-3 flex items-center justify-between w-full">
@@ -2218,7 +2259,7 @@ function PanelMisCartas({
                             Desbloqueo: {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} className="object-contain" />
                           </span>
                         </p>
-                        <div className="bg-white rounded-lg p-3 shadow-inner w-full flex flex-col md:flex-row items-center justify-center gap-4">
+                        <div className="bg-white rounded-lg p-3 shadow-inner w-full flex flex-col md:flex-row items-center justify-center gap-4 flex-1">
                           <Image 
                             src={getImagenCarta(c.nombre)} 
                             alt={c.nombre} 
@@ -2251,13 +2292,34 @@ function PanelMisCartas({
               ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {bloqueadas.map((c) => {
+                  if (tabCartas === "poderes") {
+                    return (
+                      <div key={c.nombre} className="relative group cursor-pointer opacity-80 hover:opacity-100 grayscale hover:grayscale-0 transition-all duration-300" onClick={() => setCartaAmpliada(c)}>
+                        <div className="relative h-full flex flex-col justify-between">
+                          <CartaAccionFicha 
+                            nombre={c.nombre} 
+                            descripcion={getDescripcionCartaAccion(c.descripcion ?? "")} 
+                            variante="mano"
+                            className="h-full pointer-events-none"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center z-10 bg-stone-900/40 rounded-xl group-hover:bg-transparent transition-colors">
+                            <span className="text-4xl drop-shadow-md group-hover:scale-110 transition-transform" aria-label="Bloqueada">🔒</span>
+                          </div>
+                        </div>
+                        <div className="absolute top-2 right-2 bg-stone-200/90 backdrop-blur-sm text-stone-600 text-[9px] font-bold px-2 py-1 rounded-full shadow-sm flex items-center gap-1 z-20">
+                          {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} className="object-contain opacity-60" />
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const cartaDef = TODAS_LAS_CARTAS.find(cd => cd.nombre === c.nombre);
                   return (
                   <button 
                     key={c.nombre} 
                     type="button"
                     onClick={() => setCartaAmpliada(c)}
-                    className="rounded-2xl border border-stone-200 bg-stone-100 p-4 shadow-sm flex flex-col items-center opacity-80 grayscale hover:opacity-100 hover:scale-[1.03] hover:shadow-md transition-all cursor-pointer text-left relative overflow-hidden group"
+                    className="rounded-2xl border border-stone-200 bg-stone-100 p-4 shadow-sm flex flex-col items-center opacity-80 grayscale hover:opacity-100 hover:scale-[1.03] hover:shadow-md transition-all cursor-pointer text-left relative overflow-hidden group h-full"
                   >
                     <div className="absolute top-0 left-0 w-1 h-0 bg-stone-400 transition-all duration-300 group-hover:h-full z-20"></div>
                     <p className="text-sm font-bold text-stone-600 uppercase tracking-wider mb-3 flex items-center justify-between w-full">
@@ -2266,7 +2328,7 @@ function PanelMisCartas({
                         Desbloqueo: {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} className="object-contain opacity-60" />
                       </span>
                     </p>
-                    <div className="bg-stone-200 rounded-lg p-3 shadow-inner w-full flex flex-col md:flex-row items-center justify-center gap-4 relative overflow-hidden">
+                    <div className="bg-stone-200 rounded-lg p-3 shadow-inner w-full flex flex-col md:flex-row items-center justify-center gap-4 relative overflow-hidden flex-1">
                       <div className="absolute inset-0 flex items-center justify-center z-10 bg-stone-200/40">
                         <span className="text-4xl drop-shadow-md group-hover:scale-110 transition-transform" aria-label="Bloqueada">🔒</span>
                       </div>
@@ -2293,8 +2355,6 @@ function PanelMisCartas({
             </div>
           )}
         </>
-      )}
-
       {/* Modal Información Movimientos */}
       {mostrarInfoMovimientos && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -2320,14 +2380,20 @@ function PanelMisCartas({
             
             <div className="space-y-4 text-base text-stone-600 leading-relaxed bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
               <p>
-                En el templo de Onitama, el azar reparte cinco cartas entre ambos contendientes, pero las leyes de los maestros imponen una restricción sagrada: <strong>jamás recibirás una carta que aún no hayas logrado desbloquear en tu camino.</strong>
+                {tabCartas === "poderes" 
+                  ? <>En el templo de Onitama, cada maestro empuña <strong>dos poderes</strong> únicos que desafían las normas, pero las leyes ancestrales imponen una regla sagrada: <strong>jamás recibirás un poder que aún no hayas logrado dominar en tu camino.</strong></>
+                  : <>En el templo de Onitama, el azar reparte cinco cartas entre ambos contendientes, pero las leyes de los maestros imponen una restricción sagrada: <strong>jamás recibirás una carta que aún no hayas logrado desbloquear en tu camino.</strong></>
+                }
               </p>
               <div className="bg-emerald-50 border-emerald-500 border rounded-xl p-4 mt-2">
                 <h4 className="font-bold text-emerald-900 uppercase tracking-wider text-sm flex items-center gap-2 mb-2">
                   La Regla del Oponente
                 </h4>
                 <p className="text-emerald-800 text-sm">
-                  Las cartas disponibles en una batalla están limitadas por el maestro con menor rango. Puesto que <strong>ambos</strong> contendientes deben poseer la carta para que esta pueda formar parte del reparto, <strong>aquellas con mayores requisitos de Katanas serán más raras de ver</strong>, requiriendo que te enfrentes a oponentes igual de experimentados.
+                  {tabCartas === "poderes" 
+                    ? <>Los poderes disponibles en una batalla están limitados por el maestro con menor rango. Puesto que <strong>ambos</strong> contendientes deben poseer el poder para que este pueda formar parte del nivel de la partida, <strong>aquellos con mayores requisitos de Katanas serán más raros de ver</strong>, requiriendo que te enfrentes a oponentes igual de experimentados.</>
+                    : <>Las cartas disponibles en una batalla están limitadas por el maestro con menor rango. Puesto que <strong>ambos</strong> contendientes deben poseer la carta para que esta pueda formar parte del reparto, <strong>aquellas con mayores requisitos de Katanas serán más raras de ver</strong>, requiriendo que te enfrentes a oponentes igual de experimentados.</>
+                  }
                 </p>
               </div>
             </div>
@@ -2366,17 +2432,30 @@ function PanelMisCartas({
             
             <div className="w-full bg-stone-100 rounded-2xl p-6 flex flex-col items-center justify-center gap-8 shadow-inner mb-6">
               <div className="flex flex-col md:flex-row items-center justify-center gap-8 w-full">
-                <Image 
-                  src={getImagenCarta(cartaAmpliada.nombre)} 
-                  alt={cartaAmpliada.nombre} 
-                  width={160} 
-                  height={160} 
-                  className="object-contain drop-shadow-2xl" 
-                />
-                {TODAS_LAS_CARTAS.find(cd => cd.nombre === cartaAmpliada.nombre) && (
-                  <div className="bg-white p-4 rounded-xl shadow-md border border-stone-200">
-                    <MiniGrid carta={TODAS_LAS_CARTAS.find(cd => cd.nombre === cartaAmpliada.nombre)!} size={10} colorDots="#1a2d4a" />
+                {tabCartas === "poderes" ? (
+                  <div className="w-full max-w-[200px] sm:max-w-xs shadow-2xl rounded-2xl overflow-hidden ring-4 ring-white">
+                    <CartaAccionFicha 
+                      nombre={cartaAmpliada.nombre} 
+                      descripcion={getDescripcionCartaAccion(cartaAmpliada.descripcion ?? "")} 
+                      variante="elegir" 
+                      className="w-full min-h-[250px] sm:min-h-[300px] pointer-events-none" 
+                    />
                   </div>
+                ) : (
+                  <>
+                    <Image 
+                      src={getImagenCarta(cartaAmpliada.nombre)} 
+                      alt={cartaAmpliada.nombre} 
+                      width={160} 
+                      height={160} 
+                      className="object-contain drop-shadow-2xl" 
+                    />
+                    {TODAS_LAS_CARTAS.find(cd => cd.nombre === cartaAmpliada.nombre) && (
+                      <div className="bg-white p-4 rounded-xl shadow-md border border-stone-200">
+                        <MiniGrid carta={TODAS_LAS_CARTAS.find(cd => cd.nombre === cartaAmpliada.nombre)!} size={10} colorDots="#1a2d4a" />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
               

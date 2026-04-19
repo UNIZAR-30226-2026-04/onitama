@@ -11,7 +11,9 @@ import VO.Partida;
 import java.util.List;
 import java.util.ArrayList;
 
-public final class PartidaJDBC {
+import DAO.PartidaDAO;
+
+public final class PartidaJDBC implements PartidaDAO {
 
     private final DataSource dataSource;
 

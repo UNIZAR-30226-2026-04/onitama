@@ -19,4 +19,9 @@ public class SoloAdelante extends Accion {
     public void deshacer(Partida partida) {
         // Sin mutación en ejecutar.
     }
+
+    @Override
+    public boolean esMovPermitido(int x, int y){
+        return y>=0;
+    }
 }

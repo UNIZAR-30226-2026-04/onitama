@@ -49,7 +49,10 @@
             android:name=".ui.activities.partida.PartidaActivity">
         </activity>
         <activity
-            android:name=".ui.activities.Cartas_activity">
+            android:name=".ui.activities.cartas.Cartas_activity">
+        </activity>
+        <activity
+            android:name=".ui.activities.profile.ProfileActivity">
         </activity>
 
 

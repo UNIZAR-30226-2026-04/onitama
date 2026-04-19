@@ -9,7 +9,9 @@ import VO.Skin;
 import java.util.List;
 import java.util.ArrayList;
 
-public final class SkinJDBC {
+import DAO.SkinDAO;
+
+public final class SkinJDBC implements SkinDAO {
 
     private final DataSource dataSource;
 

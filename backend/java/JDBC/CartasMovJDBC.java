@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public final class CartasMovJDBC {
+import DAO.CartasMovDAO;
+
+public final class CartasMovJDBC implements CartasMovDAO {
 
     private final DataSource dataSource;
 

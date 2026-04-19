@@ -72,6 +72,55 @@ class Partida(
         val equipo: Int
     ): MensajeCliente()
 
+    @Serializable
+    @SerialName("SOLICITAR_PAUSA")
+    data class MensajeSolicitarPausa(
+        val remitente: String,
+        val destinatario: String, 
+        val idPartida: Int
+    ) : MensajeCliente()
+
+    @Serializable
+    @SerialName("ACEPTAR_PAUSA")
+    data class MensajeAceptarPausa(
+        val idNotificacion: Int,
+        val nombre: String
+    ) : MensajeCliente()
+
+    @Serializable
+    @SerialName("RECHAZAR_PAUSA")
+    data class MensajeRechazarPausa(
+        val idNotificacion: Int,
+        val nombre: String
+    ) : MensajeCliente()
+
+    @Serializable
+    @SerialName("PONER_TRAMPA")
+    data class MensajePonerTrampa(
+        val equipo: Int,
+        val fila: Int,
+        val columna: Int
+    ) : MensajeCliente()
+
+    @Serializable
+    @SerialName("CARTA_ACCION")
+    data class MensajeSeleccionarCartaAccion(
+        val carta: String,
+        val equipo: Int
+    ) : MensajeCliente()
+
+    @Serializable
+    @SerialName("JUGAR_CARTA_ACCION")
+    data class MensajeJugarCartaAccion(
+        val cartaAccion: String,
+        val equipo: Int,
+        val x: Int,
+        val y: Int,
+        val x_op: Int = -1,
+        val y_op: Int = -1,
+        val cartaRobar: String = ""
+    ) : MensajeCliente()
+
     // ----------------------------------------------------
     // MENSAJES QUE RECIBIMOS DEL SERVIDOR (Servidor -> Cliente)
     // ----------------------------------------------------
@@ -84,6 +133,13 @@ class Partida(
     )
 
     @Serializable
+    data class CartaAccionJson(
+        val nombre: String,
+        val accion: String,
+        val estado: String? = null
+    )
+
+    @Serializable
     @SerialName("PARTIDA_ENCONTRADA")
     data class RespuestaPartidaEncontrada(
         val partida_id: Int,
@@ -92,12 +148,40 @@ class Partida(
         val oponentePt: Int,
         val cartas_jugador: List<CartaJson>,
         val cartas_oponente: List<CartaJson>,
-        val carta_siguiente: List<CartaJson>
+        val carta_siguiente: List<CartaJson>,
+        val oponente_avatar_id: String? = null,
+        val tablero_eq1: String? = null,
+        val tablero_eq2: String? = null,
+        val turno: Int? = null,
+        val cartas_accion_jugador: List<CartaAccionJson>? = emptyList(),
+        val cartas_accion_oponente: List<CartaAccionJson>? = emptyList(),
+        val posTrampa_jugador: String? = null,
+        val posTrampa_oponente: String? = null
     ): MensajeServidor() {
         fun obtenerEquipoID(): EquipoID {
             return if (equipo == 1) EquipoID.AZUL else EquipoID.ROJO
         }
     }
+
+    @Serializable
+    @SerialName("PARTIDA_PRIVADA_ENCONTRADA")
+    data class RespuestaPartidaPrivadaEncontrada(
+        val partida_id: Int,
+        val equipo: Int,
+        val oponente: String,
+        val oponentePt: Int,
+        val cartas_jugador: List<CartaJson>,
+        val cartas_oponente: List<CartaJson>,
+        val carta_siguiente: List<CartaJson>,
+        val oponente_avatar_id: String? = null,
+        val tablero_eq1: String? = null,
+        val tablero_eq2: String? = null,
+        val turno: Int? = null,
+        val cartas_accion_jugador: List<CartaAccionJson>? = emptyList(),
+        val cartas_accion_oponente: List<CartaAccionJson>? = emptyList(),
+        val posTrampa_jugador: String? = null,
+        val posTrampa_oponente: String? = null
+    ): MensajeServidor()
 
     @Serializable
     @SerialName("TU_TURNO")
@@ -110,7 +194,8 @@ class Partida(
         val fila_origen: Int,
         val col_destino: Int,
         val fila_destino: Int,
-        val carta: String
+        val carta: String,
+        val trampa_activada: Boolean? = false
     ): MensajeServidor()
 
     @Serializable
@@ -131,13 +216,65 @@ class Partida(
     @SerialName("DERROTA")
     object RespuestaDerrota : MensajeServidor() // Convertido a object
 
+    @Serializable
+    @SerialName("SOLICITUD_PAUSA")
+    data class RespuestaSolicitudPausa(
+        val remitente: String,
+        val idNotificacion: Int
+    ) : MensajeServidor()
+
+    @Serializable
+    @SerialName("PARTIDA_PAUSADA")
+    object RespuestaPartidaPausada : MensajeServidor()
+
+    @Serializable
+    @SerialName("PAUSA_RECHAZADA")
+    object RespuestaPausaRechazada : MensajeServidor()
+
+    @Serializable
+    @SerialName("SELECCIONE_CARTA_ACCION")
+    data class RespuestaSeleccioneCartaAccion(
+        val cartas_accion: List<CartaAccionJson>
+    ) : MensajeServidor()
+
+    @Serializable
+    @SerialName("PARTIDA_LISTA")
+    data class RespuestaPartidaLista(
+        val cartas_accion: List<CartaAccionJson>
+    ) : MensajeServidor()
+
+    @Serializable
+    @SerialName("TRAMPA_ACTIVADA")
+    data class RespuestaTrampaActivada(
+        val columna: Int,
+        val fila: Int
+    ) : MensajeServidor()
+
+    @Serializable
+    @SerialName("CARTA_ACCION_JUGADA")
+    data class RespuestaCartaAccionJugada(
+        val carta_accion: String,
+        val equipo: Int,
+        val x: Int,
+        val y: Int,
+        val x_op: Int,
+        val y_op: Int,
+        val carta_robar: String
+    ) : MensajeServidor()
+
+    @Serializable
+    @SerialName("TRAMPA_INVALIDA")
+    object RespuestaTrampaInvalida : MensajeServidor()
+
+    @Serializable
+    @SerialName("CARTA_ACCION_INVALIDA")
+    object RespuestaCartaAccionInvalida : MensajeServidor()
+
     /**
      * Devuelve una función lambda () -> Unit que sirve para desconectar (limpiar).
      */
-    fun conectarPartida(onMensaje: (MensajeServidor) -> Unit): () -> Unit {
-        if(!usarServidor){
-            return {}
-        }
+    /*fun conectarPartida(onMensaje: (MensajeServidor) -> Unit): () -> Unit {
+
         val receptor: (String) -> Unit = { textoJson ->
             try {
                 val mensaje = jsonPartida.decodeFromString<MensajeServidor>(textoJson)
@@ -147,67 +284,21 @@ class Partida(
             }
         }
 
-        // Si la partida es nueva(será siempre el caso en las públicas): Reusar el WebSocket existente (inyectado desde buscarpartida)
-        if (PartidaActiva.wsActivo != null) {
-            PartidaActiva.onMensajeJuegoRecibido = receptor
 
-            // Retornamos la función de limpieza (cleanup)
-            return { PartidaActiva.onMensajeJuegoRecibido = null }
-        }
-        //Fallback (abrir conexión nueva si por alguna razón no existe)
-        try {
-            val client = OkHttpClient()
-            val solicitud = Request.Builder().url(wsUrl).build()
 
-            val wsFallback = client.newWebSocket(solicitud, object : WebSocketListener() {
-                override fun onMessage(webSocket: WebSocket, text: String) {
-                    Log.w("CHIVATO_WS", "El móvil acaba de recibir esto del servidor: $text")
-                    receptor(text)
-                }
-                override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
-                    Log.e("Partida", "Error en el WebSocket (Fallback)", t)
-                }
-                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                    Log.e("CHIVATO_WS", "¡EL SOCKET SE HA CERRADO! Razón: $reason")
-                    PartidaActiva.wsActivo = null
-                }
-            })
-
-            PartidaActiva.wsActivo = wsFallback
-
-            //devuelve una función lambda () -> Unit que sirve para desconectar (limpiar)
-            return {
-                wsFallback.cancel()
-                PartidaActiva.wsActivo = null
-            }
-        } catch (e: Exception) {
-            Log.e("Partida", "No se pudo abrir WebSocket.", e)
-            return {}
-        }
-
-    }
+    }*/
 
     fun desconectarPartida() {
-        if(PartidaActiva.wsActivo != null) {
-            PartidaActiva.wsActivo?.close(1000, "Cerrando conexión")
-            PartidaActiva.wsActivo = null
             PartidaActiva.wsEstoyListoEnviado = false
             PartidaActiva.datosPartida = null
-        }
     }
 
     fun enviar(msg: Partida.MensajeCliente): Boolean {
-        //si el websocket no está activo no se puede enviar nada
-        val ws = PartidaActiva.wsActivo
-
-        if (ws == null) {
-            Log.e( "Partida", "No se puede enviar mensaje, el WebSocket no está activo.")
-            return false
-        }
 
         return try {
             val jsonTexto = jsonPartida.encodeToString(msg)
-            ws.send(jsonTexto)
+            ManejadorGlobal.enviarMensaje(jsonTexto)
+            true
 
         } catch (e: Exception) {
             false
@@ -231,6 +322,49 @@ class Partida(
     fun enviarAbandono(quien: Int):Boolean{
         val msg = MensajeAbandonar(equipo = quien)
         return enviar(msg)
+    }
+
+    fun enviarPonerTrampa(
+        equipo: Int,
+        fila: Int,
+        columna: Int
+    ) : Boolean {
+        return enviar(MensajePonerTrampa(equipo, fila, columna))
+    }
+
+    fun enviarSeleccionAccion(
+        nombreCartaAccion: String,
+        equipo: Int
+    ) : Boolean {
+        return enviar(MensajeSeleccionarCartaAccion(nombreCartaAccion, equipo))
+    }
+
+    fun enviarJugarCartaAccion(
+        datos: MensajeJugarCartaAccion
+    ) : Boolean {
+        return enviar(datos)
+    }
+
+    fun enviarSolicitudPausa(
+        remitente: String,
+        destinatario: String,
+        idPartida: Int
+    ) : Boolean {
+        return enviar(MensajeSolicitarPausa(remitente, destinatario, idPartida))
+    }
+
+    fun enviarAceptarPausa(
+        idNotificacion: Int,
+        miNombre: String
+    ) : Boolean {
+        return enviar(MensajeAceptarPausa(idNotificacion, miNombre))
+    }
+
+    fun enviarRechazarPausa(
+        idNotificacion: Int,
+        miNombre: String
+    ) : Boolean {
+        return enviar(MensajeRechazarPausa(idNotificacion, miNombre))
     }
 
 }
