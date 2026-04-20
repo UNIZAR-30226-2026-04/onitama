@@ -1,5 +1,4 @@
 import Header from "@/components/Header";
-import Image from "next/image";
 
 export default function Home() {
   return (
@@ -34,17 +33,7 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Imagen de los dos luchadores */}
-          <div className="hidden lg:flex items-end mt-8 lg:mt-0">
-            <Image
-              src="/luchadores.png"
-              alt="Dos maestros enfrentados"
-              width={420}
-              height={320}
-              className="h-72 w-auto object-contain drop-shadow-2xl"
-              priority
-            />
-          </div>
+          {/* Imagen lateral eliminada a petición de diseño */}
         </div>
       </main>
     </div>

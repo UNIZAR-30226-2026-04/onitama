@@ -78,12 +78,12 @@ const TIPOS_PARTIDA = [
 ];
 
 const MENU_LATERAL = [
-  { id: "cartas", label: "Mis cartas" },
-  { id: "tableros", label: "Mis tableros" },
-  { id: "amigos", label: "Mis amigos" },
-  { id: "tienda", label: "Tienda" },
-  { id: "notificaciones", label: "Notificaciones" },
-  { id: "cuenta", label: "Mi cuenta" },
+  { id: "cartas", label: "Mis cartas", icono: "/MisCartas.png" },
+  { id: "tableros", label: "Mis tableros", icono: "/MisTableros.png" },
+  { id: "amigos", label: "Mis amigos", icono: "/MisAmigos.png" },
+  { id: "tienda", label: "Tienda", icono: "/Tienda.png" },
+  { id: "notificaciones", label: "Notificaciones", icono: "/Notificiones.png" },
+  { id: "cuenta", label: "Mi cuenta", icono: "/MiCuenta.png" },
 ];
 
 const NIVELES_DIFICULTAD = [
@@ -756,7 +756,14 @@ export default function PartidasPage() {
             onClick={() => setPanelActivo(null)}
             className="px-6 pt-6 pb-3 text-left w-full hover:bg-white/10 transition-colors"
           >
-            <span className="text-white font-bold text-lg tracking-wide uppercase">
+            <span className="text-white font-bold text-lg tracking-wide uppercase flex items-center gap-3">
+              <Image
+                src="/luchadores.png"
+                alt=""
+                width={24}
+                height={24}
+                className="w-6 h-6 object-contain"
+              />
               ¡A jugar!
             </span>
           </button>
@@ -773,14 +780,23 @@ export default function PartidasPage() {
                     : "text-white/90 hover:bg-white/10"
                   }`}
               >
-                <span className="flex-1">{item.label}</span>
-
-                {/* Badge de notificaciones */}
-                {item.id === "notificaciones" && notifPendientes > 0 && (
-                  <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
-                    {notifPendientes}
+                <span className="flex items-center gap-3 flex-1 min-w-0">
+                  <span className="relative shrink-0">
+                    <Image
+                      src={item.icono}
+                      alt=""
+                      width={22}
+                      height={22}
+                      className="w-[22px] h-[22px] object-contain"
+                    />
+                    {item.id === "notificaciones" && notifPendientes > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                        {notifPendientes}
+                      </span>
+                    )}
                   </span>
-                )}
+                  <span className="truncate">{item.label}</span>
+                </span>
               </button>
             ))}
           </nav>
@@ -1390,7 +1406,10 @@ function PanelMiCuenta({
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-8">
-      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2">Mi cuenta</h2>
+      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2 flex items-center gap-3">
+        <Image src="/MiCuenta.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
+        Mi cuenta
+      </h2>
       <p className="text-stone-500 text-sm mb-8">
         Datos de tu perfil. El cambio de nombre y contraseña estará disponible cuando el servidor lo soporte.
       </p>
@@ -1498,7 +1517,10 @@ function PanelMisTableros({
   const compradas = skins.filter((s) => s.owned);
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
-      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2">Mis tableros</h2>
+      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2 flex items-center gap-3">
+        <Image src="/MisTableros.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
+        Mis tableros
+      </h2>
       <p className="text-stone-500 text-sm mb-6">Skin activa actual: <span className="font-semibold">{getSkinNombre(normalizarSkinId(jugador.skin_activa))}</span></p>
       {cargando ? (
         <p className="text-stone-500 animate-pulse">Cargando skins...</p>
@@ -1549,7 +1571,10 @@ function PanelTiendaSkins({
 }) {
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
-      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2">Tienda</h2>
+      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2 flex items-center gap-3">
+        <Image src="/Tienda.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
+        Tienda
+      </h2>
       <p className="text-stone-500 text-sm mb-6 flex items-center gap-2">
         <span>Tus cores:</span>
         <Image src="/core.png" alt="Cores" width={16} height={16} />
@@ -1641,7 +1666,8 @@ function PanelAmigos({
 }: PanelAmigosProps) {
   return (
     <div className="max-w-xl mx-auto px-6 py-8">
-      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-6">
+      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-6 flex items-center gap-3">
+        <Image src="/MisAmigos.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
         Mis amigos
       </h2>
 
@@ -1668,7 +1694,13 @@ function PanelAmigos({
         <div>
           {amigos.length === 0 ? (
             <div className="text-center py-16 text-stone-400">
-              <p className="text-4xl mb-3">👥</p>
+              <Image
+                src="/MisAmigos.png"
+                alt=""
+                width={64}
+                height={64}
+                className="w-16 h-16 object-contain mx-auto mb-3 opacity-70"
+              />
               <p className="font-semibold">Aún no tienes amigos añadidos.</p>
               <p className="text-sm mt-1">
                 Usa la pestaña &ldquo;Buscar&rdquo; para encontrar jugadores.
@@ -1871,13 +1903,20 @@ function PanelNotificaciones({
 
   return (
     <div className="max-w-xl mx-auto px-6 py-8">
-      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-6">
+      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-6 flex items-center gap-3">
+        <Image src="/Notificiones.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
         Notificaciones
       </h2>
 
       {items.length === 0 ? (
         <div className="text-center py-16 text-stone-400">
-          <p className="text-4xl mb-3">🔔</p>
+          <Image
+            src="/Notificiones.png"
+            alt=""
+            width={64}
+            height={64}
+            className="w-16 h-16 object-contain mx-auto mb-3 opacity-70"
+          />
           <p className="font-semibold">Sin notificaciones pendientes.</p>
           <p className="text-sm mt-1">Aquí aparecerán solicitudes de amistad e invitaciones privadas.</p>
         </div>
@@ -2095,7 +2134,10 @@ function PanelMisCartas({
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       <div className="flex items-end justify-between mb-2">
-        <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest">Mis cartas</h2>
+        <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest flex items-center gap-3">
+          <Image src="/MisCartas.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
+          Mis cartas
+        </h2>
       </div>
 
       {/* Tabs para seleccionar el tipo de carta */}
