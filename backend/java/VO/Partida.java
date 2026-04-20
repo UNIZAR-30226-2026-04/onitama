@@ -485,12 +485,18 @@ public class Partida{
             for (CartaAccion ca : cartasA) {
                 if (ca.getNombre().equals(nomCartaAcc)) {
                     if (ca.jugarCarta(this, x, y, equipo, xOp, yOp, nomCarta)) {
-                        turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado)
+                        // Atrapasueños (ROBAR) mantiene el turno del ejecutor para que pueda mover con 3 cartas.
+                        if (!"ROBAR".equals(ca.getAccion())) {
+                            turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado)
+                        }
                         cartaEncontrada = true;
-                        cartaAccionJugadaJ1 = (equipo == 1) ? ca : null;
-                        cartaAccionJugadaJ2 = (equipo == 2) ? ca : null;
-                        accionActivadaJ1 = true;
-                        accionActivadaJ2 = true;
+                        cartaAccionJugadaJ1 = (equipo == 1) ? ca : cartaAccionJugadaJ1;
+                        cartaAccionJugadaJ2 = (equipo == 2) ? ca : cartaAccionJugadaJ2;
+                        if (equipo == 1) {
+                            accionActivadaJ1 = true;
+                        } else {
+                            accionActivadaJ2 = true;
+                        }
                     } else {
                         cartaEncontrada = false;
                     }
@@ -627,15 +633,17 @@ public class Partida{
             rotarCartas(carta.getNombre(), equipo);
             turno++; //Cambiamos de turno (tambien lo utilizamos para saber cuantas rondas se han jugado) 
             if (accionActivadaJ1 && cartaAccionJugadaJ1 != null && equipo == 2) {
-                cartaAccionJugadaJ1.deshacerCarta(this);
+                CartaAccion accionJ1 = cartaAccionJugadaJ1;
+                accionJ1.deshacerCarta(this);
+                accionJ1.marcarUsada();
                 cartaAccionJugadaJ1 = null;
-                cartaAccionJugadaJ1.marcarUsada();
                 accionActivadaJ1 = false;
             }
             if (accionActivadaJ2 && cartaAccionJugadaJ2 != null && equipo == 1) {
-                cartaAccionJugadaJ2.deshacerCarta(this);
+                CartaAccion accionJ2 = cartaAccionJugadaJ2;
+                accionJ2.deshacerCarta(this);
+                accionJ2.marcarUsada();
                 cartaAccionJugadaJ2 = null;
-                cartaAccionJugadaJ2.marcarUsada();
                 accionActivadaJ2 = false;
             }
             return 0; //Movimiento realizado con exito

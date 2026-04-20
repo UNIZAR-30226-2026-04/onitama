@@ -694,8 +694,9 @@ function PartidaInterna({
                 cartasJugador: nuevasMias,
                 cartasOponente: nuevasSuyas,
                 cartasSiguientes: mazo,
-                cartaAccionPropia: null, // carta de acción usada
-                cartaAccionRival: base.cartaAccionRival,
+                // Igual que el resto de acciones: al usar una carta de acción desaparecen las dos de la mano.
+                cartaAccionPropia: null,
+                cartaAccionRival: null,
               };
             } else {
               return {
@@ -1660,8 +1661,13 @@ function PartidaInterna({
                   desactivada={estado.modoAccion !== "ROBAR" && estado.turnoActual !== (miEquipoActual === 1 ? 2 : 1)}
                   onClick={() => {
                     if (estado.modoAccion === "ROBAR") {
+                      if (envioAccionBloqueadoRef.current) return;
                       const cartaJug = estado.cartaAccionParaModo ?? estado.cartaAccionPropia;
                       if (!cartaJug) return;
+                      envioAccionBloqueadoRef.current = true;
+                      window.setTimeout(() => {
+                        envioAccionBloqueadoRef.current = false;
+                      }, 700);
                       estadoAntesAccionRef.current = estado;
                       enviarJugarCartaAccion({
                         equipo: miEquipoActual,

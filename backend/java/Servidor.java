@@ -427,6 +427,7 @@ public class Servidor extends WebSocketServer {
                 JSONObject msg1 = new JSONObject();
                 JSONObject msg2 = new JSONObject();
                 System.out.print("TIEMPO!!!");
+                esperaPartida.remove(idPartida);
                 int equipo = obj.getInt("equipo");
                 if(equipo == 1){
                     equipo = 2;
@@ -522,6 +523,9 @@ public class Servidor extends WebSocketServer {
                         msgEq2.put("equipo_responsable", equipo);
                         msgEq2.put("tipo", "DERROTA");
 
+                        // Persistir fin de partida y puntuaciones (incluye victorias por trampa/trono/captura).
+                        pj.partida.finalizarPartida();
+
                         try {
                             mutexParejas.acquire();
                             parejas.remove(pjFinal);
@@ -539,6 +543,10 @@ public class Servidor extends WebSocketServer {
                             conn.send(msgEq2.toString());
                             if(oponente.ws.isOpen()) oponente.ws.send(msgEq1.toString());
                         }
+                        ScheduledFuture<?> timerFinal = esperaPartida.remove(idPartida);
+                        if (timerFinal != null) {
+                            timerFinal.cancel(false);
+                        }
                         System.out.println("Partida finalizada con victoria del eq1 " + pj.partida.getIDPartida());
                         return;
                     } else if (estado == 2) {
@@ -551,6 +559,9 @@ public class Servidor extends WebSocketServer {
                         msgEq2.put("motivo", "FIN_PARTIDA");
                         msgEq2.put("equipo_responsable", equipo);
                         msgEq2.put("tipo", "VICTORIA");
+
+                        // Persistir fin de partida y puntuaciones (incluye victorias por trampa/trono/captura).
+                        pj.partida.finalizarPartida();
 
                         try {
                             mutexParejas.acquire();
@@ -569,6 +580,10 @@ public class Servidor extends WebSocketServer {
                             // conn es Eq1 (pierde)
                             conn.send(msgEq1.toString());
                             if(oponente.ws.isOpen()) oponente.ws.send(msgEq2.toString());
+                        }
+                        ScheduledFuture<?> timerFinal = esperaPartida.remove(idPartida);
+                        if (timerFinal != null) {
+                            timerFinal.cancel(false);
                         }
                         System.out.println("Partida finalizada con victoria del eq2 " + pj.partida.getIDPartida());
                         return;
@@ -1300,6 +1315,7 @@ public class Servidor extends WebSocketServer {
                     mutexParejas.release();
                 }
             }, 2, TimeUnit.MINUTES);
+            esperaPartida.put(idPartida, timerNuevo);
             
             boolean estado = pj.partida.jugarAccion(nomCartaAcc, x, y, equipo, xOp, yOp, cartaRobar);
             if(!estado){

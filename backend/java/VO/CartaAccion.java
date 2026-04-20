@@ -146,6 +146,11 @@ public class CartaAccion {
     }
 
     public boolean permiteMovimiento(int x, int y){
+        // CEGAR es solo visual y no restringe movimientos.
+        // Además, evitamos NPE en acciones sin ejecutor concreto.
+        if (accionEjecutable == null) {
+            return true;
+        }
         return accionEjecutable.esMovPermitido(x, y);
     }
 
