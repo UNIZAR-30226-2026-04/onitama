@@ -62,6 +62,34 @@ public class CartaAccion {
         this.estado = estado;
         this.equipo = equipo;
         dao = new CartasAccionJDBC();
+        switch (accion) {
+            case "ESPEJO":
+                accionEjecutable = new Espejo();
+                break;
+            case "REVIVIR":
+                accionEjecutable = new Revivir();
+                break;
+            case "SALVAR_REY":
+                accionEjecutable = new SalvarRey();
+                break;
+            case "SACRIFICIO":
+                accionEjecutable = new Sacrificio();
+                break;
+            case "SOLO_PARA_ADELANTE":
+                accionEjecutable = new SoloAdelante();
+                break;
+            case "ROBAR":
+                accionEjecutable = new Robar();
+                break;
+            case "SOLO_PARA_ATRAS":
+                accionEjecutable = new SoloAtras();
+                break;
+            default:
+        }
+    }
+
+    public boolean esTipoRestriccion(){
+        return accionEjecutable != null && accionEjecutable.esTipoRestriccion();
     }
 
     //Comprueba si la carta puede ser usada (estado USABLE y no usada previamente)

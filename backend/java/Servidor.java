@@ -436,6 +436,8 @@ public class Servidor extends WebSocketServer {
                 }
                 
                 msg1.put("tipo", "DERROTA");
+                msg1.put("motivo", "FIN_PARTIDA");
+                msg1.put("equipo_responsable", equipo);
                 msg2.put("tipo", "VICTORIA");
                 msg2.put("motivo", "FIN_PARTIDA");
                 msg2.put("equipo_responsable", equipo);
@@ -1297,6 +1299,8 @@ public class Servidor extends WebSocketServer {
                 }
                 
                 msg1.put("tipo", "DERROTA");
+                msg1.put("motivo", "FIN_PARTIDA");
+                msg1.put("equipo_responsable", eq);
                 msg2.put("tipo", "VICTORIA");
                 msg2.put("motivo", "FIN_PARTIDA");
                 msg2.put("equipo_responsable", eq);
@@ -1317,11 +1321,27 @@ public class Servidor extends WebSocketServer {
             }, 2, TimeUnit.MINUTES);
             esperaPartida.put(idPartida, timerNuevo);
             
-            boolean estado = pj.partida.jugarAccion(nomCartaAcc, x, y, equipo, xOp, yOp, cartaRobar);
-            if(!estado){
+            int estado = pj.partida.jugarAccion(nomCartaAcc, x, y, equipo, xOp, yOp, cartaRobar);
+            if(estado < 0){
                 JSONObject msg = new JSONObject();
                 msg.put("tipo", "CARTA_ACCION_INVALIDA");
                 conn.send(msg.toString());
+            }else if(estado != 0){
+                //Uno de los dos se quedo sin movimientos
+                JSONObject msg1 = new JSONObject();
+                JSONObject msg2 = new JSONObject();
+                esperaPartida.remove(idPartida);
+                
+                msg1.put("tipo", "DERROTA");
+                msg1.put("motivo", "SIN_MOV");
+                msg1.put("equipo_responsable", (equipo==1) ? 2 : 1);
+                msg2.put("tipo", "VICTORIA");
+                msg2.put("motivo", "SIN_MOV");
+                msg2.put("equipo_responsable", (equipo==1) ? 2 : 1);
+
+                InfoJugador oponente = pj.getOponente(conn);
+                oponente.ws.send((equipo == estado) ? msg1.toString() : msg2.toString());
+                conn.send((equipo == estado) ? msg2.toString() : msg1.toString());
             }else{
                 String accionTipo = "";
                 for (CartaAccion ca : pj.partida.getCartasAccion()) {
@@ -1520,87 +1540,6 @@ public class Servidor extends WebSocketServer {
             mutexConectados.release();
         }
     }
-/* 
-    @Override
-    public void onMessage(WebSocket conn, String message) {
-        System.out.println("Mensaje recibido: " + message);
-
-        hilos.submit(() -> {
-            JSONObject obj = new JSONObject(message);
-            String tipoMSG = obj.getString("tipo");
-            if (tipoMSG.equals("BUSCAR_PARTIDA")) {
-                gestionarBusquedaPartida(conn, obj);
-            } else if (tipoMSG.equals("MOVER")) {
-                gestionarPartida(conn, obj);
-            } else if (tipoMSG.equals("INICIAR_SESION")) {
-                iniciarSesion(conn, obj);
-            } else if (tipoMSG.equals("REGISTRARSE")) {
-                registrarJugador(conn, obj);
-            } else if (tipoMSG.equals("ABANDONAR")) {
-                abandonarPartida(conn, obj);
-            } else if (tipoMSG.equals("CANCELAR")) {
-                cancelarBusqueda(conn);
-                // PREVIAMENTE INVITACION_AMISTAD, NO ERA COHERENTE CON EL README
-            } else if (tipoMSG.equals("SOLICITUD_AMISTAD")) {
-                notificarAmistad(conn, obj);
-            } else if (tipoMSG.equals("ACEPTAR_AMISTAD")) {
-                aceptarAmistad(conn, obj);
-            } else if (tipoMSG.equals("RECHAZAR_AMISTAD")) {
-                rechazarAmistad(conn, obj);
-            } else if (tipoMSG.equals("INVITACION_PARTIDA")) {
-                gestionarInvitacionPartida(conn, obj);
-            } else if (tipoMSG.equals("ACEPTAR_INVITACION")) {
-                aceptarInvitacion(conn, obj);
-            } else if (tipoMSG.equals("RECHAZAR_INVITACION")) {
-                rechazarInvitacion(conn, obj);
-            } else if (tipoMSG.equals("OBTENER_PERFIL")) {
-                obtenerPerfil(conn, obj);
-            } else if (tipoMSG.equals("BUSCAR_JUGADORES")) {
-                buscarJugadores(conn, obj);
-            } else if (tipoMSG.equals("OBTENER_AMIGOS")) {
-                buscarAmigos(conn, obj);
-            } else if (tipoMSG.equals("BORRAR_AMIGO")) {
-                borrarAmigo(conn, obj);
-            } else if (tipoMSG.equals("SOLICITAR_PARTIDAS_PUB")) {
-                solicitarPartidas(conn, obj, "PUBLICA");
-            } else if (tipoMSG.equals("SOLICITAR_PARTIDAS_PRIV")) {
-                solicitarPartidas(conn, obj, "PRIVADA");
-            } else if (tipoMSG.equals("OBTENER_CARTAS")) {
-                obtenerCartas(conn, obj);
-            // AÑADIMOS SOLICITUD DE PAUSA DE PARTIDA Y DE REANUDAR
-            // EN MENSAJES ACEPTAR/RECHAZAR HE AÑADIDO UN PARÁMETRO MÁS
-            // POR GESTIONARLO EN UN MISMO MÉTODO Y NO TENER QUE HACER DOS
-            } else if (tipoMSG.equals("CANCELAR_NOTIFICACION")) {
-                cancelarNotificacion(conn, obj);
-            } else if (tipoMSG.equals("SOLICITAR_PAUSA")) {
-                gestionarSolicitudPausa(conn, obj);
-            } else if (tipoMSG.equals("ACEPTAR_PAUSA")) {
-                gestionarRespuestaPausa(conn, obj, true);
-            } else if (tipoMSG.equals("RECHAZAR_PAUSA")) {
-                gestionarRespuestaPausa(conn, obj, false);
-            } else if (tipoMSG.equals("SOLICITAR_REANUDAR")) {
-                gestionarSolicitudReanudar(conn, obj);
-            } else if (tipoMSG.equals("ACEPTAR_REANUDAR")) {
-                gestionarRespuestaReanudar(conn, obj, true);
-            } else if (tipoMSG.equals("RECHAZAR_REANUDAR")) {
-                gestionarRespuestaReanudar(conn, obj, false);
-            } else if (tipoMSG.equals("PONER_TRAMPA")) {
-                setTrampa(conn, obj);
-            } else if (tipoMSG.equals("CARTA_ACCION")) {
-                seleccionarCartaAccion(conn, obj);
-            } else if (tipoMSG.equals("JUGAR_CARTA_ACCION")) {
-                jugarCartaAccion(conn, obj);
-            } else if (tipoMSG.equals("OBTENER_TIENDA_SKINS")) {
-                obtenerTiendaSkins(conn, obj);
-            } else if (tipoMSG.equals("COMPRAR_SKIN")) {
-                comprarSkin(conn, obj);
-            } else if (tipoMSG.equals("ACTIVAR_SKIN")) {
-                activarSkin(conn, obj);
-            }
-        });
-    }
-
-*/
 
 // VERSIÓN PARA JAVA 14 O SUPERIORES QUE CON -> EVITA FALL THROUGH EN LUGAR DE CASE "HOLA": funcion(); break;
         @Override

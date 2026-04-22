@@ -24,4 +24,9 @@ public class SoloAtras extends Accion {
     public boolean esMovPermitido(int x, int y){
         return y<=0;
     }
+
+    @Override
+    public boolean esTipoRestriccion(){
+        return true;
+    }
 }

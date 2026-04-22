@@ -20,4 +20,8 @@ public abstract class Accion {
     public boolean esMovPermitido(int x, int y){
         return true;
     }
+
+    public boolean esTipoRestriccion(){
+        return false;
+    }
 }

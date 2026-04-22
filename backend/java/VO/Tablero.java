@@ -1,5 +1,6 @@
 package VO;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -253,5 +254,27 @@ public class Tablero {
             }
         }
         return n;
+    }
+
+    public boolean existeMovimiento(List<Posicion> mov, int equipo){
+        for (int i = 0; i < DIM; i++) {
+            for (int j = 0; j < DIM; j++) {
+                Ficha f = tablero[i][j].getFicha();
+                if (f != null && f.getEquipo() == equipo) {
+                    for(Posicion m : mov){
+                        int x = (equipo == 1) ? j-m.getX() : j+m.getX();
+                        int y = (equipo == 1) ? i+m.getY() : i-m.getY();
+                        if(x < DIM && y < DIM){
+                            Posicion destino = tablero[y][x];
+                            Ficha fDest = destino.getFicha();
+                            if(destino.estaActiva() && (fDest == null || (fDest != null && fDest.getEquipo() != equipo))){
+                                return true; //Devolvemos true si hay una casilla donde podemos mover con los movimientos que se nos pase
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

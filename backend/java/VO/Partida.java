@@ -442,43 +442,11 @@ public class Partida{
         }
     }
 
-    /* 
-    private void activarRestriccionSolo(int casterEquipo, String tipoAccion) {
-        restriccionSoloCaster = casterEquipo;
-        restriccionSoloTipo = tipoAccion;
-        restriccionSoloEquipoAfectado = (casterEquipo == 1) ? 2 : 1;
-    }
-
-     Si quien juega la acción debía mover bajo restricción, la pasa al rival sin mover. 
-    private void transferirRestriccionSoloSiJuegaAccion(int equipo) {
-        if (restriccionSoloTipo != null && restriccionSoloEquipoAfectado == equipo) {
-            restriccionSoloEquipoAfectado = (equipo == 1) ? 2 : 1;
-        }
-    }
-
-    private void limpiarRestriccionSolo() {
-        int c = restriccionSoloCaster;
-        restriccionSoloTipo = null;
-        restriccionSoloEquipoAfectado = 0;
-        restriccionSoloCaster = 0;
-        if (c == 1 && cartaAccionJugadaJ1 != null) {
-            String acc = cartaAccionJugadaJ1.getAccion();
-            if ("SOLO_PARA_ADELANTE".equals(acc) || "SOLO_PARA_ATRAS".equals(acc)) {
-                cartaAccionJugadaJ1 = null;
-                turnoAccionJ1 = -1;
-            }
-        } else if (c == 2 && cartaAccionJugadaJ2 != null) {
-            String acc = cartaAccionJugadaJ2.getAccion();
-            if ("SOLO_PARA_ADELANTE".equals(acc) || "SOLO_PARA_ATRAS".equals(acc)) {
-                cartaAccionJugadaJ2 = null;
-                turnoAccionJ2 = -1;
-            }
-        }
-    }*/
-
-    //true -> exito en la accion
-    //false -> error (carta no del equipo, carta ya usada ...)
-    public boolean jugarAccion(String nomCartaAcc, int x, int y, int equipo, int xOp, int yOp, String nomCarta) {
+    // 0 -> Accion realizada con exito
+   // 1 -> equipo 1 gana
+   // 2 -> equipo 2 gana
+   // -1 -> error
+    public int jugarAccion(String nomCartaAcc, int x, int y, int equipo, int xOp, int yOp, String nomCarta) {
         boolean cartaEncontrada = false;
         CartaAccion cartaA = null;
         if (equipo - 1 == turno % 2 && ((cartaAccionJugadaJ1 == null && equipo == 1) || (cartaAccionJugadaJ2 == null && equipo == 2))) { // Turno correcto y aún no hay otra acción activa de ese equipo
@@ -505,10 +473,34 @@ public class Partida{
                 }
             }
         }
+
         if (cartaEncontrada && cartaA != null) {
             cartaA.marcarNoUsable(); //Marcamos la otra carta como usada porque solo se puede usar una carta de accion por partida y equipo
         }
-        return cartaEncontrada;
+
+        //Busqueda para ver si se ha quedado sin movimientos
+        if((accionActivadaJ1 && cartaAccionJugadaJ1 != null && cartaAccionJugadaJ1.esTipoRestriccion()) || (accionActivadaJ2 && cartaAccionJugadaJ2 != null && cartaAccionJugadaJ2.esTipoRestriccion())){
+            boolean hayMovimiento = false;
+            if(cartaAccionJugadaJ1 == null && equipo == 2){
+                hayMovimiento = true; //El enemigo puede jugar su carta de acccion para librarse de la accion
+            }else if(cartaAccionJugadaJ2 == null && equipo == 1){
+                hayMovimiento = true;
+            }else{
+                for(CartaMov cm : cartasM){
+                    int equipoEnemigo = (equipo == 1) ? 2 : 1;
+                    if(cm.perteneceAlEquipo(equipoEnemigo)){
+                        hayMovimiento = tablero.existeMovimiento(cm.getListaMovimientos(), equipoEnemigo);
+                        if(hayMovimiento){
+                            break;
+                        }else{
+                            return equipo; //Si el enemigo no tiene movimientos -> hemos ganado
+                        }
+                    }
+                }
+            }
+        }
+
+        return (cartaEncontrada) ? 0 : -1;
     }
 
    // 0 -> Movimiento realizado con exito
