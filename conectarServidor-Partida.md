@@ -347,10 +347,33 @@ Se envía cuando el rival rechaza la solicitud de reanudar.
   "nombre": "Taisen"
 }
 ```
+---
+### 2.2.3 CAMBIAR AVATAR Y CONTRASEÑA
+
+#### `CAMBIAR_AVATAR`
+Se envía para cambiar la imagen de perfil actual del cliente por uno de los 12 avatares disponibles
+```json
+{
+  "tipo": "CAMBIAR_AVATAR",
+  "nombre": "Taisen",
+  "avatar_id": "avatar_01"
+}
+```
+---
+
+#### `CAMBIAR_CONTRASENA`
+Se envía cuando el usuario quiere actualizar su contraseña (el servidor procesará el hash con BCrypt antes de almacenarla)
+```json
+{
+  "tipo": "CAMBIAR_CONTRASENA",
+  "nombre": "Taisen",
+  "nueva_contrasena": "5678"
+}
+```
 
 ---
 
-### 2.2.3 Historial de partidas (publicas y privadas)
+### 2.2.4 Historial de partidas (publicas y privadas)
 
 #### `SOLICITAR_PARTIDAS_PRIV`
 Se envía para pedir el historial de partidas privadas contra un amigo concreto.
@@ -845,6 +868,47 @@ Se envía al cliente cuando el **oponente** ha ejecutado un movimiento.
 > **Importante:** El servidor solo envía este mensaje al cliente que NO movió (el oponente). El cliente que movió ya actualizó su estado local al enviar.
 
 **Archivo:** `src/api/partida.ts` → interface `RespuestaMover`
+
+---
+
+#### `AVATAR_CAMBIADO`
+Si el cambio de foto de perfil del cliente en la base de datos ha sido exitoso.
+```json
+{
+  "tipo": "AVATAR_CAMBIADO",
+  "avatar_id": "avatar_01"
+}
+```
+---
+
+#### `CAMBIO_AVATAR_ERROR`
+Si el cambio de foto de perfil del cliente en la base de datos no ha sido exitoso.
+```json
+{
+  "tipo": "CAMBIO_AVATAR_ERROR",
+  "codigo": "ERROR_BD"
+}
+```
+---
+
+#### `CONTRASENA_CAMBIADA`
+Se envía cuando se ha actualizado exitosamente la contraseña.
+```json
+{
+  "tipo": "CONTRASENA_CAMBIADA"
+}
+```
+
+---
+
+#### `CAMBIO_CONTRASENA_ERROR`
+Se envía cuando no se ha actualizado exitosamente la contraseña.
+```json
+{
+  "tipo": "CAMBIO_CONTRASENA_ERROR",
+  "codigo": "ERROR_BD"
+}
+```
 
 ---
 
