@@ -1551,40 +1551,42 @@ public class Servidor extends WebSocketServer {
             String tipoMSG = obj.getString("tipo");
             System.out.println("HOLA");
             switch (tipoMSG) {
-                case "BUSCAR_PARTIDA"        -> gestionarBusquedaPartida(conn, obj);
-                case "MOVER"                 -> gestionarPartida(conn, obj);
-                case "INICIAR_SESION"        -> iniciarSesion(conn, obj);
-                case "REGISTRARSE"           -> registrarJugador(conn, obj);
-                case "ABANDONAR"             -> abandonarPartida(conn, obj);
-                case "CANCELAR"              -> cancelarBusqueda(conn);
-                case "SOLICITUD_AMISTAD"     -> notificarAmistad(conn, obj);
-                case "ACEPTAR_AMISTAD"       -> aceptarAmistad(conn, obj);
-                case "RECHAZAR_AMISTAD"      -> rechazarAmistad(conn, obj);
-                case "INVITACION_PARTIDA"    -> gestionarInvitacionPartida(conn, obj);
-                case "ACEPTAR_INVITACION"    -> aceptarInvitacion(conn, obj);
-                case "RECHAZAR_INVITACION"   -> rechazarInvitacion(conn, obj);
-                case "OBTENER_PERFIL"        -> obtenerPerfil(conn, obj);
-                case "BUSCAR_JUGADORES"      -> buscarJugadores(conn, obj);
-                case "OBTENER_AMIGOS"        -> buscarAmigos(conn, obj);
-                case "BORRAR_AMIGO"          -> borrarAmigo(conn, obj);
-                case "SOLICITAR_PARTIDAS_PUB"-> solicitarPartidas(conn, obj, "PUBLICA");
+                case "BUSCAR_PARTIDA"         -> gestionarBusquedaPartida(conn, obj);
+                case "MOVER"                  -> gestionarPartida(conn, obj);
+                case "INICIAR_SESION"         -> iniciarSesion(conn, obj);
+                case "REGISTRARSE"            -> registrarJugador(conn, obj);
+                case "ABANDONAR"              -> abandonarPartida(conn, obj);
+                case "CANCELAR"               -> cancelarBusqueda(conn);
+                case "SOLICITUD_AMISTAD"      -> notificarAmistad(conn, obj);
+                case "ACEPTAR_AMISTAD"        -> aceptarAmistad(conn, obj);
+                case "RECHAZAR_AMISTAD"       -> rechazarAmistad(conn, obj);
+                case "INVITACION_PARTIDA"     -> gestionarInvitacionPartida(conn, obj);
+                case "ACEPTAR_INVITACION"     -> aceptarInvitacion(conn, obj);
+                case "RECHAZAR_INVITACION"    -> rechazarInvitacion(conn, obj);
+                case "OBTENER_PERFIL"         -> obtenerPerfil(conn, obj);
+                case "BUSCAR_JUGADORES"       -> buscarJugadores(conn, obj);
+                case "OBTENER_AMIGOS"         -> buscarAmigos(conn, obj);
+                case "BORRAR_AMIGO"           -> borrarAmigo(conn, obj);
+                case "SOLICITAR_PARTIDAS_PUB" -> solicitarPartidas(conn, obj, "PUBLICA");
                 case "SOLICITAR_PARTIDAS_PRIV"-> solicitarPartidas(conn, obj, "PRIVADA");
-                case "OBTENER_CARTAS"        -> obtenerCartas(conn, obj);
-                case "OBTENER_CARTAS_ACCION" -> obtenerCartasAccion(conn, obj);
-                case "CANCELAR_NOTIFICACION" -> cancelarNotificacion(conn, obj);
-                case "SOLICITAR_PAUSA"       -> gestionarSolicitudPausa(conn, obj);
-                case "ACEPTAR_PAUSA"         -> gestionarRespuestaPausa(conn, obj, true);
-                case "RECHAZAR_PAUSA"        -> gestionarRespuestaPausa(conn, obj, false);
-                case "SOLICITAR_REANUDAR"    -> gestionarSolicitudReanudar(conn, obj);
-                case "ACEPTAR_REANUDAR"      -> gestionarRespuestaReanudar(conn, obj, true);
-                case "RECHAZAR_REANUDAR"     -> gestionarRespuestaReanudar(conn, obj, false);
-                case "PONER_TRAMPA"          -> setTrampa(conn, obj);
-                case "CARTA_ACCION"          -> seleccionarCartaAccion(conn, obj);
-                case "JUGAR_CARTA_ACCION"    -> jugarCartaAccion(conn, obj);
-                case "OBTENER_TIENDA_SKINS"  -> obtenerTiendaSkins(conn, obj);
+                case "OBTENER_CARTAS"         -> obtenerCartas(conn, obj);
+                case "OBTENER_CARTAS_ACCION"  -> obtenerCartasAccion(conn, obj);
+                case "CANCELAR_NOTIFICACION"  -> cancelarNotificacion(conn, obj);
+                case "SOLICITAR_PAUSA"        -> gestionarSolicitudPausa(conn, obj);
+                case "ACEPTAR_PAUSA"          -> gestionarRespuestaPausa(conn, obj, true);
+                case "RECHAZAR_PAUSA"         -> gestionarRespuestaPausa(conn, obj, false);
+                case "SOLICITAR_REANUDAR"     -> gestionarSolicitudReanudar(conn, obj);
+                case "ACEPTAR_REANUDAR"       -> gestionarRespuestaReanudar(conn, obj, true);
+                case "RECHAZAR_REANUDAR"      -> gestionarRespuestaReanudar(conn, obj, false);
+                case "PONER_TRAMPA"           -> setTrampa(conn, obj);
+                case "CARTA_ACCION"           -> seleccionarCartaAccion(conn, obj);
+                case "JUGAR_CARTA_ACCION"     -> jugarCartaAccion(conn, obj);
+                case "OBTENER_TIENDA_SKINS"   -> obtenerTiendaSkins(conn, obj);
                 case "COMPRAR_SKIN"           -> comprarSkin(conn, obj);
                 case "ACTIVAR_SKIN"           -> activarSkin(conn, obj);
                 case "RECUPERAR_CONTRASENA"   -> recuperarContrasena(conn, obj);
+                case "CAMBIAR_CONTRASENA"     -> cambiarContrasena(conn, obj);
+                case "CAMBIAR_AVATAR"         -> cambiarAvatar(conn, obj);
             }
         });
     }
@@ -2145,6 +2147,71 @@ public class Servidor extends WebSocketServer {
             System.err.println("RECUPERAR_CONTRASENA [Exception inesperada]: " + e.getClass().getSimpleName() + " – " + e.getMessage());
             e.printStackTrace();
             conn.send(new JSONObject().put("tipo", "CORREO_NO_ENCONTRADO").toString());
+        }
+    }
+
+    private void cambiarContrasena(WebSocket conn, JSONObject obj) {
+        String usuario = obj.getString("usuario");
+        // vienen hasheadas de cliente
+        String hashAntigua = obj.getString("contrasena_actual");
+        String hashNueva = obj.getString("contrasena_nueva");
+        try {
+            GestorJugador gestorJugador = new GestorJugador();
+            Jugador jugador = gestorJugador.buscarJugador(usuario);
+
+            if (jugador == null) {
+                conn.send(new JSONObject().put("tipo", "CAMBIO_CONTRASENA_ERROR")
+                        .put("codigo", "USUARIO_NO_EXISTE").toString());
+                return;
+            }
+
+            // se verigica la contraseña actual usando bcrypt, igual que en iniciarSesion
+            if (!jugador.verificarPassword(hashAntigua)) {
+                conn.send(new JSONObject().put("tipo", "CAMBIO_CONTRASENA_ERROR")
+                        .put("codigo", "CONTRASENA_INCORRECTA").toString());
+                return;
+            }
+
+            // hashNueva llega en texto plano desde el cliente entonces la hasheamos aquí como en registro
+            String nuevoHash = org.mindrot.jbcrypt.BCrypt.hashpw(hashNueva, org.mindrot.jbcrypt.BCrypt.gensalt());
+            boolean ok = gestorJugador.updateContrasenya(usuario, nuevoHash);
+
+            if (ok) {
+                conn.send(new JSONObject().put("tipo", "CONTRASENA_CAMBIADA").toString());
+                System.out.println("CAMBIAR_CONTRASENA: OK para " + usuario);
+            } else {
+                conn.send(new JSONObject().put("tipo", "CAMBIO_CONTRASENA_ERROR")
+                        .put("codigo", "ERROR_BD").toString());
+            }
+
+        } catch (SQLException e) {
+            System.err.println("CAMBIAR_CONTRASENA [SQLException]: " + e.getMessage());
+            conn.send(new JSONObject().put("tipo", "CAMBIO_CONTRASENA_ERROR")
+                    .put("codigo", "ERROR_BD").toString());
+        }
+    }
+
+    private void cambiarAvatar(WebSocket conn, JSONObject obj) {
+        String usuario = obj.getString("usuario");
+        String nuevoAvatarId = obj.getString("avatar_id");
+        try {
+            GestorJugador gestorJugador = new GestorJugador();
+            boolean ok = gestorJugador.updateAvatar(usuario, nuevoAvatarId);
+
+            if (ok) {
+                JSONObject msg = new JSONObject();
+                msg.put("tipo", "AVATAR_CAMBIADO");
+                msg.put("avatar_id", nuevoAvatarId);
+                conn.send(msg.toString());
+            } else {
+                conn.send(new JSONObject().put("tipo", "CAMBIO_AVATAR_ERROR")
+                        .put("codigo", "ERROR_BD").toString());
+            }
+
+        } catch (SQLException e) {
+            System.err.println("CAMBIAR_AVATAR [SQLException]: " + e.getMessage());
+            conn.send(new JSONObject().put("tipo", "CAMBIO_AVATAR_ERROR")
+                    .put("codigo", "ERROR_BD").toString());
         }
     }
 
