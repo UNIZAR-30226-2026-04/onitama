@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -40,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -64,6 +66,7 @@ import com.example.onitama.lib.Cartas
 import com.example.onitama.lib.Dificultad
 import com.example.onitama.lib.EquipoID
 import com.example.onitama.lib.EstadoJuego
+import com.example.onitama.lib.FasePartida
 import com.example.onitama.lib.ModoJuego
 import com.example.onitama.lib.Movimiento
 import com.example.onitama.lib.Posicion
@@ -150,10 +153,13 @@ class PartidaActivity: AppCompatActivity() {
                         text = when(motivo) {
                             "TRONO"-> if(victoria)"Colocaste tu rey en el trono del rival" else "Tu rival llevó su rey hasta tu trono"
                             "REY CAPTURADO"-> if(victoria)"Capturaste el rey de tu rival" else "Tu rival ha capturado tu rey"
-                            else -> if(victoria)"Tu rival abandonó la partida" else "Esta vez tu rival te ha vencido, más suerte a la próxima"
+                            "ABANDONO" -> if(victoria)"Tu rival abandonó la partida" else "Has abandonado la partida"
+                            "SIN MOVIMIENTOS" -> if(victoria)"El rival no tiene movimientos disponibles" else "Te has quedado sin mvimientos disponibles"
+                            else -> if(victoria)"El Rey del rival ha caído en tu trampa" else "Tu rey ha caido en una trampa. Esta vez tu rival te ha vencido, más suerte a la próxima"
 
                         },
-                        fontSize = 18.sp
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center
                     )
                 },
                 confirmButton = {
@@ -166,7 +172,7 @@ class PartidaActivity: AppCompatActivity() {
                                 AutoLogin.actualizar(context, datos)
                             }
                             finish()
-                                  },
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.azulFondo))
                     ) {
                         Text("Volver al Menú", color = Color.White)
@@ -175,7 +181,75 @@ class PartidaActivity: AppCompatActivity() {
             )
         }
 
+        if (estado.fasePartida == FasePartida.COLOCAR_TRAMPA) {
+            Box (
+                modifier = Modifier.Companion
+                    .fillMaxWidth()
+                    .padding(top = 130.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "CCOLOCA TU TRAMPA",
+                    color = Color.Yellow,
+                    fontFamily = quattrocentoBold,
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            vertical = 5.dp
+                        )
+                )
+            }
+        }
 
+        if (estado.cartaAccionPropia != null && estado.fasePartida == FasePartida.JUGANDO) {
+            val seleccion = estado.modoAccion != null
+
+            Box (
+                modifier = Modifier.Companion
+                    .fillMaxSize()
+                    .padding(bottom = 100.dp),
+            )
+            Button(
+                onClick = { 
+                    if (seleccion) {
+                        viewModel.desSeleccionarCarta()
+                    }
+                    else {
+                        viewModel.activarCartaAccion(estado.cartaAccionPropia) 
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 15.dp
+                    )
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (estado.modoAccion != null){
+                        Color.Red
+                    } 
+                    else {
+                        colorResource(
+                            id = R.color.azulFondo
+                        )
+                    }
+                ),
+                enabled = estado.turnoActual == viewModel.equipoPropio
+            ) {
+                Text(
+                    text = if (estado.modoAccion != null) {
+                        "CANCELAR PODER"
+                    } else {
+                        "USAR: ${estado.cartaAccionPropia}"
+                    },
+                    fontFamily = quattrocentoBold,
+                    color = Color.White,
+                    fontSize = 16.sp
+                )
+            }
+        }
 
         Box(
             modifier = Modifier.Companion
@@ -499,6 +573,10 @@ class PartidaActivity: AppCompatActivity() {
     }
 
     fun cambiarEstadoCarta(carta: Carta, estado: EstadoJuego){
+        if (estado.modoAccion != null){
+            return
+        }
+
         if(estado.cartaSeleccionada == carta) {
             viewModel.desSeleccionarCarta()
         }
@@ -640,6 +718,7 @@ class PartidaActivity: AppCompatActivity() {
                                 .clip(RoundedCornerShape(5))
                                 .background(
                                     when {
+                                        celda.esTrampaEquipo == -1 -> Color.Companion.Black
                                         estado.fichaSeleccionada == posLogica -> Color.Yellow
                                         estado.movimientosValidos.contains(posLogica) -> Color.Green
                                         celda.esTrono -> Color.DarkGray
@@ -664,6 +743,26 @@ class PartidaActivity: AppCompatActivity() {
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .padding(1.dp)
+                                )
+                            }
+                            else if (celda.esTrampaEquipo == equipoLocal.id) {
+                                Image(
+                                    painter = painterResource(
+                                        id = R.drawable.casilla_trampa
+                                    ),
+                                    contentDescription = "Trampa",
+                                    modifier = Modifier.Companion
+                                        .fillMaxSize()
+                                )
+                            }
+                            else if (celda.esTrampaEquipo == -1) {
+                                Image(
+                                    painter = painterResource(
+                                        id = R.drawable.lapida
+                                    ),
+                                    contentDescription = "Esta casilla ha quedado inactiva",
+                                    modifier = Modifier.Companion
+                                        .fillMaxSize()
                                 )
                             }
                         }

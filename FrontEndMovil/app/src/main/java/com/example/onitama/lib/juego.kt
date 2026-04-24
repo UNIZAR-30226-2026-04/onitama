@@ -1,6 +1,6 @@
 package com.example.onitama.lib
 
-import com.example.onitama.api.partida
+import com.example.onitama.api.Partida
 
 // ─── Constantes del tablero ───────────────────────────────────────────────────
 const val DIM = 7
@@ -70,31 +70,31 @@ data class EstadoJuego (
     val cartasSiguientes: List<Carta>,
 
     /** Ficha que el jugador ha pulsado (highlight amarillo) */
-    val fichaSeleccionada: Posicion?,
+    val fichaSeleccionada: Posicion? = null,
 
     /** Carta que el jugador ha seleccionado (activa las casillas azules) */
-    val cartaSeleccionada: Carta?,
+    val cartaSeleccionada: Carta? = null,
 
     /** Casillas destino válidas según la ficha y carta seleccionadas */
-    val movimientosValidos: List<Posicion>,
+    val movimientosValidos: List<Posicion> = emptyList(),
 
     /** Equipo ganador; null mientras la partida siga en curso */
-    val ganador: EquipoID?,
+    val ganador: EquipoID? = null,
 
     /** Origen y destino del último movimiento (para feedback visual) */
-    val ultimoMovimiento: Pair<Posicion, Posicion>?
+    val ultimoMovimiento: Pair<Posicion, Posicion>? = null,
 
     
-    val cartaAccionPropia : String?,
-    val cartaAccionRival: String?,
+    val cartaAccionPropia : String? = null,
+    val cartaAccionRival: String? = null,
 
-    val modoAccion: String?,
+    val modoAccion: String? = null,
     
-    val equipoCiego: EquipoID?,
+    val equipoCiego: EquipoID? = null,
 
-    val espejoActivadoPor: EquipoID?,
+    val espejoActivadoPor: EquipoID? = null,
 
-    val restriccionSolo: RestriccionSolo?
+    val restriccionSolo: RestriccionSolo? = null
 )
 
 enum class TipoRestriccion {
@@ -158,7 +158,7 @@ fun resolverRestrccionSoloTrasMovimiento (
 
 fun activarRestriccionSolo (
     caster: EquipoID,
-    tipo: TipoRestriccion?
+    tipo: TipoRestriccion
 ) : RestriccionSolo {
     var afectado = if (caster == EquipoID.AZUL) {
         EquipoID.ROJO
@@ -167,11 +167,11 @@ fun activarRestriccionSolo (
         EquipoID.AZUL
     }
 
-    return {
+    return RestriccionSolo (
         tipo,
         caster,
         equipoAfectado = afectado
-    }
+    )
 }
 
 /** Misma transformación que al aplicar ESPEJO (invertir dc en cada vector). */
@@ -201,14 +201,12 @@ fun deshacerEspejoTrasMovimientoRival (
         return estado
     }
 
-    return {
-        estado.copy(
+    return estado.copy(
             cartasJugador = invertirCartasEspejo(estado.cartasJugador),
             cartasOponente = invertirCartasEspejo(estado.cartasOponente),
             cartasSiguientes = invertirCartasEspejo(estado.cartasSiguientes),
             espejoActivadoPor = null
         )
-    }
 }
 
 // ─── Creación del estado inicial ──────────────────────────────────────────────
@@ -233,11 +231,7 @@ fun crearTableroInicial(): List<List<Celda>> {
             Celda(
                 ficha = ficha,
                 esTrono = esTronoSuperior || esTronoInferior,
-                equipoTrono = when {
-                    esTronoSuperior -> EquipoID.ROJO
-                    esTronoInferior -> EquipoID.AZUL
-                    else -> null
-                }
+                esTrampaEquipo = null
             )
         }
     }
@@ -250,16 +244,12 @@ fun crearTableroInicial(): List<List<Celda>> {
 fun crearEstadoInicial(): EstadoJuego {
     val cartas = Cartas.selectRandomCards(7)
     return EstadoJuego(
+        fasePartida = FasePartida.COLOCAR_TRAMPA,
         tablero = crearTableroInicial(),
         turnoActual = EquipoID.AZUL,
         cartasJugador = listOf(cartas[0], cartas[1]),
         cartasOponente = listOf(cartas[2], cartas[3]),
-        cartasSiguientes = listOf(cartas[4], cartas[5], cartas[6]),
-        fichaSeleccionada = null,
-        cartaSeleccionada = null,
-        movimientosValidos = emptyList(),
-        ganador = null,
-        ultimoMovimiento = null,
+        cartasSiguientes = listOf(cartas[4], cartas[5], cartas[6])
     )
 }
 
@@ -274,7 +264,7 @@ fun calcularMovimientosValidos (
     col: Int,
     cartaMov: Carta,
     equipoFicha: EquipoID,
-    restriccion: restriccionSolo? = null
+    restriccion: RestriccionSolo? = null
 ): List<Posicion> {
     val signo = if(equipoFicha == EquipoID.AZUL) 1 else -1
 
@@ -282,10 +272,10 @@ fun calcularMovimientosValidos (
 
     for (movimientos in cartaMov.movimientos){
          if (restriccion != null && restriccion.equipoAfectado == equipoFicha) {
-            if (restriccion.tipo == RestriccionSolo.Tipo.SOLO_PARA_ADELANTE && mov.df < 0) {
+            if (restriccion.tipo == TipoRestriccion.SOLO_PARA_ADELANTE && movimientos.df < 0) {
                 continue
             }
-            if (restriccion.tipo == RestriccionSolo.Tipo.SOLO_PARA_ATRAS && mov.df > 0) {
+            if (restriccion.tipo == TipoRestriccion.SOLO_PARA_ATRAS && movimientos.df > 0) {
                 continue
             }
         }
@@ -372,7 +362,7 @@ fun tableroDesdeServidor(
         MutableList(DIM) { col -> 
             Celda(
                 ficha = null,
-                esTrono = (fila == 0 && col == CENTRO) || (fila == DIM - 1 && col == CENTRO)
+                esTrono = (fila == 0 && col == CENTRO) || (fila == DIM - 1 && col == CENTRO),
                 esTrampaEquipo = null
             )
         }
@@ -411,11 +401,11 @@ fun tableroDesdeServidor(
 
             if (fila in 0 until DIM && col in 0 until DIM) {
                 nuevoTablero[fila][col] = nuevoTablero[fila][col].copy(
-                    if (activa == 1) {
-                        esTrampaEquipo = equipo.id
-                    } 
+                    esTrampaEquipo = if (activa == 1) {
+                        equipo.id
+                    }
                     else {
-                        esTrampaEquipo = -1
+                        -1
                     }
                 )
             }
@@ -453,19 +443,19 @@ fun crearEstadoServidor (
 
     /** Cartas de acción (para partidas reanudadas). Puede venir como array [propia, rival]
     *  o como campos individuales carta_accion_propia / carta_accion_rival. */
-    cartas_accion_propia: List<Partida.CartaAccionJson>,
-    cartas_accion_rival: List<Partida.CartaAccionJson>
+    cartas_accion_propia: List<Partida.CartaAccionJson>?,
+    cartas_accion_rival: List<Partida.CartaAccionJson>?
 ): EstadoJuego {
-    val esReanudada = !datos.tablero_eq1.isNullOrEmpty() && !datos.tablero_eq2.isNullOrEmpty()
+    val esReanudada = !tablero_eq1.isNullOrEmpty() && !tablero_eq2.isNullOrEmpty()
 
     val tablero = if (esReanudada) {
-        tableroDesdeServidor(datos.tablero_eq1!!, datos.tablero_eq2!!)
+        tableroDesdeServidor(tablero_eq1!!, tablero_eq2!!)
     }
     else {
         crearTableroInicial()
     }
 
-    val turnoActual = if ((datos.turno ?:0) % 2 == 0) {
+    val turnoActual = if ((turno ?:0) % 2 == 0) {
         EquipoID.ROJO
     }
     else {
@@ -480,14 +470,14 @@ fun crearEstadoServidor (
     }
     
     return EstadoJuego (
-        fasePartida = faseP
+        fasePartida = faseP,
         tablero = tablero,
         turnoActual = turnoActual,
-        cartasJugador = cartas_jugador.map { convertirCarta(it.nombre) },
-        cartasOponente = cartas_oponente.map { convertirCarta(it.nombre) },
-        cartasSiguientes = carta_siguiente.map { convertirCarta(it.nombre) },
-        cartaAccionPropia = cartas_accion_jugador?.firstOfNull()?.nombre,
-        cartaAccionRival = cartas_accion_oponente?.firstOfNull()?.nombre
+        cartasJugador = cartas_jugador.map { convertirCarta(it) },
+        cartasOponente = cartas_oponente.map { convertirCarta(it) },
+        cartasSiguientes = carta_siguiente.map { convertirCarta(it) },
+        cartaAccionPropia = cartas_accion_propia?.firstOrNull()?.nombre,
+        cartaAccionRival = cartas_accion_rival?.firstOrNull()?.nombre,
     )
 
 }
@@ -534,8 +524,8 @@ fun ejecutarMovimiento (
 
     val fichaMovida = tablero[origen.fila][origen.col].ficha!!
 
-    val capturado = false
-    val esReyCapturado = false
+    var capturado = false
+    var esReyCapturado = false
 
     val esTrampaOponente = tablero[destino.fila][destino.col].esTrampaEquipo != null && 
                            tablero[destino.fila][destino.col].esTrampaEquipo != fichaMovida.equipo.id
@@ -577,7 +567,7 @@ fun ejecutarMovimiento (
 
     val equipoActual = estado.turnoActual
 
-    val cartasMovedor = if (equipoQueMovio == equipoLocal) {
+    val cartasMovedor = if (equipoActual == EquipoID.AZUL) {
         estado.cartasJugador
     }
     else {
@@ -587,7 +577,7 @@ fun ejecutarMovimiento (
     val tieneCartaExtra = cartasMovedor.size > 2
 
     /** El jugador recibe la primera carta de la cola; la carta usada va al final.*/
-    val cartaRecibida: Carta? = null
+    var cartaRecibida: Carta? = null
     val nuevasSiguientes: List<Carta>
 
     if (tieneCartaExtra) {
@@ -595,7 +585,7 @@ fun ejecutarMovimiento (
     }
     else {
         cartaRecibida = estado.cartasSiguientes[0]
-        nuevasSiguientes = listOf(estado.cartasSiguientes[1], estaso.cartasSiguientes[2], carta)
+        nuevasSiguientes = listOf(estado.cartasSiguientes[1], estado.cartasSiguientes[2], carta)
     }
 
     /**
@@ -624,7 +614,7 @@ fun ejecutarMovimiento (
     } 
 
     val nuevasCartasOponente = if (equipoActual != equipoLocal) {
-        if {
+        if (tieneCartaExtra) {
             estado.cartasOponente.filter {
                 it.nombre != carta.nombre
             }
@@ -653,6 +643,7 @@ fun ejecutarMovimiento (
     }
 
     val nuevoEstado = estado.copy(
+        fasePartida = if (ganador != null) FasePartida.TERMINADA else estado.fasePartida,
         tablero = tablero,
         turnoActual = if (equipoActual == EquipoID.ROJO) EquipoID.AZUL else EquipoID.ROJO,
         cartasJugador = nuevasCartasJugador,
@@ -667,5 +658,7 @@ fun ejecutarMovimiento (
         restriccionSolo = resolverRestrccionSoloTrasMovimiento(estado.restriccionSolo, equipoActual)
     )
 
-    return ResultadoMovimiento(nuevoEstado, capturado, esReyCapturado, victoriaPorTrono)
+    val estadoFinal = deshacerEspejoTrasMovimientoRival(nuevoEstado, equipoActual)
+
+    return ResultadoMovimiento(estadoFinal, capturado, esReyCapturado, victoriaPorTrono)
 }

@@ -12,6 +12,7 @@ import com.example.onitama.lib.Cartas
 import com.example.onitama.lib.Dificultad
 import com.example.onitama.lib.EquipoID
 import com.example.onitama.lib.EstadoJuego
+import com.example.onitama.lib.FasePartida
 import com.example.onitama.lib.JugadaIA
 import com.example.onitama.lib.ModoJuego
 import com.example.onitama.lib.Posicion
@@ -66,11 +67,12 @@ class PartidaViewModel : ViewModel() {
                     cartas_jugador = datos.cartas_jugador.map { it.nombre },
                     cartas_oponente = datos.cartas_oponente.map { it.nombre },
                     carta_siguiente = datos.carta_siguiente.map { it.nombre },
+                    equipo = equipoPropio,
                     tablero_eq1 = datos.tablero_eq1,
                     tablero_eq2 = datos.tablero_eq2,
                     turno = datos.turno,
-                    cartas_accion_jugador = datos.cartas_accion_jugador,
-                    cartas_accion_oponente = datos.cartas_accion_oponente
+                    cartas_accion_propia = datos.cartas_accion_jugador,
+                    cartas_accion_rival = datos.cartas_accion_oponente
                 )
 
                 // Luego conectamos el WebSocket para escuchar los turnos
@@ -202,7 +204,7 @@ class PartidaViewModel : ViewModel() {
                                     "ROBAR" -> {}
                                 }
 
-                                if (jugador != equipoPropio && datos.accion != "ROBAR") {
+                                if (jugador != equipoPropio && accion != "ROBAR") {
                                     _estado.value = _estado.value.copy(
                                         turnoActual = equipoPropio
                                     )
@@ -218,21 +220,44 @@ class PartidaViewModel : ViewModel() {
                             }
 
                             is Partida.RespuestaDerrota -> {
-                                _estado.value = _estado.value.copy(ganador = if (equipoPropio == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL)
+                                razon = if (mensaje.motivo == "SIN_MOV") {
+                                    "SIN_MOVIMIENTOS"
+                                }
+                                else {
+                                    "DERROTA"
+                                }
+
+                                _estado.value = _estado.value.copy(
+                                    ganador = if (equipoPropio == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL,
+                                    fasePartida = FasePartida.TERMINADA
+                                )
+                                Log.i("conexion servidor", "Mensaje de derrota recibido")
                             }
 
                             is Partida.RespuestaVictoria -> {
                                 if(mensaje.motivo == "ABANDONO"){
                                     razon = "ABANDONO"
                                 }
-                                _estado.value = _estado.value.copy(ganador = if (equipoPropio == EquipoID.ROJO) EquipoID.ROJO else EquipoID.AZUL)
+                                else if(mensaje.motivo == "SIN_MOV"){
+                                    razon = "SIN_MOVIMIENTOS"
+                                }
+                                else {
+                                    razon = "VICTORIA"
+                                }
+                                _estado.value = _estado.value.copy(
+                                    ganador = if (equipoPropio == EquipoID.ROJO) EquipoID.ROJO else EquipoID.AZUL,
+                                    fasePartida = FasePartida.TERMINADA
+                                )
                                 Log.i("conexion servidor", "Mensaje de victoria recibido")
                             }
 
                             is Partida.RespuestaTerminarPartida ->{
                                 if (mensaje.razon == "ABANDONO"){ razon ="ABANDONO" }
                                 Log.i("conexion servidor", "Mensaje de terminar partida recibido")
-                                _estado.value = _estado.value.copy(ganador = if (mensaje.ganador == EquipoID.ROJO.id.toString()) EquipoID.ROJO else EquipoID.AZUL)
+                                _estado.value = _estado.value.copy(
+                                    ganador = if (mensaje.ganador == EquipoID.ROJO.id.toString()) EquipoID.ROJO else EquipoID.AZUL,
+                                    fasePartida = FasePartida.TERMINADA
+                                )
                             }
 
                             else -> {
@@ -262,7 +287,7 @@ class PartidaViewModel : ViewModel() {
                 if (sePuede) {
                     partida.enviarPonerTrampa(
                         equipo = equipoPropio.id,
-                        fila = END -pos.fila,
+                        fila = END - pos.fila,
                         columna = END - pos.col
                     )
                 }
@@ -316,13 +341,21 @@ class PartidaViewModel : ViewModel() {
                             if (celda.ficha?.equipo == actual.turnoActual) {
                                 _estado.value = actual.copy(
                                     fichaSeleccionada = pos,
-                                    movimientosValidos = calcularMovimientosValidos(actual.tablero, pos.fila, pos.col, actual.cartaSeleccionada, actual.turnoActual)
+                                    movimientosValidos = calcularMovimientosValidos(
+                                        actual.tablero, 
+                                        pos.fila,
+                                        pos.col, 
+                                        actual.cartaSeleccionada, 
+                                        actual.turnoActual,
+                                        actual.restriccionSolo
+                                    )
                                 )
                             }
                         }
                     }           
                 }
             }
+            else -> {}
         }
     }
 
@@ -357,7 +390,12 @@ class PartidaViewModel : ViewModel() {
 
     fun desSeleccionarCarta() {
         val actual = _estado.value
-        _estado.value = actual.copy(cartaSeleccionada = null, fichaSeleccionada = null, movimientosValidos = emptyList())
+        _estado.value = actual.copy(
+            cartaSeleccionada = null, 
+            fichaSeleccionada = null, 
+            movimientosValidos = emptyList(),
+            modoAccion = null
+        )
     }
 
     fun activarCartaAccion (
@@ -402,10 +440,10 @@ class PartidaViewModel : ViewModel() {
         val mensaje = Partida.MensajeJugarCartaAccion(
             nombreCarta,
             equipoPropio.id,
-            x = posicionPropia?.col ?: -1,
-            y = posicionPropia?.fila ?: -1,
-            x_op = posicionRival?.col ?: -1,
-            y_op = posicionRival?.fila ?: -1,
+            x = if (posicionPropia != null) END - posicionPropia.col else -1,
+            y = if (posicionPropia != null) END - posicionPropia.fila else -1,
+            x_op = if (posicionRival != null) END - posicionRival.col else -1,
+            y_op = if (posicionRival != null) END - posicionRival.fila else -1,
             cartaRobar = cartaARobar
         )
 
@@ -425,7 +463,7 @@ class PartidaViewModel : ViewModel() {
 
         ejecucionCartaAccion(
             nombreCarta = cartaAccion,
-            accion = "ROBAR",
+            cartaAccion = "ROBAR",
             cartaARobar = nombreCarta
         )
     }

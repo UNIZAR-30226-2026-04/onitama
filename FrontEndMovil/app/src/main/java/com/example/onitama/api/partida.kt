@@ -214,7 +214,10 @@ class Partida(
 
     @Serializable
     @SerialName("DERROTA")
-    object RespuestaDerrota : MensajeServidor() // Convertido a object
+    data class RespuestaDerrota(
+        val motivo: String,
+        val equipo_responsable: Int
+    ) : MensajeServidor() // Convertido a object
 
     @Serializable
     @SerialName("SOLICITUD_PAUSA")
