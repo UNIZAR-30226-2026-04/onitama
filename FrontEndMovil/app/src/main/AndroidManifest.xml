@@ -44,9 +44,11 @@
         </activity>
         <activity
             android:name=".ui.activities.Buscar_PartidaActivity">
+            android:screenOrientation="portrait"
         </activity>
         <activity
             android:name=".ui.activities.partida.PartidaActivity">
+            android:screenOrientation="portrait"
         </activity>
         <activity
             android:name=".ui.activities.cartas.Cartas_activity">
@@ -54,7 +56,9 @@
         <activity
             android:name=".ui.activities.profile.ProfileActivity">
         </activity>
-
+        <activity
+            android:name="ui.activities.notificaciones.NotificacionesActivity">
+        </activity>
 
     </application>
 </manifest>

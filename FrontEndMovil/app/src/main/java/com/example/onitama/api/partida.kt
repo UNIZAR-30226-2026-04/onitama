@@ -183,7 +183,26 @@ class Partida(
         val cartas_accion_oponente: List<CartaAccionJson>? = emptyList(),
         val posTrampa_jugador: String? = null,
         val posTrampa_oponente: String? = null
-    ): MensajeServidor()
+    ): MensajeServidor() {
+        fun toPartidaEncontrada() = RespuestaPartidaEncontrada(
+            partida_id = this.partida_id,
+            equipo = this.equipo,
+            oponente = this.oponente,
+            oponentePt = this.oponentePt,
+            cartas_jugador = this.cartas_jugador,
+            cartas_oponente = this.cartas_oponente,
+            carta_siguiente = this.carta_siguiente,
+            oponente_avatar_id = this.oponente_avatar_id,
+            oponente_skin_id = this.oponente_skin_id,
+            tablero_eq1 = this.tablero_eq1,
+            tablero_eq2 = this.tablero_eq2,
+            turno = this.turno,
+            cartas_accion_jugador = this.cartas_accion_jugador,
+            cartas_accion_oponente = this.cartas_accion_oponente,
+            posTrampa_jugador = this.posTrampa_jugador,
+            posTrampa_oponente = this.posTrampa_oponente
+        )
+    }
 
     @Serializable
     @SerialName("TU_TURNO")

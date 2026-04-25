@@ -113,7 +113,7 @@ class BuscarPartida(
                         .filter { json ->
                             val tipo = json.optString("tipo")
 
-                            tipo == "PARTIDA_ENCONTRADA"
+                            tipo == "PARTIDA_ENCONTRADA" || tipo == "PARTIDA_PRIVADA_ENCONTRADA"
                         }
                         .first()
                     // Aquí puedes usar tu PartidaActiva.datosPartida = ...
@@ -125,17 +125,34 @@ class BuscarPartida(
                     } //en caso de que el mensaje sea correcto se inicia la partida
                     val mensajeEntrante =
                         jsonTolerante.decodeFromString<Partida.MensajeServidor>(respuesta.toString())
-                    if (mensajeEntrante is Partida.RespuestaPartidaEncontrada) {
-                        PartidaActiva.datosPartida = mensajeEntrante
-                        promise.complete(
-                            RespuestaBuscarPartida(
-                                estado = EstadoPartida.ENCONTRADA,
-                                mensaje = "¡Partida encontrada! Te enfrentarás a ${mensajeEntrante.oponente}",
-                                partida_id = mensajeEntrante.partida_id,
-                                oponente = mensajeEntrante.oponente,
-                                oponentePt = mensajeEntrante.oponentePt
+                    when (mensajeEntrante) {
+                        is Partida.RespuestaPartidaEncontrada -> {
+                            PartidaActiva.datosPartida = mensajeEntrante
+                            promise.complete(
+                                RespuestaBuscarPartida(
+                                    estado = EstadoPartida.ENCONTRADA,
+                                    mensaje = "¡Partida encontrada! Te enfrentarás a ${mensajeEntrante.oponente}",
+                                    partida_id = mensajeEntrante.partida_id,
+                                    oponente = mensajeEntrante.oponente,
+                                    oponentePt = mensajeEntrante.oponentePt
+                                )
                             )
-                        )
+                        }
+
+                        is Partida.RespuestaPartidaPrivadaEncontrada -> {
+                            PartidaActiva.datosPartida = mensajeEntrante.toPartidaEncontrada()
+                            promise.complete(
+                                RespuestaBuscarPartida(
+                                    estado = EstadoPartida.ENCONTRADA,
+                                    mensaje = "¡Partida encontrada! Te enfrentarás a ${mensajeEntrante.oponente}",
+                                    partida_id = mensajeEntrante.partida_id,
+                                    oponente = mensajeEntrante.oponente,
+                                    oponentePt = mensajeEntrante.oponentePt
+                                )
+                            )
+                        }
+
+                        else -> {}
                     }
                 }
 
