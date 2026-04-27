@@ -480,6 +480,7 @@ public class Partida{
 
         //Busqueda para ver si se ha quedado sin movimientos
         if((accionActivadaJ1 && cartaAccionJugadaJ1 != null && cartaAccionJugadaJ1.esTipoRestriccion()) || (accionActivadaJ2 && cartaAccionJugadaJ2 != null && cartaAccionJugadaJ2.esTipoRestriccion())){
+            System.err.println("BUSCANDO MOVIMIENTOS...");
             boolean hayMovimiento = false;
             if(cartaAccionJugadaJ1 == null && equipo == 2){
                 hayMovimiento = true; //El enemigo puede jugar su carta de acccion para librarse de la accion
@@ -491,6 +492,7 @@ public class Partida{
                     if(cm.perteneceAlEquipo(equipoEnemigo)){
                         hayMovimiento = tablero.existeMovimiento(cm.getListaMovimientos(), equipoEnemigo);
                         if(hayMovimiento){
+                            System.err.println("TIENE MOVIMIENTOS CON " + cm.getNombre());
                             break;
                         }else{
                             return equipo; //Si el enemigo no tiene movimientos -> hemos ganado

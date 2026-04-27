@@ -1551,7 +1551,6 @@ public class Servidor extends WebSocketServer {
         hilos.submit(() -> {
             JSONObject obj = new JSONObject(message);
             String tipoMSG = obj.getString("tipo");
-            System.out.println("HOLA");
             switch (tipoMSG) {
                 case "BUSCAR_PARTIDA"         -> gestionarBusquedaPartida(conn, obj);
                 case "MOVER"                  -> gestionarPartida(conn, obj);
