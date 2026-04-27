@@ -490,7 +490,7 @@ public class Partida{
                 for(CartaMov cm : cartasM){
                     int equipoEnemigo = (equipo == 1) ? 2 : 1;
                     if(cm.perteneceAlEquipo(equipoEnemigo)){
-                        hayMovimiento = tablero.existeMovimiento(cm.getListaMovimientos(), equipoEnemigo);
+                        hayMovimiento = tablero.existeMovimiento(cm.getListaMovimientos(), equipoEnemigo, cartaAccionJugadaJ1, cartaAccionJugadaJ2);
                         if(hayMovimiento){
                             System.err.println("TIENE MOVIMIENTOS CON " + cm.getNombre());
                             break;
