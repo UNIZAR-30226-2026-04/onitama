@@ -367,7 +367,16 @@ export default function PartidasPage() {
   useEffect(() => {
     const unsubEncontrada = WS.suscribir("PARTIDA_PRIVADA_ENCONTRADA", (msg) => {
       // partida_nueva: true solo en partidas nuevas (no en reanudaciones)
-      const esReanudacion = !!reanudarEnCursoRef.current;
+      const esReanudacion =
+        !!reanudarEnCursoRef.current ||
+        Boolean(
+          msg.tablero_eq1 &&
+          msg.tablero_eq2 &&
+          (msg.trampa_j1_pos ||
+            msg.trampa_j2_pos ||
+            msg.cartas_accion_jugador ||
+            msg.cartas_accion_oponente)
+        );
       sessionStorage.setItem("datosPartida", JSON.stringify({ ...msg, partida_nueva: !esReanudacion }));
       setInvitacionPrivadaEnCurso(null);
       setMostrarModalPartidaPrivada(false);

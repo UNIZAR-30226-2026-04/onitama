@@ -184,6 +184,7 @@ public class CartaAccion {
 
     public boolean jugarCarta(Partida partida, int x, int y, int equipo, int xOp, int yOp, String nomCarta){
         if (puedeUsarse() &&  equipo == this.equipo && accion.equals("CEGAR")) {
+            marcarActivada();
             return true; //Como es un efecto visual, se manejara en el front (solo se mandara el mensaje avisando que se ha jugado)
         }else if (puedeUsarse() && accionEjecutable != null && equipo == this.equipo) {
             if(accionEjecutable.ejecutar(partida, x, y, equipo, xOp, yOp, nomCarta)) {

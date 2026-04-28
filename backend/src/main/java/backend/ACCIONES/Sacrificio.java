@@ -12,10 +12,18 @@ public class Sacrificio extends Accion {
     @Override
     public boolean ejecutar(Partida partida, int x, int y, int equipo, int xOp, int yOp, String nomCarta) {
         System.out.println("Ejecutando acción: " + getNombre());
-        Ficha mia = partida.getPosicion(x, y).getFicha();
-        Ficha oponente = partida.getPosicion(xOp, yOp).getFicha();
+        var posMia = partida.getPosicion(x, y);
+        var posOponente = partida.getPosicion(xOp, yOp);
+        Ficha mia = posMia.getFicha();
+        Ficha oponente = posOponente.getFicha();
         if (mia != null && oponente != null && mia.getEquipo() == equipo && oponente.getEquipo() != equipo && !mia.isRey() && !oponente.isRey()) {
-            return !mia.matar() && !oponente.matar();
+            // Sacrificio/Requiem: ambas fichas deben desaparecer físicamente del tablero
+            // para que el estado persistido en BD no las recupere al reanudar.
+            mia.matar();
+            oponente.matar();
+            posMia.setFicha(null);
+            posOponente.setFicha(null);
+            return true;
         }
         return false;
     }

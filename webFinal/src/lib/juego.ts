@@ -46,13 +46,20 @@ export interface Celda {
 
 export type FasePartida = "COLOCAR_TRAMPA" | "ELEGIR_CARTA_ACCION" | "JUGANDO" | "TERMINADA";
 
+export interface CartaAccionJuego {
+  nombre: string;
+  accion: string;
+  /** Estado persistido por backend: USABLE, ACTIVA, NO_USABLE, etc. */
+  estado?: string;
+}
+
 export interface EstadoJuego {
   fasePartida: FasePartida;
   opcionesCartasAccion: { nombre: string; accion: string }[];
-  cartaAccionPropia: { nombre: string; accion: string } | null;
-  cartaAccionRival: { nombre: string; accion: string } | null;
+  cartaAccionPropia: CartaAccionJuego | null;
+  cartaAccionRival: CartaAccionJuego | null;
   /** Carta que abrió el modo de acción (puede ser la segunda en mano) */
-  cartaAccionParaModo: { nombre: string; accion: string } | null;
+  cartaAccionParaModo: CartaAccionJuego | null;
   /** Estado de interacción visual para jugar una carta de acción */
   modoAccion?: "REVIVIR" | "SALVAR_REY" | "SACRIFICIO_PROPIO" | "SACRIFICIO_RIVAL" | "ROBAR" | null;
   /** Datos temporales recogidos durante el modoAccion */
@@ -273,6 +280,13 @@ export interface CartaServidor {
   movimientos: { x: number; y: number }[];
 }
 
+export interface CartaAccionServidor {
+  nombre: string;
+  accion?: string;
+  estado?: string;
+  equipo?: number;
+}
+
 /**
  * Convierte una carta del formato servidor al formato frontend.
  * Si el servidor no envía movimientos (retrocompatibilidad mock), se busca
@@ -315,7 +329,7 @@ function convertirCarta(carta: CartaServidor | string): CartaMovDef {
  * Parsea las cadenas de posición del servidor (formato Java Tablero) en un tablero frontend.
  * Formato eq1/eq2: "[x,y]" = rey, "(x,y)" = peón. x=col, y=fila.
  */
-function tableroDesdeServidor(eq1: string, eq2: string): Celda[][] {
+function tableroDesdeServidor(eq1: string, eq2: string, trampaJ1?: string | null, trampaJ2?: string | null): Celda[][] {
   const tablero: Celda[][] = Array.from({ length: DIM }, (_, fila) =>
     Array.from({ length: DIM }, (_, col) => ({
       ficha: null,
@@ -355,9 +369,36 @@ function tableroDesdeServidor(eq1: string, eq2: string): Celda[][] {
     }
   };
 
+  const aplicarTrampaGuardada = (pos: string | null | undefined, equipo: EquipoID) => {
+    if (!pos) return;
+    const [colRaw, filaRaw, activaRaw] = pos.split(",");
+    const col = Number.parseInt(colRaw, 10);
+    const fila = Number.parseInt(filaRaw, 10);
+    const activa = activaRaw === undefined ? 1 : Number.parseInt(activaRaw, 10);
+    if (Number.isNaN(col) || Number.isNaN(fila)) return;
+    if (fila >= 0 && fila < DIM && col >= 0 && col < DIM) {
+      tablero[fila][col].esTrampaEquipo = activa === 0 ? -1 : equipo;
+    }
+  };
+
   colocar(eq1, 1);
   colocar(eq2, 2);
+  aplicarTrampaGuardada(trampaJ1, 1);
+  aplicarTrampaGuardada(trampaJ2, 2);
   return tablero;
+}
+
+function normalizarCartaAccion(carta: { nombre: string; accion?: string; estado?: string } | null | undefined): CartaAccionJuego | null {
+  if (!carta) return null;
+  return {
+    nombre: carta.nombre,
+    accion: carta.accion ?? carta.nombre,
+    estado: carta.estado,
+  };
+}
+
+function cartaAccionEnIndice(cartas: CartaAccionServidor[] | undefined, indice: number): CartaAccionJuego | null {
+  return normalizarCartaAccion(cartas?.[indice]);
 }
 
 export function crearEstadoDesdeServidor(datos: {
@@ -367,6 +408,8 @@ export function crearEstadoDesdeServidor(datos: {
   equipo?: 1 | 2;
   tablero_eq1?: string;
   tablero_eq2?: string;
+  trampa_j1_pos?: string | null;
+  trampa_j2_pos?: string | null;
   /** Turno numérico del servidor: par=equipo1, impar=equipo2 */
   turno?: number;
   /** Cartas de acción (para partidas reanudadas). Puede venir como array [propia, rival]
@@ -374,24 +417,31 @@ export function crearEstadoDesdeServidor(datos: {
   cartas_accion?: { nombre: string; accion: string }[];
   carta_accion_propia?: { nombre: string; accion: string } | null;
   carta_accion_rival?: { nombre: string; accion: string } | null;
+  cartas_accion_jugador?: CartaAccionServidor[];
+  cartas_accion_oponente?: CartaAccionServidor[];
 }): EstadoJuego {
   const tieneTableroGuardado = datos.tablero_eq1 && datos.tablero_eq2;
   const tablero = tieneTableroGuardado
-    ? tableroDesdeServidor(datos.tablero_eq1!, datos.tablero_eq2!)
+    ? tableroDesdeServidor(datos.tablero_eq1!, datos.tablero_eq2!, datos.trampa_j1_pos, datos.trampa_j2_pos)
     : crearTableroInicial();
 
   // Si viene turno del servidor lo usamos; si no, equipo 1 empieza siempre.
   const turnoActual: EquipoID =
     datos.turno !== undefined ? (datos.turno % 2 === 0 ? 1 : 2) : 1;
 
-  // Restaurar cartas de acción para partidas reanudadas
+  // Restaurar cartas de acción para partidas reanudadas.
+  // En la UI cartaAccionPropia/cartaAccionRival representan las dos cartas de acción
+  // que tiene el jugador local (puede usar solo una); el nombre "Rival" se mantiene
+  // por compatibilidad con el estado anterior.
   const cartaAccionPropia =
-    datos.carta_accion_propia ??
-    datos.cartas_accion?.[0] ??
+    normalizarCartaAccion(datos.carta_accion_propia ?? null) ??
+    cartaAccionEnIndice(datos.cartas_accion_jugador, 0) ??
+    normalizarCartaAccion(datos.cartas_accion?.[0] ?? null) ??
     null;
   const cartaAccionRival =
-    datos.carta_accion_rival ??
-    datos.cartas_accion?.[1] ??
+    normalizarCartaAccion(datos.carta_accion_rival ?? null) ??
+    cartaAccionEnIndice(datos.cartas_accion_jugador, 1) ??
+    normalizarCartaAccion(datos.cartas_accion?.[1] ?? null) ??
     null;
 
   return {
@@ -498,18 +548,15 @@ export function ejecutarMovimiento(
 
   let cartaRecibida: CartaMovDef | undefined;
   let nuevasSiguientes: CartaMovDef[];
+  const colaActual = estado.cartasSiguientes.filter(Boolean);
 
   if (tieneCartaExtra) {
     // Post-ROBAR: la carta usada pasa al final; nadie recibe carta del mazo (2→3 cartas en cola).
-    nuevasSiguientes = [...estado.cartasSiguientes, carta];
+    nuevasSiguientes = [...colaActual, carta];
   } else {
     // Rotación normal FIFO: el jugador recibe la primera de la cola; la usada va al final.
-    cartaRecibida = estado.cartasSiguientes[0];
-    nuevasSiguientes = [
-      estado.cartasSiguientes[1],
-      estado.cartasSiguientes[2],
-      carta,
-    ];
+    cartaRecibida = colaActual[0];
+    nuevasSiguientes = [...colaActual.slice(1), carta];
   }
 
   // Si el equipo que mueve ahora ES el jugador local → actualizar cartasJugador.
@@ -519,7 +566,7 @@ export function ejecutarMovimiento(
       ? tieneCartaExtra
         ? estado.cartasJugador.filter((c) => c.nombre !== carta.nombre)
         : estado.cartasJugador.map((c) =>
-            c.nombre === carta.nombre ? cartaRecibida! : c
+            c.nombre === carta.nombre ? (cartaRecibida ?? c) : c
           )
       : [...estado.cartasJugador];
 
@@ -528,7 +575,7 @@ export function ejecutarMovimiento(
       ? tieneCartaExtra
         ? estado.cartasOponente.filter((c) => c.nombre !== carta.nombre)
         : estado.cartasOponente.map((c) =>
-            c.nombre === carta.nombre ? cartaRecibida! : c
+            c.nombre === carta.nombre ? (cartaRecibida ?? c) : c
           )
       : [...estado.cartasOponente];
 

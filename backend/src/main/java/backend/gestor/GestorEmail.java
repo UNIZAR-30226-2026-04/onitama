@@ -17,7 +17,7 @@ public class GestorEmail {
     private static final int    SMTP_PORT      = 587;
     private static final String EMAIL_CUENTA   = "ironTaisen@gmail.com";
     // App password de Gmail (sin espacios)
-    private static final String EMAIL_PASSWORD = "kksod fpjsfuznidy";
+    private static final String EMAIL_PASSWORD = "kksodfpjsfuznidy";
     private static final String NOMBRE_REMIT   = "Iron Taisen";
 
     private static final String CHARS_CONTRASENA =
