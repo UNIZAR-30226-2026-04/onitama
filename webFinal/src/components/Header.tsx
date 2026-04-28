@@ -1,46 +1,102 @@
 /**
- * Componente Header compartido para todas las pantallas de la web.
- * Incluye logo, navegación (Sobre el juego, Sobre nosotros) y botón Iniciar sesión.
+ * Header compartido para todas las pantallas.
+ * Diseño: Japandi-Tech — consistente con la landing page.
  */
 import Image from "next/image";
 import Link from "next/link";
 
+const DISPLAY = "var(--font-rajdhani), var(--font-geist-sans), sans-serif";
+
 export default function Header() {
   return (
-    <header className="bg-[#1a2d4a] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-      {/* Logo - enlace a página de inicio */}
-      <Link href="/" className="flex items-center">
+    <header
+      style={{
+        background: "rgba(10, 21, 32, 0.96)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid rgba(0, 200, 255, 0.08)",
+        padding: "0 32px",
+        height: 64,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+      }}
+    >
+      {/* Accent line top */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 2,
+          background:
+            "linear-gradient(to right, transparent, rgba(184,92,56,0.7) 30%, rgba(201,168,76,0.5) 60%, transparent)",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Logo */}
+      <Link href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
         <Image
           src="/nombre.png"
           alt="Onitama"
-          width={140}
-          height={40}
+          width={130}
+          height={36}
           priority
-          className="h-10 w-auto object-contain"
+          style={{ height: 34, width: "auto", objectFit: "contain" }}
         />
       </Link>
 
-      {/* Navegación */}
-      <nav className="flex items-center gap-6 md:gap-12">
-        {/* Temporalmente apunta a /partidas para probar la pantalla principal del jugador */}
+      {/* Nav */}
+      <nav style={{ display: "flex", alignItems: "center", gap: 36 }}>
         <Link
-          href="/partidas"
-          className="text-white uppercase text-sm font-medium tracking-wide hover:opacity-80 transition-opacity"
+          href="/"
+          className="oni-nav-link"
+          style={{
+            fontFamily: DISPLAY,
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            textDecoration: "none",
+          }}
         >
-          Sobre el juego
+          El juego
         </Link>
-        <button
-          type="button"
-          className="text-white uppercase text-sm font-medium tracking-wide hover:opacity-80 transition-opacity"
+        <span
+          className="oni-nav-link"
+          style={{
+            fontFamily: DISPLAY,
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            cursor: "default",
+          }}
         >
-          Sobre nosotros
-        </button>
+          Nosotros
+        </span>
       </nav>
 
-      {/* Botón Iniciar sesión - enlaza a la pantalla de login */}
+      {/* CTA */}
       <Link
         href="/iniciar-sesion"
-        className="bg-[#e8e8e8] text-[#2d2d2d] px-6 py-2.5 rounded-full uppercase text-sm font-medium tracking-wide hover:bg-[#d8d8d8] transition-colors"
+        style={{
+          fontFamily: DISPLAY,
+          background: "#b85c38",
+          color: "#f0ebe1",
+          padding: "9px 28px",
+          fontSize: 12,
+          fontWeight: 700,
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          textDecoration: "none",
+        }}
       >
         Iniciar sesión
       </Link>

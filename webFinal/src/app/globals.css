@@ -3,6 +3,15 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --oni-dark:   #0f1a2b;
+  --oni-mid:    #131e2d;
+  --oni-cream:  #f0ebe1;
+  --oni-stone:  #c4b5a0;
+  --oni-ink:    #2a2118;
+  --oni-copper: #b85c38;
+  --oni-gold:   #c9a84c;
+  --oni-steel:  #4a7fa5;
+  --oni-muted:  #8a9bb0;
 }
 
 @theme inline {
@@ -23,4 +32,162 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════
+   LANDING — Battle-Tech animation system
+═══════════════════════════════════════════════════ */
+
+/* Entry animations */
+@keyframes oni-fade-up {
+  from { opacity: 0; transform: translateY(36px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes oni-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes oni-slide-left {
+  from { opacity: 0; transform: translateX(-60px) skewX(2deg); }
+  to   { opacity: 1; transform: translateX(0) skewX(0deg); }
+}
+@keyframes oni-slide-right {
+  from { opacity: 0; transform: translateX(60px) skewX(-2deg); }
+  to   { opacity: 1; transform: translateX(0) skewX(0deg); }
+}
+@keyframes oni-scale-in {
+  from { opacity: 0; transform: scale(0.88) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Glitch on title */
+@keyframes oni-glitch {
+  0%,  82%, 100% { text-shadow: none; transform: skew(0deg); letter-spacing: 0.12em; }
+  83%            { text-shadow:  4px 0 #b85c38, -4px 0 #4a7fa5; transform: skew(-0.6deg); letter-spacing: 0.14em; }
+  85%            { text-shadow: -4px 0 #b85c38,  4px 0 #00c8ff; transform: skew( 0.4deg); letter-spacing: 0.10em; }
+  87%            { text-shadow:  3px 0 #c9a84c, -3px 0 #b85c38; transform: skew(-0.2deg); }
+  89%            { text-shadow: none; transform: skew(0deg) translateX(2px); }
+  91%            { text-shadow: none; transform: skew(0deg); }
+}
+
+/* Neon glow pulse (button / accent) */
+@keyframes oni-glow {
+  0%,100% { box-shadow: 0 0  6px rgba(184,92,56,0.5), 0 0 20px rgba(184,92,56,0.2); }
+  50%     { box-shadow: 0 0 18px rgba(184,92,56,0.9), 0 0 48px rgba(184,92,56,0.4), 0 0 80px rgba(184,92,56,0.15); }
+}
+@keyframes oni-glow-blue {
+  0%,100% { box-shadow: 0 0  6px rgba(0,200,255,0.3); }
+  50%     { box-shadow: 0 0 20px rgba(0,200,255,0.7), 0 0 50px rgba(0,200,255,0.25); }
+}
+
+/* Flicker (neon-light feel) */
+@keyframes oni-flicker {
+  0%,   96%, 98%, 100% { opacity: 1; }
+  97%                  { opacity: 0.15; }
+}
+
+/* Scroll indicator */
+@keyframes oni-scroll-pulse {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50%      { opacity: 0.9;  transform: translateY(10px); }
+}
+
+/* Scan-line drift (::after pseudo) */
+@keyframes oni-scanlines {
+  from { background-position: 0 0; }
+  to   { background-position: 0 200px; }
+}
+
+/* Grid drift */
+@keyframes oni-grid-drift {
+  from { transform: translate(0, 0); }
+  to   { transform: translate(72px, 72px); }
+}
+
+/* VS "charge" pulse */
+@keyframes oni-vs-pulse {
+  0%,100% { transform: scale(1);   opacity: 1; }
+  50%     { transform: scale(1.08); opacity: 0.85; }
+}
+
+/* Stat number reveal */
+@keyframes oni-stat-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.75); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* Border beam (SVG stroke) */
+@keyframes oni-beam {
+  from { stroke-dashoffset: 600; opacity: 0; }
+  to   { stroke-dashoffset: 0;   opacity: 1; }
+}
+
+/* Utility classes */
+.oni-anim-1    { animation: oni-fade-up   0.85s cubic-bezier(0.22,1,0.36,1) 0.05s both; }
+.oni-anim-2    { animation: oni-fade-up   0.85s cubic-bezier(0.22,1,0.36,1) 0.25s both; }
+.oni-anim-3    { animation: oni-fade-up   0.85s cubic-bezier(0.22,1,0.36,1) 0.45s both; }
+.oni-anim-4    { animation: oni-fade-up   0.85s cubic-bezier(0.22,1,0.36,1) 0.65s both; }
+.oni-anim-5    { animation: oni-fade-up   0.85s cubic-bezier(0.22,1,0.36,1) 0.85s both; }
+.oni-anim-fade { animation: oni-fade-in   1.4s ease 0s both; }
+.oni-left-1    { animation: oni-slide-left  0.9s cubic-bezier(0.22,1,0.36,1) 0.1s both; }
+.oni-left-2    { animation: oni-slide-left  0.9s cubic-bezier(0.22,1,0.36,1) 0.3s both; }
+.oni-right-1   { animation: oni-slide-right 0.9s cubic-bezier(0.22,1,0.36,1) 0.1s both; }
+.oni-right-2   { animation: oni-slide-right 0.9s cubic-bezier(0.22,1,0.36,1) 0.3s both; }
+.oni-scale-1   { animation: oni-scale-in  0.8s cubic-bezier(0.22,1,0.36,1) 0.1s both; }
+.oni-scale-2   { animation: oni-scale-in  0.8s cubic-bezier(0.22,1,0.36,1) 0.25s both; }
+.oni-scale-3   { animation: oni-scale-in  0.8s cubic-bezier(0.22,1,0.36,1) 0.4s both; }
+.oni-scale-4   { animation: oni-scale-in  0.8s cubic-bezier(0.22,1,0.36,1) 0.55s both; }
+
+.oni-glitch         { animation: oni-glitch      8s   ease-in-out    infinite; }
+.oni-glow           { animation: oni-glow         2.4s ease-in-out   infinite; }
+.oni-glow-blue      { animation: oni-glow-blue    2.8s ease-in-out   infinite; }
+.oni-flicker        { animation: oni-flicker      5s   step-end      infinite; }
+.oni-vs-pulse       { animation: oni-vs-pulse     1.8s ease-in-out   infinite; }
+.oni-scroll-indicator { animation: oni-scroll-pulse 2.2s ease-in-out infinite; }
+
+/* Scanlines overlay */
+.oni-scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent      0px,
+    transparent      3px,
+    rgba(0,0,0,0.09) 3px,
+    rgba(0,0,0,0.09) 4px
+  );
+  animation: oni-scanlines 8s linear infinite;
+}
+
+/* Grid drift wrapper */
+.oni-grid-drift {
+  animation: oni-grid-drift 18s linear infinite;
+  will-change: transform;
+}
+
+/* SVG beam stroke */
+.oni-beam-path {
+  stroke-dasharray: 600;
+  animation: oni-beam 1.8s cubic-bezier(0.22,1,0.36,1) 0.3s both;
+}
+
+/* Hover lifts for cards */
+.oni-card-hover {
+  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1), background 0.25s ease;
+}
+.oni-card-hover:hover {
+  transform: translateY(-4px);
+  background: #0d1f35 !important;
+}
+
+/* Header nav link hover */
+.oni-nav-link {
+  color: rgba(196, 181, 160, 0.75);
+  transition: color 0.2s ease;
+}
+.oni-nav-link:hover {
+  color: #c4b5a0;
 }
