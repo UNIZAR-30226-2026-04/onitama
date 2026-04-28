@@ -40,6 +40,7 @@ import {
   deshacerEspejoTrasMovimientoRival,
   type EstadoJuego,
   type EquipoID,
+  type CartaAccionJuego,
   DIM,
 } from "@/lib/juego";
 import { TODAS_LAS_CARTAS, getImagenCarta, type CartaMovDef } from "@/lib/cartas";
@@ -50,6 +51,7 @@ import { getBoardStyle, getColorMovimiento, getEquipoNombre, getPiezaSrc, normal
 import { CartaAccionFicha, getDescripcionCartaAccion } from "@/lib/cartasAccionVisual";
 import { AvatarCircle } from "@/lib/avatar";
 import { usarServidor } from "@/api/ws";
+import * as WS from "@/api/ws";
 import {
   conectarPartida,
   desconectarPartida,
@@ -379,6 +381,15 @@ interface MovimientoUI {
   destino: { fila: number; col: number };
 }
 
+function cartaAccionUsable(carta: CartaAccionJuego): boolean {
+  return carta.estado === undefined || carta.estado === "USABLE";
+}
+
+function etiquetaEstadoCartaAccion(carta: CartaAccionJuego): string {
+  if (carta.estado === "ACTIVA" || carta.estado === "USADA" || carta.estado === "NO_USABLE") return "YA USADA";
+  return "NO DISPONIBLE";
+}
+
 function formatoCasilla(fila: number, col: number): string {
   return `(${fila + 1},${col + 1})`;
 }
@@ -504,23 +515,38 @@ function PartidaInterna({
           tablero_eq1?: string;
           tablero_eq2?: string;
           turno?: number;
+          trampa_j1_pos?: string | null;
+          trampa_j2_pos?: string | null;
           partida_nueva?: boolean;
           /** Cartas de acción para partidas reanudadas (array [propia, rival] o campos individuales) */
           cartas_accion?: { nombre: string; accion: string }[];
           carta_accion_propia?: { nombre: string; accion: string } | null;
           carta_accion_rival?: { nombre: string; accion: string } | null;
+          cartas_accion_jugador?: unknown[];
+          cartas_accion_oponente?: unknown[];
         };
         const estadoInicial = crearEstadoDesdeServidor(datos as RespuestaPartidaEncontrada & {
           tablero_eq1?: string;
           tablero_eq2?: string;
           turno?: number;
+          trampa_j1_pos?: string | null;
+          trampa_j2_pos?: string | null;
           cartas_accion?: { nombre: string; accion: string }[];
           carta_accion_propia?: { nombre: string; accion: string } | null;
           carta_accion_rival?: { nombre: string; accion: string } | null;
         });
+        const tienePayloadReanudado = Boolean(
+          datos.tablero_eq1 &&
+          datos.tablero_eq2 &&
+          (datos.partida_nueva === false ||
+            datos.trampa_j1_pos ||
+            datos.trampa_j2_pos ||
+            datos.cartas_accion_jugador ||
+            datos.cartas_accion_oponente)
+        );
         // Si es partida nueva (flag puesto por buscarpartida/partidas), siempre arrancamos en
         // COLOCAR_TRAMPA aunque el servidor haya mandado tablero (posición inicial de piezas).
-        if (datos.partida_nueva && !modoEntrenamiento) {
+        if (datos.partida_nueva && !tienePayloadReanudado && !modoEntrenamiento) {
           estadoInicial.fasePartida = "COLOCAR_TRAMPA";
         }
         setEstado(estadoInicial);
@@ -538,7 +564,7 @@ function PartidaInterna({
         });
         // Si es partida nueva, los dos esperan al rival; equipo 2 además espera TU_TURNO del servidor.
         // Si es reanudación, el turno viene del servidor.
-        const esReanudada = !datos.partida_nueva && !!(datos.tablero_eq1 && datos.tablero_eq2);
+        const esReanudada = tienePayloadReanudado;
         if (esReanudada) {
           setAguardandoInicio(estadoInicial.turnoActual !== datos.equipo);
         } else {
@@ -569,6 +595,11 @@ function PartidaInterna({
     ganador: string; razon: string;
   } | null>(null);
   const [razonLocalFin, setRazonLocalFin] = useState<string | null>(null);
+
+  /** Partida pausada o cancelada por tiempo agotado (sin victoria/derrota) */
+  const [partidaInterrumpida, setPartidaInterrumpida] = useState<{
+    tipo: "PAUSADA" | "CANCELADA";
+  } | null>(null);
 
   /** Toast in-game: reemplaza los alert() del navegador */
   const [mensajeInGame, setMensajeInGame] = useState<string | null>(null);
@@ -618,7 +649,6 @@ function PartidaInterna({
         ),
       };
       const nuevoTablero = base.tablero.map((f) => f.map((c) => ({ ...c, ficha: c.ficha ? { ...c.ficha } : null })));
-      let nuevaAccionPropia = base.cartaAccionPropia;
       const turnoNuevo: 1 | 2 = equipoEjecutor === 1 ? 2 : 1;
       const limpiezaTurno = {
         turnoActual: turnoNuevo,
@@ -626,7 +656,26 @@ function PartidaInterna({
         cartaSeleccionada: null as null,
         movimientosValidos: [] as { fila: number; col: number }[],
         cartaAccionParaModo: null as null,
-        cartaAccionRival: equipoEjecutor === miEquipoActual ? null : base.cartaAccionRival,
+      };
+
+      const accionesTrasUso = () => {
+        if (equipoEjecutor !== miEquipoActual) {
+          return {
+            cartaAccionPropia: base.cartaAccionPropia,
+            cartaAccionRival: base.cartaAccionRival,
+          };
+        }
+        const marcar = (carta: CartaAccionJuego | null): CartaAccionJuego | null =>
+          carta
+            ? {
+                ...carta,
+                estado: carta.nombre === cartaNombre ? "ACTIVA" : "NO_USABLE",
+              }
+            : null;
+        return {
+          cartaAccionPropia: marcar(base.cartaAccionPropia),
+          cartaAccionRival: marcar(base.cartaAccionRival),
+        };
       };
 
       const metaPorNombre =
@@ -694,9 +743,7 @@ function PartidaInterna({
                 cartasJugador: nuevasMias,
                 cartasOponente: nuevasSuyas,
                 cartasSiguientes: mazo,
-                // Igual que el resto de acciones: al usar una carta de acción desaparecen las dos de la mano.
-                cartaAccionPropia: null,
-                cartaAccionRival: null,
+                ...accionesTrasUso(),
               };
             } else {
               return {
@@ -705,6 +752,7 @@ function PartidaInterna({
                 cartasJugador: nuevasSuyas,
                 cartasOponente: nuevasMias,
                 cartasSiguientes: mazo,
+                ...accionesTrasUso(),
               };
             }
           }
@@ -716,8 +764,7 @@ function PartidaInterna({
             ...base,
             ...limpiezaTurno,
             equipoCiego: equipoEjecutor as 1 | 2,
-            cartaAccionPropia: equipoEjecutor === miEquipoActual ? null : base.cartaAccionPropia,
-            cartaAccionRival: equipoEjecutor === miEquipoActual ? null : base.cartaAccionRival,
+            ...accionesTrasUso(),
           };
       } else if (c === "ESPEJO") {
           const invertir = (cartas: CartaMovDef[]) =>
@@ -732,44 +779,37 @@ function PartidaInterna({
             cartasOponente: invertir(base.cartasOponente),
             cartasSiguientes: invertir(base.cartasSiguientes),
             espejoActivadoPor: equipoEjecutor as EquipoID,
-            cartaAccionPropia: equipoEjecutor === miEquipoActual ? null : base.cartaAccionPropia,
-            cartaAccionRival: equipoEjecutor === miEquipoActual ? null : base.cartaAccionRival,
+            ...accionesTrasUso(),
           };
       } else if (c === "SOLO_PARA_ADELANTE") {
           return {
             ...base,
             ...limpiezaTurno,
             restriccionSolo: activarRestriccionSolo(equipoEjecutor as EquipoID, "SOLO_PARA_ADELANTE"),
-            cartaAccionPropia: equipoEjecutor === miEquipoActual ? null : base.cartaAccionPropia,
-            cartaAccionRival: equipoEjecutor === miEquipoActual ? null : base.cartaAccionRival,
+            ...accionesTrasUso(),
           };
       } else if (c === "SOLO_PARA_ATRAS") {
           return {
             ...base,
             ...limpiezaTurno,
             restriccionSolo: activarRestriccionSolo(equipoEjecutor as EquipoID, "SOLO_PARA_ATRAS"),
-            cartaAccionPropia: equipoEjecutor === miEquipoActual ? null : base.cartaAccionPropia,
-            cartaAccionRival: equipoEjecutor === miEquipoActual ? null : base.cartaAccionRival,
+            ...accionesTrasUso(),
           };
-      }
-      
-      if (equipoEjecutor === miEquipoActual) {
-          nuevaAccionPropia = null;
       }
 
       return {
         ...base,
         ...limpiezaTurno,
         tablero: nuevoTablero,
-        cartaAccionPropia: nuevaAccionPropia,
-        cartaAccionRival: equipoEjecutor === miEquipoActual ? null : base.cartaAccionRival,
+        ...accionesTrasUso(),
       };
     });
   }, [miEquipoActual]);
 
   /** Jugar carta de acción (primera o segunda en mano); abre modo o ejecuta al instante */
-  const iniciarAccionDesdeCarta = (carta: { nombre: string; accion: string }) => {
+  const iniciarAccionDesdeCarta = (carta: CartaAccionJuego) => {
     if (envioAccionBloqueadoRef.current) return;
+    if (!cartaAccionUsable(carta)) return;
     estadoAntesAccionRef.current = estado;
     const n = carta.nombre;
     const acc = carta.accion.toUpperCase();
@@ -934,10 +974,22 @@ function PartidaInterna({
           break;
         }
 
-        case "PARTIDA_PAUSADA":
-          // La pausa fue aceptada (por mi o por el rival) — volver al menú
-          desconectarPartida();
-          router.push("/partidas");
+        case "PARTIDA_PAUSADA": {
+          const motivo = (msg as { motivo?: string }).motivo;
+          if (motivo === "TIEMPO_AGOTADO") {
+            // Tiempo agotado en partida privada: mostrar pantalla explicativa
+            setPartidaInterrumpida({ tipo: "PAUSADA" });
+          } else {
+            // Pausa normal acordada entre jugadores → volver al menú
+            desconectarPartida();
+            router.push("/partidas");
+          }
+          break;
+        }
+
+        case "PARTIDA_CANCELADA":
+          // Partida pública cancelada por tiempo agotado: mostrar pantalla explicativa
+          setPartidaInterrumpida({ tipo: "CANCELADA" });
           break;
 
         case "PAUSA_RECHAZADA":
@@ -1054,8 +1106,8 @@ function PartidaInterna({
         if (t <= 1) {
           clearInterval(intervalo);
           if (enServidor.current) {
-            // En modo servidor: el timer es solo visual. El servidor gestiona
-            // la derrota por tiempo y enviará TERMINAR_PARTIDA cuando corresponda.
+            // Avisar al servidor: el contador llegó a 0
+            WS.enviar({ tipo: "TIEMPO_AGOTADO" });
             return 0;
           } else {
             // En entrenamiento/mock: si se agota el tiempo del jugador, pierde la partida.
@@ -1529,6 +1581,44 @@ function PartidaInterna({
         </div>
       )}
 
+      {/* ═══ OVERLAY: TIEMPO AGOTADO (pausa/cancelación automática) ════════ */}
+      {partidaInterrumpida && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-10 flex flex-col items-center gap-5 shadow-2xl max-w-xs w-full mx-4">
+            <div className="text-5xl">⏰</div>
+            <h2 className="text-2xl font-bold text-white uppercase tracking-widest text-center">
+              Tiempo agotado
+            </h2>
+            {partidaInterrumpida.tipo === "PAUSADA" ? (
+              <>
+                <p className="text-white/50 text-xs uppercase tracking-widest">PARTIDA PAUSADA</p>
+                <p className="text-white/60 text-sm text-center">
+                  Se acabó el tiempo. La partida privada ha quedado pausada y podréis reanudarla cuando queráis.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-white/50 text-xs uppercase tracking-widest">PARTIDA CANCELADA</p>
+                <p className="text-white/60 text-sm text-center">
+                  Se acabó el tiempo. La partida pública ha sido cancelada sin ganador.
+                </p>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setPartidaInterrumpida(null);
+                desconectarPartida();
+                router.push("/partidas");
+              }}
+              className="w-full py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-[#e8e8e8] text-[#1a2d4a] hover:bg-white transition-all"
+            >
+              Volver al lobby
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ═══ MODAL: CONFIRMAR ABANDONO ══════════════════════════════════════ */}
       {mostrarModalAbandono && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm">
@@ -1827,7 +1917,7 @@ function PartidaInterna({
 
           <div className="flex items-center justify-center gap-2 shrink-0">
             <p className="text-[#1a2d4a]/70 font-bold text-[9px] uppercase tracking-widest shrink-0">Mazo:</p>
-            {estado.cartasSiguientes.map((carta, i) => {
+            {estado.cartasSiguientes.filter(Boolean).map((carta, i) => {
               // Color según el equipo que recibirá esa carta al salir de la cola.
               // i=0 la recibe el equipo que mueve ahora; i=1 el contrario; i=2 el actual...
               const equipoRecibeCarta = (i % 2 === 0)
@@ -1907,25 +1997,48 @@ function PartidaInterna({
                 <p className="text-white/80 text-[9px] uppercase tracking-widest text-center font-bold">
                   Cartas de acción
                 </p>
+                {estado.cartaAccionPropia && estado.cartaAccionRival && (
+                  <p className="text-yellow-300/85 text-[8px] uppercase tracking-widest text-center">
+                    Usa una u otra. Solo 1 por partida.
+                  </p>
+                )}
                 {estado.cartaAccionPropia && (
-                  <CartaAccionFicha
-                    variante="mano"
-                    nombre={estado.cartaAccionPropia.nombre}
-                    descripcion={getDescripcionCartaAccion(estado.cartaAccionPropia.accion)}
-                    disabled={!esTurnoJugador || estado.fasePartida !== "JUGANDO" || !!estado.modoAccion}
-                    modoAccionActivo={!!estado.modoAccion}
-                    onClick={() => iniciarAccionDesdeCarta(estado.cartaAccionPropia!)}
-                  />
+                  <div className="relative">
+                    <CartaAccionFicha
+                      variante="mano"
+                      nombre={estado.cartaAccionPropia.nombre}
+                      descripcion={getDescripcionCartaAccion(estado.cartaAccionPropia.accion)}
+                      disabled={!esTurnoJugador || estado.fasePartida !== "JUGANDO" || !!estado.modoAccion || !cartaAccionUsable(estado.cartaAccionPropia)}
+                      modoAccionActivo={!!estado.modoAccion}
+                      onClick={() => iniciarAccionDesdeCarta(estado.cartaAccionPropia!)}
+                    />
+                    {!cartaAccionUsable(estado.cartaAccionPropia) && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-black/65 border border-red-400/50 pointer-events-none">
+                        <span className="rounded-full bg-red-900/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-red-100">
+                          {etiquetaEstadoCartaAccion(estado.cartaAccionPropia)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {estado.cartaAccionRival && (
-                  <CartaAccionFicha
-                    variante="mano"
-                    nombre={estado.cartaAccionRival.nombre}
-                    descripcion={getDescripcionCartaAccion(estado.cartaAccionRival.accion)}
-                    disabled={!esTurnoJugador || estado.fasePartida !== "JUGANDO" || !!estado.modoAccion}
-                    modoAccionActivo={!!estado.modoAccion}
-                    onClick={() => iniciarAccionDesdeCarta(estado.cartaAccionRival!)}
-                  />
+                  <div className="relative">
+                    <CartaAccionFicha
+                      variante="mano"
+                      nombre={estado.cartaAccionRival.nombre}
+                      descripcion={getDescripcionCartaAccion(estado.cartaAccionRival.accion)}
+                      disabled={!esTurnoJugador || estado.fasePartida !== "JUGANDO" || !!estado.modoAccion || !cartaAccionUsable(estado.cartaAccionRival)}
+                      modoAccionActivo={!!estado.modoAccion}
+                      onClick={() => iniciarAccionDesdeCarta(estado.cartaAccionRival!)}
+                    />
+                    {!cartaAccionUsable(estado.cartaAccionRival) && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-black/65 border border-red-400/50 pointer-events-none">
+                        <span className="rounded-full bg-red-900/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-red-100">
+                          {etiquetaEstadoCartaAccion(estado.cartaAccionRival)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {estado.modoAccion && (
                   <button

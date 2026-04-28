@@ -68,6 +68,8 @@ public class Partida{
                 this.tablero.cargarTablero();
             }
         }
+        aplicarTrampaGuardada(this.trampaPosJ1);
+        aplicarTrampaGuardada(this.trampaPosJ2);
 
         try {
             // 1. Buscamos los objetos Jugador
@@ -77,6 +79,39 @@ public class Partida{
         } catch (java.sql.SQLException e) {
             this.jugador1 = null;
             this.jugador2 = null;
+        }
+    }
+
+    private void aplicarTrampaGuardada(String trampaGuardada) {
+        if (trampaGuardada == null || trampaGuardada.trim().isEmpty()) return;
+        String[] partes = trampaGuardada.split(",");
+        if (partes.length < 2) return;
+        try {
+            int x = Integer.parseInt(partes[0].trim());
+            int y = Integer.parseInt(partes[1].trim());
+            int activa = partes.length >= 3 ? Integer.parseInt(partes[2].trim()) : 1;
+            if (x < 0 || x >= tablero.getDIM() || y < 0 || y >= tablero.getDIM()) return;
+            Posicion p = tablero.getPosicion(x, y);
+            p.activarTrampa();
+            if (activa == 0) {
+                p.desactivarCasilla();
+            }
+        } catch (NumberFormatException ignored) {
+        }
+    }
+
+    private void marcarTrampaDisparada(Posicion destino) {
+        String pos = destino.getX() + "," + destino.getY();
+        try {
+            if (trampaPosJ1 != null && trampaPosJ1.startsWith(pos)) {
+                trampaPosJ1 = pos + ",0";
+                dao.updateTrampaJ1(IDPartida, trampaPosJ1);
+            } else if (trampaPosJ2 != null && trampaPosJ2.startsWith(pos)) {
+                trampaPosJ2 = pos + ",0";
+                dao.updateTrampaJ2(IDPartida, trampaPosJ2);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al persistir trampa disparada: " + e.getMessage());
         }
     }
 
@@ -317,6 +352,16 @@ public class Partida{
         }
     }
 
+    // Cancela la partida sin ganador (timer expirado en partida pública)
+    public boolean cancelarPartida() {
+        this.estado = "CANCELADA";
+        try {
+            return dao.updateEstado(IDPartida, estado);
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
     //Reanuda la partida desde el estado de pausa
     public boolean reanudarPartida(){
         if (!"PAUSADA".equalsIgnoreCase(estado)) {
@@ -415,7 +460,7 @@ public class Partida{
         if (equipo == 1 && !trampaJ1) {
             p.activarTrampa();
             trampaJ1 = true;
-            trampaPosJ1 = columna + "," + fila;
+            trampaPosJ1 = columna + "," + fila + ",1";
              try {
                 // único update, ocurre una sola vez
                 dao.updateTrampaJ1(IDPartida, trampaPosJ1);
@@ -425,7 +470,7 @@ public class Partida{
         } else if(equipo == 2 && !trampaJ2){
             p.activarTrampa();
             trampaJ2 = true;
-            trampaPosJ2 = columna + "," + fila;
+            trampaPosJ2 = columna + "," + fila + ",1";
              try {
                 dao.updateTrampaJ2(IDPartida, trampaPosJ2);
             } catch (SQLException e) {
@@ -465,6 +510,7 @@ public class Partida{
                         } else {
                             accionActivadaJ2 = true;
                         }
+                        ca.actualizarDatosPartida(IDPartida);
                     } else {
                         cartaEncontrada = false;
                     }
@@ -476,6 +522,7 @@ public class Partida{
 
         if (cartaEncontrada && cartaA != null) {
             cartaA.marcarNoUsable(); //Marcamos la otra carta como usada porque solo se puede usar una carta de accion por partida y equipo
+            cartaA.actualizarDatosPartida(IDPartida);
         }
 
         //Busqueda para ver si se ha quedado sin movimientos
@@ -564,6 +611,7 @@ public class Partida{
             //Logica de casillas trampa
             if(esTrampa){
                 destino.desactivarCasilla();
+                marcarTrampaDisparada(destino);
                 boolean reyMatado = origen.matar(); // Mata la ficha que haya en la casilla trampa
                 this.trampaActivada = destino; // Guardamos para que el servidor lo lea
                 if (reyMatado && equipo == 1) {
