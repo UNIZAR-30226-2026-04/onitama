@@ -52,7 +52,8 @@ import {
 import * as WS from "@/api/ws";
 import { getSkinNombre, getPiezaSrc, getSkinPrecio, normalizarSkinId, type SkinId } from "@/lib/skins";
 import { getImagenCarta, TODAS_LAS_CARTAS, type CartaMovDef } from "@/lib/cartas";
-import { AvatarCircle } from "@/lib/avatar";
+import { getAvatarSrc, AvatarCircle } from "@/lib/avatar";
+import { validarContrasena, HINT_CONTRASENA } from "@/lib/validacion";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -1464,8 +1465,8 @@ function PanelMiCuenta({
       setPassError("Las contraseñas no coinciden.");
       return;
     }
-    if (passForm.nueva.length < 4) {
-      setPassError("La contraseña debe tener al menos 4 caracteres.");
+    if (!validarContrasena(passForm.nueva)) {
+      setPassError(HINT_CONTRASENA);
       return;
     }
     setGuardandoPass(true);
@@ -1638,6 +1639,7 @@ function PanelMiCuenta({
                     className="w-full bg-stone-50 border border-stone-200 text-stone-800 px-4 py-2 rounded-lg outline-none focus:border-[#b85c38] focus:ring-1 focus:ring-[#b85c38] transition-all"
                     required
                   />
+                  <p className="text-[10px] text-stone-400 mt-1.5 leading-tight">{HINT_CONTRASENA}</p>
                 </div>
                 <div className="mb-6">
                   <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-1">Confirmar contraseña</label>
