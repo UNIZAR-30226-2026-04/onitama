@@ -2,6 +2,7 @@ package com.example.onitama.ui.activities.partida
 
 import android.app.Activity
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -1442,8 +1443,10 @@ class PartidaActivity : AppCompatActivity() {
                                     "drawable",
                                     context.packageName
                                 )
+                                Log.d("SKINS", "ficha: $ficha, resId: $resId")
                                 
                                 val finalResId = if (resId != 0) resId else {
+                                    Log.d("SKINS", "No existe la imagen de la skin actual")
                                     // Fallback a skin0 si no existe la imagen de la skin actual
                                     context.resources.getIdentifier(
                                         "${tipoPieza}${equipoColor}",

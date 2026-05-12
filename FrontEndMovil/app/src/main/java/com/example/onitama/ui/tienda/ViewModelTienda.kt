@@ -69,6 +69,7 @@ class ViewModelTienda : ViewModel() {
                         try {
                             val msg = jsonSerializer.decodeFromString<Skin.MensajeSkinActivada>(json.toString())
                             _skinActivaId.value = msg.skin_activa
+                            com.example.onitama.AutoLogin.actualizarSkin(msg.skin_activa)
                             _skins.value = _skins.value.map {
                                 it.copy(es_activa = it.skin_id == msg.skin_activa)
                             }

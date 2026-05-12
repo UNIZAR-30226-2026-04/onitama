@@ -51,6 +51,7 @@ import com.example.onitama.ui.activities.MenuPrincipalActivity
 import com.example.onitama.ui.activities.cartas.Cartas_activity
 import com.example.onitama.ui.amigos.Amigos_Activity
 import com.example.onitama.ui.perfil.Perfil_Activity
+import com.example.onitama.ui.tienda.Tienda_Activity
 import com.example.onitama.api.Skin as SkinAPI
 
 /**
@@ -228,13 +229,7 @@ fun PantallaTableros(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = {},
-                    modifier = Modifier.size(60.dp)
-                ){
-                    Image(painterResource(R.drawable.tablero),
-                        contentDescription = "Skins")
-                }
+                Spacer(modifier = Modifier.width(80.dp))
                 IconButton(
                     onClick = {
                         val intent = Intent(context, Cartas_activity::class.java)
@@ -247,8 +242,6 @@ fun PantallaTableros(
                     Image(painterResource(R.drawable.cards),
                         contentDescription = "Cards")
                 }
-
-                Spacer(modifier = Modifier.width(80.dp)) // Hueco para el botón central
 
                 IconButton(
                     onClick = {
@@ -273,29 +266,40 @@ fun PantallaTableros(
                 ) {
                     Image(
                         painterResource(R.drawable.amigos),
+                        contentDescription = "AMIGOS")
+                }
+                IconButton(
+                    onClick = {
+                            val intent = Intent(context, Tienda_Activity::class.java)
+                            context.startActivity(intent)
+                            (context as? Activity)?.finish()},
+                    modifier = Modifier.size(60.dp)
+                ){
+                    Image(painterResource(R.drawable.carrito),
                         contentDescription = "Tienda")
                 }
+
             }
 
             // Botón central "Carrito" sobresaliendo
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 5.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .padding(bottom = 5.dp, start = 15.dp),
+                horizontalAlignment = Alignment.Start
             ) {
                 IconButton(
                     onClick = {},
                     modifier = Modifier.size(70.dp)
                 ) {
-                    Image(painterResource(R.drawable.carrito), contentDescription = "Amigos")
+                    Image(painterResource(R.drawable.tablero), contentDescription = "Amigos")
                 }
                 Text(
-                    text = "AMIGOS",
+                    text = "MIS SKINS",
                     fontFamily = quattrocentoBold,
                     fontSize = 12.sp,
                     color = Color.White,
-                    modifier = Modifier.offset(y = (-8).dp)
+                    modifier = Modifier.offset(y = (-5).dp, x = (-5).dp)
                 )
             }
         }

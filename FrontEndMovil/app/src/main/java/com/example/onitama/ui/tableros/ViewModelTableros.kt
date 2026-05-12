@@ -56,6 +56,7 @@ class ViewModelTableros : ViewModel() {
                         try {
                             val msg = jsonSerializer.decodeFromString<Skin.MensajeSkinActivada>(json.toString())
                             _skinActivaId.value = msg.skin_activa
+                            com.example.onitama.AutoLogin.actualizarSkin(msg.skin_activa)
                             // Actualizar el estado de es_activa en la lista local
                             _skins.value = _skins.value.map {
                                 it.copy(es_activa = it.skin_id == msg.skin_activa)

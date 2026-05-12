@@ -113,6 +113,11 @@ object AutoLogin {
         _sesion.value = _sesion.value?.copy(cores = coresNuevo)
     }
 
+
+    fun actualizarSkin( newSkin: String){
+        _sesion.value = _sesion.value?.copy(skin_activa = newSkin)
+    }
+
     fun cerrarSesion(context: Context){
         obtenerPreferences(context).edit().putBoolean(HAINICIADO, false).apply()
         obtenerPreferences(context).edit().clear().apply()

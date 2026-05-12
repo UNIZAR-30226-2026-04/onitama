@@ -252,17 +252,21 @@ fun CartasScreen(
                                     carta =  Carta(
                                         nombre = listasCartasAccion[card].nombre,
                                         imagen = "",
-                                        movimientos = emptyList()
+                                        movimientos = emptyList(),
                                     ),
                                     esAccion = true,
-                                    onClick = {}
-                                )
-                                Text(
-                                    text = listasCartasAccion[card].descripcion,
-                                    fontFamily = quattrocentoBold,
-                                    fontSize = 14.sp,
-                                    color = Color.DarkGray,
-                                    textAlign = TextAlign.Start
+                                    onClick = {},
+                                    descripcion = when (listasCartasAccion[card].nombre) {
+                                                            "Pensatorium" -> "Invierte en espejo los movimientos de todas las cartas del tablero. Dura hasta que el rival realice un movimiento."
+                                                            "Atrapasueños" -> "Elige una carta de movimiento del oponente y añádela a tu mano."
+                                                            "Requiem" -> "Selecciona un peón tuyo y un peón rival; ambos mueren."
+                                                            "Santo Grial" -> "Añade un peón extra a una casilla vacía de tu mitad del campo."
+                                                            "La Dama del Mar" -> "No se pueden hacer movimientos hacia atras"
+                                                            "Finisterra" -> "No se pueden hacer movimientos hacia adelante"
+                                                            "Brujeria" -> "Tu rival no verá qué cartas tienes."
+                                                            "Illusia" -> "Mueve a tu Rey a una casilla vacía en tu mitad del campo."
+                                                            else -> "Carta de acción"
+                                    }
                                 )
                             }
                         }
@@ -499,14 +503,15 @@ fun CartasScreen(
 fun CartaCatalogo(
     carta: Carta, 
     esAccion: Boolean, 
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    descripcion: String = ""
 ) {
 
     val ancho = 340.dp
     val alto = 200.dp
     val context = LocalContext.current
 
-    // 1. Usamos tu función, pero por si acaso tiene espacios, le ponemos replace
+
     val nombreSeguro = Cartas.imagenCarta(carta).replace(" ", "_")
 
 
@@ -562,9 +567,9 @@ fun CartaCatalogo(
 
             if (esAccion) {
                 Text(
-                    text = "Carta Accion",
+                    text = descripcion,
                     fontSize = 16.sp,
-                    color = Color.Gray,
+                    color = Color.DarkGray,
                     textAlign = TextAlign.Center
                 )
             }
