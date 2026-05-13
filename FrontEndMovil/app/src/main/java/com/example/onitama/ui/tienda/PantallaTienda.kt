@@ -52,6 +52,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.font.FontWeight
 import com.example.onitama.ui.amigos.Amigos_Activity
+import com.example.onitama.ui.tableros.Tableros_Activity
+import kotlin.jvm.java
 
 @Composable
 fun PantallaTienda(viewModel: ViewModelTienda = viewModel()) {
@@ -251,7 +253,11 @@ fun PantallaTienda(viewModel: ViewModelTienda = viewModel()) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = {},
+                    onClick = {
+                        val intent = Intent(context, Tableros_Activity::class.java)
+                        context.startActivity(intent)
+                        (context as? Activity)?.finish()
+                    },
                     modifier = Modifier.size(60.dp)
                 ){
                     Image(painterResource(R.drawable.tablero),

@@ -62,6 +62,7 @@ import com.example.onitama.lib.Movimiento
 import com.example.onitama.ui.activities.MenuPrincipalActivity
 import com.example.onitama.ui.amigos.Amigos_Activity
 import com.example.onitama.ui.perfil.Perfil_Activity
+import com.example.onitama.ui.tableros.Tableros_Activity
 import com.example.onitama.ui.tienda.Tienda_Activity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -427,7 +428,11 @@ fun CartasScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = {},
+                    onClick = {
+                        val intent = Intent(context, Tableros_Activity::class.java)
+                        context.startActivity(intent)
+                        (context as? Activity)?.finish()
+                    },
                     modifier = Modifier.size(60.dp)
                 ){
                     Image(painterResource(R.drawable.tablero),
