@@ -218,7 +218,7 @@ class Auth(
             // con el registro lanza una excepción.
             val respuesta = jsonSerializer.decodeFromString<MensajeServidor>(respuestaStr)
             if (respuesta is MensajeRegistroErroneo) {
-                throw Exception("Error al registrar el usuario")
+                throw Exception("Error al registrar el usuario, ese nombre ya existe")
             }
         } catch (e: Exception) {
             Log.e("Auth_API", "Error al registrar usuario", e)

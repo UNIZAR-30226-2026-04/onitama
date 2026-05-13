@@ -82,10 +82,24 @@ class ViewModelInicioSesion() : ViewModel() {
                     ManejadorGlobal.desconectar()
                 }
             } catch (e: Exception) {
+                if(e.message == "Contraseña incorrecta" )
                 _estadoUI.value = _estadoUI.value.copy(
                     isLoading = false,
-                    error = e.message ?: "Error al iniciar sesión"
+                    error = e.message ?: "La contraseña introducida no es correcta"
                 )
+                else if(e.message == "Usuario no encontrado"){
+                    _estadoUI.value = _estadoUI.value.copy(
+                        isLoading = false,
+                        error = e.message ?: "El usuario introducido no existe"
+                    )
+                }
+                else{
+                    _estadoUI.value = _estadoUI.value.copy(
+                        isLoading = false,
+                        error = e.message ?: "Algo ha ido mal, inténtalo de nuevo"
+                    )
+                    Log.e("ERROR", e.message ?: "Error desconocido")
+                }
                 ManejadorGlobal.desconectar()
             }
         }

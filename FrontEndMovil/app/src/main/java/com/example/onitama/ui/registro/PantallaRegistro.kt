@@ -115,7 +115,17 @@ fun PantallaRegistro(
                         style = MaterialTheme.typography.titleLarge
                     )
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    if(estado.error != null){
+                        chooseAvatar = false
+                        Text(
+                            text = estado.error!!,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    else{
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
 
                     // Campo para introducir el nombre de usuario
                     OutlinedTextField(

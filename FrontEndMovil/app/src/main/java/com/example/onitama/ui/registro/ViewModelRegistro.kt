@@ -118,7 +118,7 @@ class ViewModelRegistro() : ViewModel() {
             } catch (e: Exception) {
             _estadoUI.value = _estadoUI.value.copy(
                 isLoading = false,
-                error = e.message ?: "Error al registrar"
+                error = e.message ?: "Error al registrar, puede que ese usuario ya exista"
             )
             ManejadorGlobal.desconectar()
         }
