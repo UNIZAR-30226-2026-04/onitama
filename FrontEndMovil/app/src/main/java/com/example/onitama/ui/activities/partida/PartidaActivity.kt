@@ -1070,9 +1070,11 @@ class PartidaActivity : AppCompatActivity() {
                                 "TRONO" -> if (victoria) "Colocaste tu rey en el trono del rival" else "Tu rival llevó su rey hasta tu trono"
                                 "REY CAPTURADO" -> if (victoria) "Capturaste el rey de tu rival" else "Tu rival ha capturado tu rey"
                                 "ABANDONO" -> if (victoria) "Tu rival abandonó la partida" else "Has abandonado la partida"
-                                "SIN MOVIMIENTOS" -> if (victoria) "El rival no tiene movimientos disponibles" else "Te has quedado sin mvimientos disponibles"
-                                else -> if (victoria) "El Rey del rival ha caído en tu trampa" else "Tu rey ha caido en una trampa. Esta vez tu rival te ha vencido, más suerte a la próxima"
-
+                                "SIN_MOVIMIENTOS" -> if (victoria) "El rival no tiene movimientos disponibles" else "Te has quedado sin mvimientos disponibles"
+                                "REY_EN_TRAMPA" -> if (victoria) "El Rey del rival ha caído en tu trampa" else "Tu rey ha caido en una trampa. Esta vez tu rival te ha vencido, más suerte a la próxima"
+                                "TIEMPO_AGOTADO" -> if (victoria) "Has ganado: se agotó el tiempo del rival" else "Has perdido: se agotó tu tiempo"
+                                "FIN_PARTIDA" -> if (victoria) "Has ganado la partida" else "Has perdido la partida"
+                                else -> if (victoria) "Has ganado la partida" else "Has perdido la partida"
                             },
                             fontSize = 18.sp,
                             textAlign = TextAlign.Center

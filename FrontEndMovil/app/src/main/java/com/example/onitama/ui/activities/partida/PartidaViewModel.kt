@@ -174,11 +174,20 @@ class PartidaViewModel : ViewModel() {
                             }
 
                             is Partida.RespuestaDerrota -> {
-                                razon = if (mensaje.motivo == "SIN_MOV") {
-                                    "SIN_MOVIMIENTOS"
-                                }
-                                else {
-                                    "DERROTA"
+                                razon = when (mensaje.motivo) {
+                                    "SIN_MOV" -> "SIN_MOVIMIENTOS"
+                                    "ABANDONO" -> "ABANDONO"
+                                    "REY_EN_TRAMPA" -> "REY_EN_TRAMPA"
+                                    "TIEMPO_AGOTADO" -> "TIEMPO_AGOTADO"
+                                    "FIN_PARTIDA" -> when {
+                                        razon == "TRONO" || razon == "REY CAPTURADO" -> razon!!
+                                        else -> "FIN_PARTIDA"
+                                    }
+
+                                    else -> when {
+                                        razon == "TRONO" || razon == "REY CAPTURADO" -> razon!!
+                                        else -> "FIN_PARTIDA"
+                                    }
                                 }
 
                                 _estado.value = _estado.value.copy(
@@ -189,14 +198,17 @@ class PartidaViewModel : ViewModel() {
                             }
 
                             is Partida.RespuestaVictoria -> {
-                                if(mensaje.motivo == "ABANDONO"){
-                                    razon = "ABANDONO"
-                                }
-                                else if(mensaje.motivo == "SIN_MOV"){
-                                    razon = "SIN_MOVIMIENTOS"
-                                }
-                                else {
-                                    razon = "VICTORIA"
+                                when (mensaje.motivo) {
+                                    "ABANDONO" -> razon = "ABANDONO"
+                                    "SIN_MOV" -> razon = "SIN_MOVIMIENTOS"
+                                    "REY_EN_TRAMPA" -> razon = "REY_EN_TRAMPA"
+                                    "TIEMPO_AGOTADO" -> razon = "TIEMPO_AGOTADO"
+                                    "FIN_PARTIDA" -> {
+                                        if (razon == null) razon = "FIN_PARTIDA"
+                                    }
+                                    else -> {
+                                        if (razon == null) razon = "FIN_PARTIDA"
+                                    }
                                 }
                                 _estado.value = _estado.value.copy(
                                     ganador = if (equipoPropio == EquipoID.ROJO) EquipoID.ROJO else EquipoID.AZUL,
