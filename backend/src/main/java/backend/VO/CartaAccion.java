@@ -88,6 +88,21 @@ public class CartaAccion {
         }
     }
 
+    public int eraTrampa(){
+        if(accionEjecutable instanceof SalvarRey){
+            SalvarRey acc1 = (SalvarRey)accionEjecutable;
+            if(acc1.reyMuerto()){
+                return 1;
+            }
+        }else if(accionEjecutable instanceof Revivir){
+            Revivir acc2 = (Revivir)accionEjecutable;
+            if(acc2.peonMuerto()){
+                return 2;
+            }
+        }
+        return 0;
+    }
+
     public boolean esTipoRestriccion(){
         return accionEjecutable != null && accionEjecutable.esTipoRestriccion();
     }

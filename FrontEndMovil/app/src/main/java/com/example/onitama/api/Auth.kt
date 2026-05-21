@@ -30,7 +30,7 @@ class Auth(
         val password: String,
         val nombre: String,
         val correo: String,
-        val avatar_id: String
+        val avatar_id: String?
     ): MensajeCliente()
 
     @Serializable
@@ -44,6 +44,22 @@ class Auth(
     @SerialName("OBTENER_PERFIL")
     data class MensajeObtenerPerfil(
         val nombre: String
+    ): MensajeCliente()
+
+
+    @Serializable
+    @SerialName("CAMBIAR_AVATAR")
+    data class MensajeCambiarAvatar(
+        val usuario: String,
+        val avatar_id: String?,
+    ): MensajeCliente()
+
+    @Serializable
+    @SerialName("CAMBIAR_CONTRASENA")
+    data class MensajeCambiarContrasegna(
+        val usuario: String,
+        val contrasena_actual: String,
+        val contrasena_nueva: String,
     ): MensajeCliente()
 
     @Serializable
@@ -77,6 +93,22 @@ class Auth(
     @Serializable
     @SerialName("REGISTRO_ERRONEO")
     object MensajeRegistroErroneo : MensajeServidor()
+
+    @Serializable
+    @SerialName("CAMBIO_AVATAR_ERROR")
+    object MensajeCambioAvatarError : MensajeServidor()
+
+    @Serializable
+    @SerialName("CONTRASENA_CAMBIADA")
+    object MensajeCambioContrasena : MensajeServidor()
+
+    @Serializable
+    @SerialName("CAMBIO_CONTRASENA_ERROR")
+    object MensajeCambioContrasenaError : MensajeServidor()
+
+    @Serializable
+    @SerialName("AVATAR_CAMBIADO")
+    object MensajeCambioAvatarExitoso : MensajeServidor()
 
     @Serializable
     @SerialName("PERFIL_ACTUALIZADO")
@@ -161,7 +193,7 @@ class Auth(
     }
 
     // ─── Registro ─────────────────────────────────────────────────────────────────
-    suspend fun registrarUsuario(correo: String, nombre: String, password: String, avatar: String) {
+    suspend fun registrarUsuario(correo: String, nombre: String, password: String, avatar: String?) {
         if (!usarServidor) return
 
         try {
@@ -186,7 +218,7 @@ class Auth(
             // con el registro lanza una excepción.
             val respuesta = jsonSerializer.decodeFromString<MensajeServidor>(respuestaStr)
             if (respuesta is MensajeRegistroErroneo) {
-                throw Exception("Error al registrar el usuario")
+                throw Exception("Error al registrar, ya existe alguien con ese nombre")
             }
         } catch (e: Exception) {
             Log.e("Auth_API", "Error al registrar usuario", e)
@@ -238,6 +270,70 @@ class Auth(
         } catch (e: Exception) {
             Log.e("Auth_API", "Error al obtener perfil", e)
             null
+        }
+    }
+
+
+    suspend fun cambiarAvatar(nombre: String, avatar: String?) {
+        if (!usarServidor) return
+
+        try {
+            // Convierte el mensaje a enviar al servidor en JSON.
+            val mensaje = MensajeCambiarAvatar(nombre, avatar)
+            val jsonMsg = jsonSerializer.encodeToString<MensajeCliente>(mensaje)
+            // Lo envía a través del websocket.
+            ManejadorGlobal.enviarMensaje(jsonMsg)
+
+            // Espera 5 segundos para recibir la respuesta del servidor.
+            val respuestaStr = withTimeoutOrNull(5000L) {
+                ManejadorGlobal.mensajesEntrantes
+                    .filter { json ->
+                        val tipo = json.optString("tipo")
+                        tipo in listOf("AVATAR_CAMBIADO", "CAMBIO_AVATAR_ERROR")
+                    }
+                    .first()
+                    .toString()
+            } ?: throw Exception("Tiempo de espera agotado")
+
+            // Si recibe respuesta la decodifica, si ha habido algún problema
+            // con el registro lanza una excepción.
+            val respuesta = jsonSerializer.decodeFromString<MensajeServidor>(respuestaStr)
+            if (respuesta is MensajeCambioAvatarError) {
+                throw Exception("Error al cambiar el avatar")
+            }
+        } catch (e: Exception) {
+            Log.e("Auth_API", "Error al cambiar el avatar", e)
+            throw e
+        }
+    }
+
+    suspend fun cambiarContrasegna(nombre: String, oldPass: String, newPass: String) {
+        if (!usarServidor) return
+
+        try {
+            // Convierte el mensaje a enviar al servidor en JSON.
+            val mensaje = MensajeCambiarContrasegna(nombre, oldPass, newPass)
+            val jsonMsg = jsonSerializer.encodeToString<MensajeCliente>(mensaje)
+            // Lo envía a través del websocket.
+            ManejadorGlobal.enviarMensaje(jsonMsg)
+
+            val respuestaStr = withTimeoutOrNull(5000L) {
+                ManejadorGlobal.mensajesEntrantes
+                    .filter { json ->
+                        val tipo = json.optString("tipo")
+                        tipo in listOf("CONTRASENA_CAMBIADA", "CAMBIO_CONTRASENA_ERROR")
+                    }
+                    .first()
+                    .toString()
+            } ?: throw Exception("Tiempo de espera agotado")
+
+            val respuesta = jsonSerializer.decodeFromString<MensajeServidor>(respuestaStr)
+            if (respuesta is MensajeCambioContrasenaError) {
+                throw Exception("Error al cambiar la contrasegna")
+            }
+        } catch (e: Exception) {
+            Log.e("Auth_API", "Error al cambiar la contrasegna", e)
+            throw e
         }
     }
 }

@@ -5,6 +5,8 @@ import com.example.onitama.Config
 import com.example.onitama.PartidaActiva
 import com.example.onitama.lib.EquipoID
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -37,6 +39,17 @@ import java.util.Objects
 val jsonPartida = Json {
     ignoreUnknownKeys = true
     classDiscriminator = "tipo"
+}
+
+
+fun invertirCoordenadasString(input: String?, end: Int = 6): String? {
+    if (input == null) return null
+    val regex = Regex("(\\d+),(\\d+)")
+    return regex.replace(input) { matchResult ->
+        val x = matchResult.groupValues[1].toInt()
+        val y = matchResult.groupValues[2].toInt()
+        "${end - x},${end - y}"
+    }
 }
 
 class Partida(
@@ -116,9 +129,12 @@ class Partida(
         val equipo: Int,
         val x: Int,
         val y: Int,
-        val x_op: Int = -1,
-        val y_op: Int = -1,
-        val cartaRobar: String = ""
+        @OptIn(ExperimentalSerializationApi::class)
+        @EncodeDefault val x_op: Int = -1,
+        @OptIn(ExperimentalSerializationApi::class)
+        @EncodeDefault val y_op: Int = -1,
+        @OptIn(ExperimentalSerializationApi::class)
+        @EncodeDefault val cartaRobar: String = "ninguna"
     ) : MensajeCliente()
 
     // ----------------------------------------------------
@@ -156,8 +172,8 @@ class Partida(
         val turno: Int? = null,
         val cartas_accion_jugador: List<CartaAccionJson>? = emptyList(),
         val cartas_accion_oponente: List<CartaAccionJson>? = emptyList(),
-        val posTrampa_jugador: String? = null,
-        val posTrampa_oponente: String? = null
+        val trampa_j1_pos: String? = null,
+        val trampa_j2_pos: String? = null
     ): MensajeServidor() {
         fun obtenerEquipoID(): EquipoID {
             return if (equipo == 1) EquipoID.AZUL else EquipoID.ROJO
@@ -181,8 +197,8 @@ class Partida(
         val turno: Int? = null,
         val cartas_accion_jugador: List<CartaAccionJson>? = emptyList(),
         val cartas_accion_oponente: List<CartaAccionJson>? = emptyList(),
-        val posTrampa_jugador: String? = null,
-        val posTrampa_oponente: String? = null
+        val trampa_j1_pos: String? = null,
+        val trampa_j2_pos: String? = null
     ): MensajeServidor() {
         fun toPartidaEncontrada() = RespuestaPartidaEncontrada(
             partida_id = this.partida_id,
@@ -199,8 +215,8 @@ class Partida(
             turno = this.turno,
             cartas_accion_jugador = this.cartas_accion_jugador,
             cartas_accion_oponente = this.cartas_accion_oponente,
-            posTrampa_jugador = this.posTrampa_jugador,
-            posTrampa_oponente = this.posTrampa_oponente
+            trampa_j1_pos = this.trampa_j1_pos,
+            trampa_j2_pos = this.trampa_j2_pos
         )
     }
 
@@ -286,7 +302,7 @@ class Partida(
     data class RespuestaCartaAccionJugada(
         @SerialName("carta_accion")
         val cartaAccion: String,
-        val equipo: Int,
+        val accion: String?,
         val x: Int,
         val y: Int,
         val x_op: Int,
@@ -303,23 +319,19 @@ class Partida(
     @SerialName("CARTA_ACCION_INVALIDA")
     object RespuestaCartaAccionInvalida : MensajeServidor()
 
-    /**
-     * Devuelve una función lambda () -> Unit que sirve para desconectar (limpiar).
-     */
-    /*fun conectarPartida(onMensaje: (MensajeServidor) -> Unit): () -> Unit {
+    @Serializable
+    @SerialName("PEON_MUERTO")
+    data class RespuestaPeonMuerto(
+        val pos_x: Int,
+        val pos_y: Int
+    ) : MensajeServidor()
 
-        val receptor: (String) -> Unit = { textoJson ->
-            try {
-                val mensaje = jsonPartida.decodeFromString<MensajeServidor>(textoJson)
-                onMensaje(mensaje)
-            } catch (e: Exception) {
-                Log.e("Partida", "Mensaje no válido o tipo desconocido: $textoJson", e)
-            }
-        }
+    @Serializable
+    @SerialName("PARTIDA_CANCELADA")
+    data class RespuestaPartidaCancelada(
+        val motivo: String
+    ) : MensajeServidor()
 
-
-
-    }*/
 
     fun desconectarPartida() {
             PartidaActiva.wsEstoyListoEnviado = false

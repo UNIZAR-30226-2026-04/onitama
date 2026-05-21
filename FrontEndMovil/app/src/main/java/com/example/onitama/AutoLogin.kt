@@ -14,7 +14,7 @@ data class DatosPerfil(
     val partidas_jugadas: Int,
     val cores: Int,
     val skin_activa: String,
-    val avatar_id: String
+    val avatar_id: String?
 )
 
 data class LoginTool(
@@ -53,7 +53,7 @@ object AutoLogin {
 
 
 
-    fun inicioSesion(context: Context, nombre: String, katanas: Int, cores: Int, avatar: String, skin: String){
+    fun inicioSesion(context: Context, nombre: String, katanas: Int, cores: Int, avatar: String?, skin: String){
         val pref = obtenerPreferences(context).edit()
         pref.putString(NOMBRE, nombre)
         pref.putInt(KATANAS, katanas)
@@ -95,6 +95,7 @@ object AutoLogin {
         pref.putInt(JUGADAS, datos.partidas_jugadas)
         pref.putInt(GANADAS, datos.partidas_ganadas)
         pref.putString(AVATAR, datos.avatar_id)
+        pref.putString(SKIN, datos.skin_activa)
         pref.apply()
 
         _sesion.value = datos
@@ -108,11 +109,19 @@ object AutoLogin {
     fun obtenerKatanas(context: Context): Int = obtenerPreferences(context).getInt(KATANAS, 0)
     fun obtenerCores(context: Context): Int = obtenerPreferences(context).getInt(CORES, 0)
 
+    fun actualizarCores( coresNuevo: Int){
+        _sesion.value = _sesion.value?.copy(cores = coresNuevo)
+    }
+
+
+    fun actualizarSkin( newSkin: String){
+        _sesion.value = _sesion.value?.copy(skin_activa = newSkin)
+    }
+
     fun cerrarSesion(context: Context){
         obtenerPreferences(context).edit().putBoolean(HAINICIADO, false).apply()
         obtenerPreferences(context).edit().clear().apply()
         _sesion.value = null
-        //ws?.close(1000, "Sesión cerrada por el usuario")
     }
 
     fun mantenerSesion(context: Context, nombre: String, contrasenya: String){

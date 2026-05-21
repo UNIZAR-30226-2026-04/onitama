@@ -1,6 +1,9 @@
 package com.example.onitama.ui.activities.partida
 
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.onitama.PartidaActiva
@@ -47,21 +50,27 @@ class PartidaViewModel : ViewModel() {
     var razon: String? = null
     val estado: StateFlow<EstadoJuego> = _estado.asStateFlow()
 
-    private var cartaAccionEnUso: String? = null
+    var cartaAccionEnUso: String? = null
     private var sacrificioPieza: Posicion? = null
     private var estadoAntesCartaAccion: EstadoJuego? = null
 
     private val _mensajeCartaAccion = MutableStateFlow<String>("")
-    val mensajeCartaAccion = _mensajeCartaAccion.asStateFlow()    
+    val mensajeCartaAccion = _mensajeCartaAccion.asStateFlow()
+
+    var mostrarPopPausa by mutableStateOf(false)
+        private set
 
     private val _notificacionPausa = MutableStateFlow<Partida.RespuestaSolicitudPausa?>(null)
     val notificacionPausa = _notificacionPausa.asStateFlow()
+
+    var mostrarPopCancel by mutableStateOf(false)
+        private set
 
     var partida = Partida()
 
     var equipoPropio = EquipoID.AZUL //de momento el bot siempre es el rojo, ya si eso se mejorará más adelante
 
-    var limpiar: (() -> Unit)? = null
+
 
     fun iniciarPartida(modo: ModoJuego, dificultad: Dificultad = Dificultad.FACIL) {
         modoJuegoActual = modo
@@ -75,7 +84,7 @@ class PartidaViewModel : ViewModel() {
                 equipoPropio = if (datos.equipo == 1) EquipoID.AZUL else EquipoID.ROJO
 
                 // Primero construimos el tablero con las cartas del servidor
-                val esNueva = (modo == ModoJuego.PUBLICA || modo == ModoJuego.PRIVADA )
+                val esNueva = (modo == ModoJuego.PUBLICA || modo == ModoJuego.PRIVADA && (datos.trampa_j2_pos== null ) && (datos.trampa_j1_pos == null))
                 _estado.value = crearEstadoServidor(
                     cartas_jugador = datos.cartas_jugador.map { it.nombre },
                     cartas_oponente = datos.cartas_oponente.map { it.nombre },
@@ -85,8 +94,12 @@ class PartidaViewModel : ViewModel() {
                     turno = datos.turno,
                     cartas_accion_propia = datos.cartas_accion_jugador,
                     cartas_accion_rival = datos.cartas_accion_oponente,
-                    esReanudada = !esNueva
+                    esReanudada = !esNueva,
+                    trampa_eq1 = datos.trampa_j1_pos,
+                    trampa_eq2 = datos.trampa_j2_pos
                 )
+
+
 
                 // Luego conectamos el WebSocket para escuchar los turnos
                 conectarAlServidor()
@@ -161,11 +174,20 @@ class PartidaViewModel : ViewModel() {
                             }
 
                             is Partida.RespuestaDerrota -> {
-                                razon = if (mensaje.motivo == "SIN_MOV") {
-                                    "SIN_MOVIMIENTOS"
-                                }
-                                else {
-                                    "DERROTA"
+                                razon = when (mensaje.motivo) {
+                                    "SIN_MOV" -> "SIN_MOVIMIENTOS"
+                                    "ABANDONO" -> "ABANDONO"
+                                    "REY_EN_TRAMPA" -> "REY_EN_TRAMPA"
+                                    "TIEMPO_AGOTADO" -> "TIEMPO_AGOTADO"
+                                    "FIN_PARTIDA" -> when {
+                                        razon == "TRONO" || razon == "REY CAPTURADO" -> razon!!
+                                        else -> "FIN_PARTIDA"
+                                    }
+
+                                    else -> when {
+                                        razon == "TRONO" || razon == "REY CAPTURADO" -> razon!!
+                                        else -> "FIN_PARTIDA"
+                                    }
                                 }
 
                                 _estado.value = _estado.value.copy(
@@ -176,14 +198,17 @@ class PartidaViewModel : ViewModel() {
                             }
 
                             is Partida.RespuestaVictoria -> {
-                                if(mensaje.motivo == "ABANDONO"){
-                                    razon = "ABANDONO"
-                                }
-                                else if(mensaje.motivo == "SIN_MOV"){
-                                    razon = "SIN_MOVIMIENTOS"
-                                }
-                                else {
-                                    razon = "VICTORIA"
+                                when (mensaje.motivo) {
+                                    "ABANDONO" -> razon = "ABANDONO"
+                                    "SIN_MOV" -> razon = "SIN_MOVIMIENTOS"
+                                    "REY_EN_TRAMPA" -> razon = "REY_EN_TRAMPA"
+                                    "TIEMPO_AGOTADO" -> razon = "TIEMPO_AGOTADO"
+                                    "FIN_PARTIDA" -> {
+                                        if (razon == null) razon = "FIN_PARTIDA"
+                                    }
+                                    else -> {
+                                        if (razon == null) razon = "FIN_PARTIDA"
+                                    }
                                 }
                                 _estado.value = _estado.value.copy(
                                     ganador = if (equipoPropio == EquipoID.ROJO) EquipoID.ROJO else EquipoID.AZUL,
@@ -205,7 +230,14 @@ class PartidaViewModel : ViewModel() {
                                 _notificacionPausa.value = mensaje
                             }
 
-                            is Partida.RespuestaPartidaPausada -> { }
+                            is Partida.RespuestaPartidaPausada -> {
+                                mostrarPopPausa = true
+                            }
+
+                            is Partida.RespuestaPartidaCancelada -> {
+                                mostrarPopCancel = true
+
+                            }
 
                             is Partida.RespuestaPausaRechazada -> { }
 
@@ -245,15 +277,18 @@ class PartidaViewModel : ViewModel() {
                             }
 
                             is Partida.RespuestaCartaAccionJugada -> {
-                                val jugador = if (mensaje.equipo == 1) {
-                                    EquipoID.AZUL
-                                }
-                                else {
+                                val jugador = if (equipoPropio == EquipoID.AZUL) {
                                     EquipoID.ROJO
                                 }
-
-                                val tipoAccion = obtenerCartaAccion(mensaje.cartaAccion)
-
+                                else {
+                                    EquipoID.AZUL
+                                }
+                                Log.d("LOG", "Carta accion jugada por el rival: ${mensaje.cartaAccion}")
+                                if(mensaje.accion == "ROBAR"){
+                                    Log.d("LOG", "Carta robada por el rival: ${mensaje.cartaRobar}")
+                                }
+                                val tipoAccion = mensaje.accion
+                                Log.d("LOG", "Tipo de accion: $tipoAccion")
                                 val nuevoEstado = aplicarCartaAccion(
                                     estado = _estado.value,
                                     equipo = jugador,
@@ -289,13 +324,39 @@ class PartidaViewModel : ViewModel() {
                                     cartaAccionEnUso = null
                                     sacrificioPieza = null
                                 }
-                            }                           
+                            }
+                            is Partida.RespuestaPeonMuerto -> {
+                                Log.d("Partida", "has colocado el peon resucitado en una casilla trampa")
+                                val fila = END - mensaje.pos_y
+                                val columna = END - mensaje.pos_x
+                                var turnoActual = equipoPropio
+                                if (fila > 3){
+                                    turnoActual = if (equipoPropio == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL
+                                }
+                                val nuevoTablero = actual.tablero.map {
+                                    it.toMutableList()
+                                }.toMutableList()
+
+                                nuevoTablero[fila][columna] = nuevoTablero[fila][columna].copy(
+                                    ficha = null,
+                                    esTrampaEquipo = -1
+                                )
+
+                                // Solo actualizamos el tablero y limpiamos la UI de la carta,
+                                // respetando el turno que ya había avanzado 'ejecucionCartaAccion'
+                                _estado.value = actual.copy(
+                                    modoAccion = null,
+                                    tablero = nuevoTablero,
+                                    turnoActual = turnoActual
+                                )
+                            }
 
                             else -> {
                                 println("LOG: Mensaje recibido no reconocido: $mensaje")
                             }
                         }
                     } catch (e: Exception) {
+                        Log.e("CHIVATO_WS", "Fallo al decodificar el mensaje: ${json.toString()}", e)
                         println("Mensaje ignorado (no pertenece a la lógica de partida)")
                     }
                 }
@@ -377,31 +438,58 @@ class PartidaViewModel : ViewModel() {
             }
 
             FasePartida.JUGANDO -> {
+                val celda = actual.tablero[pos.fila][pos.col]
                 if (actual.modoAccion != null) {
-                    Log.d("LOG", "modoaccion no es null")
+                    Log.d("LOG", "Se está usando la carta ${actual.modoAccion} con la celda ${pos}")
                     val cartaAccion = actual.modoAccion ?: return
                     val nombreCarta = cartaAccionEnUso ?: return
 
                     when (cartaAccion) {
                         "REVIVIR" -> {
-                            ejecucionCartaAccion(nombreCarta, cartaAccion, posicionPropia = pos)
+                            if (celda.ficha == null && ((pos.fila >=3 && equipoPropio == EquipoID.AZUL) || (pos.fila <=3 && equipoPropio == EquipoID.ROJO))) {
+                                Log.d("LOG", "Eligiendo Casilla segura columna ${pos.col} y fila ${pos.fila}")
+                                _mensajeCartaAccion.value = ""
+                                ejecucionCartaAccion(nombreCarta, cartaAccion, posicionPropia = pos)
+                            } else {
+                                _mensajeCartaAccion.value = "¡Elige una en tu mitad del campo!"
+                                return
+                            }
                         }
 
                         "SACRIFICIO" -> {
+
                             if (sacrificioPieza == null){
-                                sacrificioPieza = pos
-                                _mensajeCartaAccion.value = "Ahora selecciona el peón rival"
+
+                                if (celda.ficha != null && celda.ficha.equipo == actual.turnoActual) {
+                                    Log.d("LOG", "Sacrificio, eligiendo peon a sacrificar")
+                                    sacrificioPieza = pos
+                                    _mensajeCartaAccion.value = "Ahora selecciona el peón rival"
+                                } else {
+                                    _mensajeCartaAccion.value = "¡Esa no es una de tus piezas!"
+                                    return
+                                }
                             }
-                            else {
+                            else if (celda.ficha != null && celda.ficha.equipo != equipoPropio) {
+                                Log.d("LOG", "Sacrificio, eligiendo peon del rival a asesinar")
+                                _mensajeCartaAccion.value = ""
                                 ejecucionCartaAccion(nombreCarta, cartaAccion, posicionPropia = sacrificioPieza, posicionRival = pos)
+                            } else {
+                                _mensajeCartaAccion.value = "¡Debes seleccionar un peón rival válido!"
                             }
                         }
 
                         "SALVAR_REY" -> {
-                            ejecucionCartaAccion(nombreCarta, cartaAccion, posicionPropia = pos)
+                            if (celda.ficha == null && ((pos.fila >=3 && equipoPropio == EquipoID.AZUL) || (pos.fila <=3 && equipoPropio == EquipoID.ROJO))){
+                                Log.d("LOG", "Eligiendo Casilla segura")
+                                _mensajeCartaAccion.value = ""
+                                ejecucionCartaAccion(nombreCarta, cartaAccion, posicionPropia = pos)
+                            } else {
+                                _mensajeCartaAccion.value = "¡Elige una vacía en tu mitad del campo!"
+                            }
                         }
-
-                        "ROBAR" -> {}
+                        "ROBAR" -> {
+                            _mensajeCartaAccion.value = "¡Toca una de las cartas del rival para robarla, no el tablero!"
+                        }
                     }
                 }
                 else {
@@ -448,7 +536,6 @@ class PartidaViewModel : ViewModel() {
                         }
                         else if (actual.cartaSeleccionada != null) {
                             Log.d("LOG", "Toque en $pos durante fase ${actual.fasePartida} con carta seleccionada ${actual.cartaSeleccionada.nombre}")
-                            val celda = actual.tablero[pos.fila][pos.col]
                             Log.d("LOG", "en esa celda hay una ficha? ${celda.ficha != null}")
                             if (celda.ficha?.equipo == actual.turnoActual) {
                                 Log.d("LOG", "en esa celda hay una ficha tuya, todo bien")
@@ -606,17 +693,19 @@ class PartidaViewModel : ViewModel() {
             estado = _estado.value,
             equipo = equipoPropio,
             cartaNombre = nombreCarta,
-            x = if (posicionPropia != null) END - posicionPropia.col else -1,
-            y = if (posicionPropia != null) END - posicionPropia.fila else -1,
-            x_op = if (posicionRival != null) END - posicionRival.col else -1,
-            y_op = if (posicionRival != null) END - posicionRival.fila else -1,
+            x = if (posicionPropia != null) posicionPropia.col else -1,
+            y = if (posicionPropia != null) posicionPropia.fila else -1,
+            x_op = if (posicionRival != null) posicionRival.col else -1,
+            y_op = if (posicionRival != null) posicionRival.fila else -1,
             cartaRobar = cartaARobar,
             tipo = cartaAccion
         )
 
+        val turnoSiguiente = if (cartaAccion == "ROBAR") _estado.value.turnoActual else if(equipoPropio == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL
         _estado.value = estadoConAccion.copy(
             modoAccion = null,
-            cartaAccionYaUsada = true
+            cartaAccionYaUsada = true,
+            turnoActual = turnoSiguiente
         )
 
         val sePuedeJugar = partida.enviarJugarCartaAccion(mensaje)
@@ -630,17 +719,6 @@ class PartidaViewModel : ViewModel() {
         }
     }
 
-    fun seleccionarCartaRobar(
-        nombreCarta: String
-    ) {
-        val cartaAccion = cartaAccionEnUso ?: return 
-
-        ejecucionCartaAccion(
-            nombreCarta = cartaAccion,
-            cartaAccion = "ROBAR",
-            cartaARobar = nombreCarta
-        )
-    }
 
     fun activarPausa() {
         val datos = PartidaActiva.datosPartida ?: return

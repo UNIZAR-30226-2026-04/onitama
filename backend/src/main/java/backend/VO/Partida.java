@@ -82,6 +82,15 @@ public class Partida{
         }
     }
 
+    public int eraTrampa(String cartaAc){
+        for(CartaAccion ca : cartasA){
+            if(ca.getNombre().equals(cartaAc)){
+                return ca.eraTrampa();
+            }
+        }
+        return -1;
+    }
+
     private void aplicarTrampaGuardada(String trampaGuardada) {
         if (trampaGuardada == null || trampaGuardada.trim().isEmpty()) return;
         String[] partes = trampaGuardada.split(",");

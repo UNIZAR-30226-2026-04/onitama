@@ -61,6 +61,9 @@ import com.example.onitama.lib.Cartas
 import com.example.onitama.lib.Movimiento
 import com.example.onitama.ui.activities.MenuPrincipalActivity
 import com.example.onitama.ui.amigos.Amigos_Activity
+import com.example.onitama.ui.perfil.Perfil_Activity
+import com.example.onitama.ui.tableros.Tableros_Activity
+import com.example.onitama.ui.tienda.Tienda_Activity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 
@@ -250,17 +253,21 @@ fun CartasScreen(
                                     carta =  Carta(
                                         nombre = listasCartasAccion[card].nombre,
                                         imagen = "",
-                                        movimientos = emptyList()
+                                        movimientos = emptyList(),
                                     ),
                                     esAccion = true,
-                                    onClick = {}
-                                )
-                                Text(
-                                    text = listasCartasAccion[card].descripcion,
-                                    fontFamily = quattrocentoBold,
-                                    fontSize = 14.sp,
-                                    color = Color.DarkGray,
-                                    textAlign = TextAlign.Start
+                                    onClick = {},
+                                    descripcion = when (listasCartasAccion[card].nombre) {
+                                                            "Pensatorium" -> "Invierte en espejo los movimientos de todas las cartas del tablero. Dura hasta que el rival realice un movimiento."
+                                                            "Atrapasueños" -> "Elige una carta de movimiento del oponente y añádela a tu mano."
+                                                            "Requiem" -> "Selecciona un peón tuyo y un peón rival; ambos mueren."
+                                                            "Santo Grial" -> "Añade un peón extra a una casilla vacía de tu mitad del campo."
+                                                            "La Dama del Mar" -> "No se pueden hacer movimientos hacia atras"
+                                                            "Finisterra" -> "No se pueden hacer movimientos hacia adelante"
+                                                            "Brujeria" -> "Tu rival no verá qué cartas tienes."
+                                                            "Illusia" -> "Mueve a tu Rey a una casilla vacía en tu mitad del campo."
+                                                            else -> "Carta de acción"
+                                    }
                                 )
                             }
                         }
@@ -335,20 +342,41 @@ fun CartasScreen(
                 context.packageName
             )
 
-
-            //🛡️ PROTECCIÓN ANTI-CRASH: Si la imagen no existe (0), ponemos el logo por defecto
-            val idSeguro = if (imageResId != 0) imageResId else R.drawable.onitama_text
-
-
-            Image(
-                painterResource(idSeguro),
-                contentDescription = "Imagen de perfil",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(80.dp)
-                    .align(Alignment.CenterEnd)
-                    .clip(CircleShape)
-            )
+            if (imageResId != 0) {
+                Image(
+                    painter = painterResource(imageResId),
+                    contentDescription = "Imagen de perfil",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .align(Alignment.CenterEnd)
+                        .clip(CircleShape)
+                        .clickable(onClick = {
+                            val intent = Intent(context, Perfil_Activity::class.java)
+                            context.startActivity(intent)
+                        })
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .align(Alignment.CenterEnd)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .clickable(onClick = {
+                            val intent = Intent(context, Perfil_Activity::class.java)
+                            context.startActivity(intent)
+                        }),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = datosUsuario?.nombre?.take(1)?.uppercase() ?: "",
+                        color = colorResource(id = R.color.azulFondo),
+                        fontSize = 32.sp,
+                        fontFamily = quattrocentoBold
+                    )
+                }
+            }
 
             // B) Título del juego
             Image(
@@ -400,12 +428,19 @@ fun CartasScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = {},
+                    onClick = {
+                        val intent = Intent(context, Tableros_Activity::class.java)
+                        context.startActivity(intent)
+                        (context as? Activity)?.finish()
+                    },
                     modifier = Modifier.size(60.dp)
                 ){
                     Image(painterResource(R.drawable.tablero),
                         contentDescription = "Skins")
                 }
+
+                Spacer(modifier = Modifier.width(80.dp)) // Hueco para el botón central
+
                 IconButton(
                     onClick = {
                         val intent = Intent(context, MenuPrincipalActivity::class.java)
@@ -415,8 +450,6 @@ fun CartasScreen(
                     Image(painterResource(R.drawable.espadas),
                         contentDescription = "Jugar")
                 }
-
-                Spacer(modifier = Modifier.width(80.dp)) // Hueco para el botón central
 
                 IconButton(
                     onClick = {
@@ -448,8 +481,9 @@ fun CartasScreen(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 5.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(bottom = 5.dp, start = 90.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.Start
             ) {
                 IconButton(
                     onClick = {  },
@@ -474,21 +508,31 @@ fun CartasScreen(
 fun CartaCatalogo(
     carta: Carta, 
     esAccion: Boolean, 
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    descripcion: String = ""
 ) {
 
     val ancho = 340.dp
     val alto = 200.dp
     val context = LocalContext.current
 
-    // 1. Usamos tu función, pero por si acaso tiene espacios, le ponemos replace
+
     val nombreSeguro = Cartas.imagenCarta(carta).replace(" ", "_")
 
-    val imageResId = context.resources.getIdentifier(
+
+    var imageResId = context.resources.getIdentifier(
         nombreSeguro,
         "drawable",
         context.packageName
     )
+    //Caso especialito: Atrapasueños, como la ñ no la admite la carpeta res, tendremos que cambiarla
+    if(nombreSeguro == "atrapasueños"){
+        imageResId = context.resources.getIdentifier(
+            "atrapasuenos",
+            "drawable",
+            context.packageName
+        )
+    }
 
     //🛡️ PROTECCIÓN ANTI-CRASH: Si la imagen no existe (0), ponemos el logo por defecto
     val idSeguro = if (imageResId != 0) imageResId else R.drawable.onitama_text
@@ -528,9 +572,9 @@ fun CartaCatalogo(
 
             if (esAccion) {
                 Text(
-                    text = "Carta Accion",
+                    text = descripcion,
                     fontSize = 16.sp,
-                    color = Color.Gray,
+                    color = Color.DarkGray,
                     textAlign = TextAlign.Center
                 )
             }

@@ -65,6 +65,9 @@
         <activity
             android:name=".ui.tienda.Tienda_Activity">
         </activity>
+        <activity
+            android:name=".ui.tableros.Tableros_Activity">
+        </activity>
 
     </application>
 </manifest>

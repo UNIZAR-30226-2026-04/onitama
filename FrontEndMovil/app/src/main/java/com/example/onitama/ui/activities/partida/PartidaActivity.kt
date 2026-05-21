@@ -1,6 +1,8 @@
 package com.example.onitama.ui.activities.partida
 
+import android.app.Activity
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -29,6 +31,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -38,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -96,20 +100,24 @@ class PartidaActivity : AppCompatActivity() {
             Dificultad.FACIL
         }
 
-        // Pasamos también la dificultad
-        viewModel.iniciarPartida(modoJuego, nivelDificultad)
+        if (savedInstanceState == null) {
+            viewModel.iniciarPartida(modoJuego, nivelDificultad)
+        }
 
         setContent {
             // Observamos el estado del ViewModel. Cuando cambie, la UI se repintará sola.
             val estadoJuego = viewModel.estado.collectAsState().value
 
             val pausa = viewModel.notificacionPausa.collectAsState().value
+            val datosUsuario by AutoLogin.sesion.collectAsState()
+            val skinActiva = datosUsuario?.skin_activa ?: "Skin0"
 
             Surface(modifier = Modifier.fillMaxSize()) {
                 MatchScreen(
                     estado = estadoJuego, // Pasamos el estado a la UI
                     modo = modoJuego,
-                    avisoPausa = pausa
+                    avisoPausa = pausa,
+                    skinActiva = skinActiva
                 )
             }
         }
@@ -120,15 +128,89 @@ class PartidaActivity : AppCompatActivity() {
     fun MatchScreen(
         estado: EstadoJuego,
         modo: ModoJuego,
-        avisoPausa: Partida.RespuestaSolicitudPausa?
+        avisoPausa: Partida.RespuestaSolicitudPausa?,
+        skinActiva: String
     ) {
         val datosUsuario by AutoLogin.sesion.collectAsState()
         val authClient: Auth = Auth()
         val context = LocalContext.current
+        val activity = context as? Activity
         val partida = Partida()
         var vermazo by remember { mutableStateOf(false) }
         var verAcciones by remember { mutableStateOf(false) }
         val infoCartasAccion by viewModel.mensajeCartaAccion.collectAsState()
+        val mostrarPopPausa by remember { derivedStateOf { viewModel.mostrarPopPausa } }
+        val mostrarPopCancel by remember { derivedStateOf { viewModel.mostrarPopCancel } }
+        val quattrocentoBold = FontFamily(Font(R.font.quattrocento_bold))
+
+
+        if (mostrarPopCancel) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { /* Opcional: no permitir cerrar fuera */ },
+                confirmButton = {
+                    Button(
+                        onClick = {
+
+                            activity?.finish()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.azulFondo))
+                    ) {
+                        Text("Aceptar", color = Color.White)
+                    }
+                },
+                title = {
+                    Text(
+                        "Partida Cancelada",
+                        fontFamily = quattrocentoBold,
+                        color = colorResource(id = R.color.azulFondo)
+                    )
+                },
+                text = {
+                    Text(
+                        "Se ha agotado el tiempo límite, la partida se cancela sin ganador",
+                        fontFamily = quattrocentoBold
+                    )
+                },
+                shape = RoundedCornerShape(16.dp),
+                containerColor = Color.White
+            )
+        }
+
+
+
+        if (mostrarPopPausa) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { /* Opcional: no permitir cerrar fuera */ },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            // Al pulsar, cerramos la actividad
+                            activity?.finish()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.azulFondo))
+                    ) {
+                        Text("Aceptar", color = Color.White)
+                    }
+                },
+                title = {
+                    Text(
+                        "Partida Pausada",
+                        fontFamily = quattrocentoBold,
+                        color = colorResource(id = R.color.azulFondo)
+                    )
+                },
+                text = {
+                    Text(
+                        "La partida se ha guardado correctamente. Podrás reanudarla más tarde desde el menú de amigos.",
+                        fontFamily = quattrocentoBold
+                    )
+                },
+                shape = RoundedCornerShape(16.dp),
+                containerColor = Color.White
+            )
+        }
+
+
 
         LaunchedEffect(estado.modoAccion, estado.cartaAccionYaUsada) {
             if (estado.modoAccion != null) {
@@ -140,7 +222,7 @@ class PartidaActivity : AppCompatActivity() {
             }
         }
 
-        val quattrocentoBold = FontFamily(Font(R.font.quattrocento_bold))
+
 
         Box(
             modifier = Modifier.Companion
@@ -184,17 +266,39 @@ class PartidaActivity : AppCompatActivity() {
                         .background(colorResource(id = R.color.azulFondo))
                         .padding(horizontal = 16.dp)
                 ) {
+                    val imageResId = context.resources.getIdentifier(
+                        datosUsuario?.avatar_id,
+                        "drawable",
+                        context.packageName
+                    )
                     // A) Botón de Perfil (A diferencia del de menu principal este debe de estar deshabilitado)
-                    IconButton(
-                        onClick = { },
-                        enabled = false,
-                        modifier = Modifier.Companion
-                            .size(80.dp)
-                            .align(Alignment.Companion.CenterEnd)
-                            .clip(CircleShape)
-                            .background(Color.Companion.White)
-                    ) {
-
+                    if (imageResId != 0) {
+                        Image(
+                            painter = painterResource(imageResId),
+                            contentDescription = "Imagen de perfil",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(80.dp)
+                                .align(Alignment.CenterEnd)
+                                .clip(CircleShape)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .align(Alignment.CenterEnd)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                            ,
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = datosUsuario?.nombre?.take(1)?.uppercase() ?: "",
+                                color = colorResource(id = R.color.azulFondo),
+                                fontSize = 32.sp,
+                                fontFamily = quattrocentoBold
+                            )
+                        }
                     }
 
                     // B) Título del juego
@@ -331,17 +435,35 @@ class PartidaActivity : AppCompatActivity() {
                         }
                     }
                 }
-                Row(
+                LazyRow(
                     verticalAlignment = Alignment.Companion.Top,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     estado.cartasOponente.forEach { carta ->
-                        CartaBoton(
-                            carta = carta,
-                            seleccionada = false,
-                            onClick = {},
-                            true
-                        )
+                        if(estado.equipoCiego == null || estado.equipoCiego != PartidaActiva.datosPartida!!.obtenerEquipoID()) {
+                            item{
+                                CartaBoton(
+                                    carta = carta,
+                                    seleccionada = false,
+                                    onClick = {
+                                        if (estado.modoAccion == "ROBAR" && viewModel.cartaAccionEnUso != null) {
+                                            viewModel.ejecucionCartaAccion(
+                                                nombreCarta = "Atrapasueños",
+                                                cartaAccion = "ROBAR",
+                                                cartaARobar = carta.nombre // Pasamos el nombre de la carta rival elegida
+                                            )
+                                        }
+                                    },
+                                    isEnemy = true,
+                                    skinActiva = skinActiva
+                                )
+                            }
+                        }
+                        else{
+                            item{
+                                Oculto()
+                            }
+                        }
                     }
 
                 }
@@ -352,24 +474,92 @@ class PartidaActivity : AppCompatActivity() {
                 ) {
                     GridTablero(
                         estado = estado,
-                        onCasillaClick = { pos -> viewModel.tocarCelda(pos) }
+                        onCasillaClick = { pos -> viewModel.tocarCelda(pos) },
+                        skinActiva = skinActiva
                     )
                 }
-                Row(
+                LazyRow(
                     verticalAlignment = Alignment.Companion.Top,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     estado.cartasJugador.forEach { carta ->
-                        CartaBoton(
-                            carta = carta,
-                            seleccionada = estado.cartaSeleccionada == carta,
-                            onClick = {
-                                cambiarEstadoCarta(carta, estado)
-                            },
-                            false
-                        )
+                        item{
+                            CartaBoton(
+                                carta = carta,
+                                seleccionada = estado.cartaSeleccionada == carta,
+                                onClick = {
+                                    cambiarEstadoCarta(carta, estado)
+                                },
+                                isEnemy = false,
+                                skinActiva = skinActiva
+                            )
+                        }
                     }
 
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Companion.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.Companion.End)
+                ) {
+
+
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = datosUsuario!!.nombre,
+                            fontFamily = quattrocentoBold,
+                            fontSize = 30.sp,
+                            color = Color.Companion.White
+                        )
+                        Row(verticalAlignment = Alignment.Companion.CenterVertically) {
+                            Image(
+                                painterResource(id = R.drawable.katanas),
+                                contentDescription = "Katanas",
+
+                                modifier = Modifier.Companion
+                                    .size(30.dp)
+                            )
+                            Text(
+                                datosUsuario?.puntos.toString(),
+                                color = Color.Companion.White,
+                                fontSize = 24.sp,
+                                fontFamily = quattrocentoBold,
+                                modifier = Modifier.Companion.padding(start = 4.dp)
+                            )
+                        }
+                    }
+                    val imageResId = context.resources.getIdentifier(
+                        datosUsuario?.avatar_id,
+                        "drawable",
+                        context.packageName
+                    )
+                    // A) Botón de Perfil (A diferencia del de menu principal este debe de estar deshabilitado)
+                    if (imageResId != 0) {
+                        Image(
+                            painter = painterResource(imageResId),
+                            contentDescription = "Imagen de perfil",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                            ,
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = datosUsuario?.nombre?.take(1)?.uppercase() ?: "",
+                                color = colorResource(id = R.color.azulFondo),
+                                fontSize = 32.sp,
+                                fontFamily = quattrocentoBold
+                            )
+                        }
+                    }
                 }
 
 
@@ -426,50 +616,6 @@ class PartidaActivity : AppCompatActivity() {
                                 }
                             }
                         }
-                    }
-                }
-
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Companion.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.Companion.End)
-                ) {
-
-
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            text = datosUsuario!!.nombre,
-                            fontFamily = quattrocentoBold,
-                            fontSize = 30.sp,
-                            color = Color.Companion.White
-                        )
-                        Row(verticalAlignment = Alignment.Companion.CenterVertically) {
-                            Image(
-                                painterResource(id = R.drawable.katanas),
-                                contentDescription = "Katanas",
-
-                                modifier = Modifier.Companion
-                                    .size(30.dp)
-                            )
-                            Text(
-                                datosUsuario?.puntos.toString(),
-                                color = Color.Companion.White,
-                                fontSize = 24.sp,
-                                fontFamily = quattrocentoBold,
-                                modifier = Modifier.Companion.padding(start = 4.dp)
-                            )
-                        }
-                    }
-                    IconButton(
-                        onClick = { },
-                        enabled = false,
-                        modifier = Modifier.Companion
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(Color.Companion.White)
-                    ) {
-
                     }
                 }
             }
@@ -529,7 +675,8 @@ class PartidaActivity : AppCompatActivity() {
                                         carta = carta,
                                         seleccionada = estado.cartaSeleccionada == carta,
                                         onClick = { Unit },
-                                        false
+                                        isEnemy = false,
+                                        skinActiva = skinActiva
                                     )
                                 }
                             }
@@ -541,8 +688,9 @@ class PartidaActivity : AppCompatActivity() {
             if (estado.fasePartida == FasePartida.JUGANDO && estado.cartasAccionPropia.isNotEmpty()) {
                 Box(
                     Modifier
+                        .padding(start = 80.dp, bottom = 10.dp)
                         .fillMaxSize(),
-                    contentAlignment = Alignment.BottomEnd
+                    contentAlignment = Alignment.BottomStart
                 ) {
                     Column(horizontalAlignment = Alignment.End) {
                         Button(
@@ -922,9 +1070,11 @@ class PartidaActivity : AppCompatActivity() {
                                 "TRONO" -> if (victoria) "Colocaste tu rey en el trono del rival" else "Tu rival llevó su rey hasta tu trono"
                                 "REY CAPTURADO" -> if (victoria) "Capturaste el rey de tu rival" else "Tu rival ha capturado tu rey"
                                 "ABANDONO" -> if (victoria) "Tu rival abandonó la partida" else "Has abandonado la partida"
-                                "SIN MOVIMIENTOS" -> if (victoria) "El rival no tiene movimientos disponibles" else "Te has quedado sin mvimientos disponibles"
-                                else -> if (victoria) "El Rey del rival ha caído en tu trampa" else "Tu rey ha caido en una trampa. Esta vez tu rival te ha vencido, más suerte a la próxima"
-
+                                "SIN_MOVIMIENTOS" -> if (victoria) "El rival no tiene movimientos disponibles" else "Te has quedado sin mvimientos disponibles"
+                                "REY_EN_TRAMPA" -> if (victoria) "El Rey del rival ha caído en tu trampa" else "Tu rey ha caido en una trampa. Esta vez tu rival te ha vencido, más suerte a la próxima"
+                                "TIEMPO_AGOTADO" -> if (victoria) "Has ganado: se agotó el tiempo del rival" else "Has perdido: se agotó tu tiempo"
+                                "FIN_PARTIDA" -> if (victoria) "Has ganado la partida" else "Has perdido la partida"
+                                else -> if (victoria) "Has ganado la partida" else "Has perdido la partida"
                             },
                             fontSize = 18.sp,
                             textAlign = TextAlign.Center
@@ -966,7 +1116,7 @@ class PartidaActivity : AppCompatActivity() {
     }
 
     @Composable
-    fun CartaBoton(carta: Carta, seleccionada: Boolean, onClick: () -> Unit, isEnemy: Boolean) {
+    fun CartaBoton(carta: Carta, seleccionada: Boolean, onClick: () -> Unit, isEnemy: Boolean, skinActiva: String) {
 
         val ancho = if (seleccionada) 192.dp else 170.dp
         val alto = if (seleccionada) 120.dp else 100.dp
@@ -1017,9 +1167,36 @@ class PartidaActivity : AppCompatActivity() {
                             .padding(start = 10.dp)
                     )
                 }
-
-                Minigrid(carta.movimientos, isEnemy)
+                Minigrid(carta.movimientos, isEnemy, skinActiva)
             }
+        }
+    }
+
+
+    @Composable
+    fun Oculto() {
+
+        val ancho = 170.dp
+        val alto = 100.dp
+        val context = LocalContext.current
+
+        Box(
+            modifier = Modifier
+                .padding(start = 15.dp)
+                .height(alto)
+                .width(ancho)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .background(Color.DarkGray)
+        ) {
+            Image(
+                painterResource(id = R.drawable.hidden),
+                contentDescription = "bloqueado",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .align (Alignment.Center)
+                    .height(65.dp)
+                    .width(65.dp)
+            )
         }
     }
 
@@ -1032,14 +1209,17 @@ class PartidaActivity : AppCompatActivity() {
     ) {
         val context = LocalContext.current
         
-        val nombreSeguro = nombre.replace(" ", "_").lowercase()
+        var nombreSeguro = nombre.replace(" ", "_").lowercase()
+        if(nombre == "Atrapasueños"){
+            nombreSeguro = "atrapasuenos" //caso especial: contiene una ñ
+        }
         val imageResId = context.resources.getIdentifier(
             nombreSeguro,
             "drawable",
             context.packageName
         )
         val idSeguro = if (imageResId != 0) imageResId else R.drawable.onitama_text
-        
+
         val descripcion = when (nombre) {
             "Pensatorium" -> "Invierte en espejo los movimientos de todas las cartas del tablero. Dura hasta que el rival realice un movimiento."
             "Atrapasueños" -> "Elige una carta de movimiento del oponente y añádela a tu mano."
@@ -1132,7 +1312,7 @@ class PartidaActivity : AppCompatActivity() {
 
 
     @Composable
-    fun Minigrid(movimientos: List<Movimiento>, isEnemy: Boolean) {
+    fun Minigrid(movimientos: List<Movimiento>, isEnemy: Boolean, skinActiva: String) {
         val tamanoGrid = 7
         val centro = tamanoGrid / 2
 
@@ -1162,7 +1342,15 @@ class PartidaActivity : AppCompatActivity() {
                                 .background(
                                     when {
                                         esCentro -> Color.Black
-                                        esMovimiento -> if (isEnemy) Color.Red else Color(0xFF2196F3) // Azul para nuestros, rojo para el enemigo
+                                        esMovimiento -> {
+                                            when (skinActiva.lowercase()) {
+                                                "skin1" -> if (isEnemy) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+                                                "skin2" -> if (isEnemy) Color(0xFFF8FAFC) else Color(0xFF1E3A8A)
+                                                "skin5" -> if (isEnemy) Color(0xFFFACC15) else Color(0xFF10B981)
+                                                "skin6" -> if (isEnemy) Color(0xFFF97316) else Color(0xFFA855F7)
+                                                else -> if (isEnemy) Color.Red else Color(0xFF2196F3)
+                                            }
+                                        }
                                         else -> Color.White.copy(alpha = 0.3f) // Fondo tenue
                                     }
                                 )
@@ -1175,7 +1363,8 @@ class PartidaActivity : AppCompatActivity() {
 
 
     @Composable
-    fun GridTablero(estado: EstadoJuego, onCasillaClick: (Posicion) -> Unit) {
+    fun GridTablero(estado: EstadoJuego, onCasillaClick: (Posicion) -> Unit, skinActiva: String) {
+        val context = LocalContext.current
         val tamanoGrid = 7
 
         // 1. ¿Quién es el jugador que tiene el móvil en la mano?
@@ -1195,16 +1384,26 @@ class PartidaActivity : AppCompatActivity() {
                 Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
                     for (c in 0 until tamanoGrid) {
 
-                        // ⚡ LA MAGIA: Calculamos la coordenada real del tablero interno
+
                         val logicaF = if (invertirPantalla) (6 - f) else f
                         val logicaC = if (invertirPantalla) (6 - c) else c
 
                         val posLogica = Posicion(logicaF, logicaC)
                         val celda = estado.tablero[logicaF][logicaC]
-
                         val esTrampaSeleccionada = estado.posicionTrampa == posLogica
-                      
-                        val esErrorEnEstaCasilla = estado.posicionErrorTrampa == posLogica
+
+                        val boardStyle = when (skinActiva.lowercase()) {
+                            "skin1" -> "ajedrez"
+                            "skin2" -> "clasico-futbol"
+                            else -> "default"
+                        }
+                        val esBlanca = (f + c) % 2 == 0
+                        val colorBase = when (boardStyle) {
+                            "ajedrez" -> if (esBlanca) Color(0xFF3A3A3A) else Color(0xFFC8C5C1)
+                            "clasico-futbol" -> Color(0xFF2E7D32).copy(alpha = 0.9f)
+                            else -> Color.White.copy(alpha = 0.3f)
+                        }
+
 
                         Box(
                             modifier = Modifier
@@ -1214,8 +1413,8 @@ class PartidaActivity : AppCompatActivity() {
                                     when {
                                         estado.fichaSeleccionada == posLogica -> Color.Yellow
                                         estado.movimientosValidos.contains(posLogica) -> Color.Green
-                                        celda.esTrono -> Color.DarkGray
-                                        else -> Color.White.copy(alpha = 0.3f)
+                                        celda.esTrono -> if (boardStyle == "default") Color.DarkGray else colorBase
+                                        else -> colorBase
                                     }
                                 )
                                 .border(
@@ -1237,24 +1436,50 @@ class PartidaActivity : AppCompatActivity() {
                             val ficha = celda.ficha
 
                             if (ficha != null) {
+                                val colorSuffix = skinActiva.lowercase()
+                                val equipoColor = if (ficha.equipo == EquipoID.ROJO) "rojo" else "azul"
+                                val tipoPieza = if (ficha.esRey) "rey" else "peon"
+                                
+                                val resId = context.resources.getIdentifier(
+                                    "${tipoPieza}${equipoColor}${colorSuffix}",
+                                    "drawable",
+                                    context.packageName
+                                )
+                                Log.d("SKINS", "ficha: $ficha, resId: $resId")
+                                
+                                val finalResId = if (resId != 0) resId else {
+                                    Log.d("SKINS", "No existe la imagen de la skin actual")
+                                    // Fallback a skin0 si no existe la imagen de la skin actual
+                                    context.resources.getIdentifier(
+                                        "${tipoPieza}${equipoColor}",
+                                        "drawable",
+                                        context.packageName
+                                    )
+                                }
+
                                 Image(
-                                    painter = when {
-                                        ficha.esRey && ficha.equipo == EquipoID.ROJO -> painterResource(
-                                            id = R.drawable.rey_rojo
-                                        )
-
-                                        ficha.esRey && ficha.equipo == EquipoID.AZUL -> painterResource(
-                                            id = R.drawable.rey_azul
-                                        )
-
-                                        ficha.equipo == EquipoID.ROJO -> painterResource(id = R.drawable.peon_rojo)
-                                        else -> painterResource(id = R.drawable.peon_azul)
-                                    },
+                                    painter = painterResource(id = finalResId),
                                     contentDescription = "Ficha ${ficha.equipo}",
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .padding(1.dp)
                                 )
+                            } else if (celda.esTrono) {
+                                val equipoTrono = if (logicaF == 0) "rojo" else "azul"
+                                val colorSuffix = skinActiva.lowercase()
+                                val resId = context.resources.getIdentifier(
+                                    "templo${equipoTrono}${colorSuffix}",
+                                    "drawable",
+                                    context.packageName
+                                )
+                                if (resId != 0) {
+                                    Image(
+                                        painter = painterResource(id = resId),
+                                        contentDescription = "Trono",
+                                        modifier = Modifier.fillMaxSize(),
+                                        alpha = 0.4f
+                                    )
+                                }
                             } else if (celda.esTrampaEquipo == -1) {
                                 Image(
                                     painter = painterResource(

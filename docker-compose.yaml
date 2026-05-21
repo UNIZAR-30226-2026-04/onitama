@@ -1,0 +1,49 @@
+services:
+
+  database:
+    image: postgis/postgis:17-3.4
+    container_name: proy-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata_pr3:/var/lib/postgresql/data
+      # cualquier .sql en esta carpeta (el entrypoint) se ejecuta automáticamente al crear el contenedor por primera vez
+      # por eso, he movido borrar.sql 
+      # OJO! se sigue esto si es la primera vez que se construye el volumen pgdata_pr3, si no no.
+      # Para poder partir de cero si ya están construido (que seguramente lo esté) ejecuta docker compose down -v
+      # para eliminar el volumen (ANTES de hacer docker compose up -d!!!!!!!!!!!)
+      - ./BaseDatos/crear.sql:/docker-entrypoint-initdb.d/01_crear.sql
+      - ./BaseDatos/construir.sql:/docker-entrypoint-initdb.d/02_construir.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: proy-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_NAME=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+    # depends_on con healthcheck en backend garantiza que el backend no arranca
+    # hasta que postgre esté listo para aceptar conexiones, así no nos saldrá nunca el error de conexión rechazada
+      database:
+        condition: service_healthy
+
+volumes:
+  pgdata_pr3:

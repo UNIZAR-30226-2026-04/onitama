@@ -120,6 +120,27 @@ class Amigos (
         val destinatario: String
     ): MensajeServidor()
 
+    @Serializable
+    @SerialName("INVITACION_PARTIDA")
+    data class MensajeInvitacionPartida(
+        val remitente: String,
+        val idNotificacion: Int
+    ): MensajeServidor()
+
+    @Serializable
+    @SerialName("SOLICITUD_REANUDAR")
+    data class MensajeSolicitudReanudar(
+        val remitente: String,
+        val idNotificacion: Int,
+        val idPartida: Int
+    ): MensajeServidor()
+
+    @Serializable
+    @SerialName("NOTIFICACION_CANCELADA")
+    data class MensajeNotificacionCancelada(
+        val idNotificacion: Int
+    ): MensajeServidor()
+
     private val jsonSerializer = Json {
         ignoreUnknownKeys = true
         classDiscriminator = "tipo"

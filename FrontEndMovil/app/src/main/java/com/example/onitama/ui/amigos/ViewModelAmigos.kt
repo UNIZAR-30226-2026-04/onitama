@@ -69,7 +69,7 @@ class ViewModelAmigos : ViewModel() {
         nombreAmigo: String
     ) {
         val miNombre = AutoLogin.sesion.value?.nombre ?: return
-        manejadorPartidaAPI.obtenerPartidasPausadas(miNombre)
+        manejadorPartidaAPI.obtenerPartidasPausadas(miNombre, nombreAmigo)
     }
 
     fun obtenerAmigos() {

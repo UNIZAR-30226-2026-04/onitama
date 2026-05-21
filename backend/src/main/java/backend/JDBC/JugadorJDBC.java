@@ -17,7 +17,7 @@ public final class JugadorJDBC implements JugadorDAO {
 
     public JugadorJDBC() {
         try {
-            String url = "jdbc:postgresql://localhost:5432/postgres"; 
+            String url = "jdbc:postgresql://database:5432/postgres"; 
             String user = "postgres";
             String password = "postgres";
             

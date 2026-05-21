@@ -4,13 +4,10 @@ import android.os.Bundle
 import android.content.Intent
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.viewModelScope
 import com.example.onitama.api.Auth
 import com.example.onitama.api.ManejadorGlobal
 import com.example.onitama.ui.inicial.Ini_Activity
 import com.example.onitama.ui.activities.MenuPrincipalActivity
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class MainActivity : AppCompatActivity() {

@@ -14,7 +14,9 @@ class Perfil_Activity : ComponentActivity() {
         setContent {
 
             OnitamaTheme {
-                PantallaPerfil()
+                PantallaPerfil(
+                    viewModel = viewModel()
+                )
             }
         }
     }

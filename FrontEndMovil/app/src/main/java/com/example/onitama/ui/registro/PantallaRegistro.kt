@@ -115,7 +115,17 @@ fun PantallaRegistro(
                         style = MaterialTheme.typography.titleLarge
                     )
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    if(estado.error != null){
+                        chooseAvatar = false
+                        Text(
+                            text = estado.error!!,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    else{
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
 
                     // Campo para introducir el nombre de usuario
                     OutlinedTextField(
@@ -196,7 +206,7 @@ fun PantallaRegistro(
                             val conseguido = viewModel.onCrearClick()
                             if(conseguido){
                                 Log.d("Registro", "Registro exitoso con ${estado.nombre}, ${estado.correo}")
-                                viewModel.onAvatarChange("None")
+                                viewModel.onAvatarChange(null)
                                 chooseAvatar = true
                             }
                             else{
@@ -251,7 +261,7 @@ fun PantallaRegistro(
 
                     Button(
                         onClick = {
-                            viewModel.onAvatarChange("None")
+                            viewModel.onAvatarChange(null)
                         },
                     ){
                         Text("Ninguno")

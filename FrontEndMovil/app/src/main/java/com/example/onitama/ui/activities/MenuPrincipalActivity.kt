@@ -27,6 +27,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ButtonDefaults
@@ -69,6 +71,9 @@ import com.example.onitama.ui.activities.profile.ProfileActivity
 import com.example.onitama.ui.amigos.Amigos_Activity
 import com.example.onitama.api.*
 import com.example.onitama.api.ManejadorPartidaAPI
+import com.example.onitama.ui.perfil.Perfil_Activity
+import com.example.onitama.ui.tableros.Tableros_Activity
+import com.example.onitama.ui.tienda.Tienda_Activity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -202,13 +207,7 @@ fun MainMenuScreen(
         if(listaAmigosDesplegada) {
             cargaDatos = true
             listaAmigos = amigosAPI.obtenerAmigos(datosUsuario?.nombre ?: "")
-            
-            if (!esNuevaPartida) {
-                manejadorPartidaAPI.obtenerPartidasPausadas(datosUsuario?.nombre ?: "")
-            }
-            else {
-                cargaDatos = false
-            }
+            cargaDatos = false
         }
     }
 
@@ -494,118 +493,107 @@ fun MainMenuScreen(
 
         AnimatedVisibility(
             visible = listaAmigosDesplegada,
-            modifier = Modifier
-                .align(Alignment.Center)
+            modifier = Modifier.align(Alignment.Center)
         ) {
-            Surface(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White,
+                    .fillMaxWidth(0.9f) // Evita que toque los bordes de la pantalla
+                    .background(Color.White, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ){
-                        Text(
-                            text = if(esNuevaPartida) {
-                                "RETAR A UN AMIGO"
-                            }
-                            else {
-                                "SELECCIONAR RIVAL"
-                            },
-                            fontFamily = quattrocentoBold,
-                            fontSize = 16.sp,
-                            color = colorResource(id = R.color.azulFondo)
-                        )
-                        IconButton(
-                            onClick = {
-                                listaAmigosDesplegada = false
-                            }
-                        ) {
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            if (cargaDatos) {
-                Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                // CABECERA (Título e icono de cerrar)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "CARGANDO AMIGOS",
-                        textAlign = TextAlign.Center,
-                        color = Color.Gray
+                        text = if (esNuevaPartida) "RETAR A UN AMIGO" else "SELECCIONAR RIVAL",
+                        fontFamily = quattrocentoBold,
+                        fontSize = 16.sp,
+                        color = colorResource(id = R.color.azulFondo)
                     )
+                    IconButton(onClick = { listaAmigosDesplegada = false }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Cerrar",
+                            tint = Color.Gray
+                        )
+                    }
                 }
-            }
-            else if (listaAmigos.isEmpty()) {
-                Text(
-                    "NO TIENES AMIGOS",
-                    textAlign = TextAlign.Center,
-                    color = Color.Gray
-                )
-            }
-            else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(listaAmigos.size) { index ->
-                        val amigo = listaAmigos[index]
-                        Button(
-                            onClick = {
-                                if (esNuevaPartida) {
-                                    oponente = amigo.nombre
-                                    esperar = true
-                                    listaAmigosDesplegada = false
 
-                                    manejadorPartidaAPI.enviarInvitacion(
-                                        remitente = datosUsuario?.nombre ?: "",
-                                        destinatario = amigo.nombre
-                                    )
-                                }
-                                else {
-                                    amigoSeleccionadoParaReanudar = amigo
-                                    listaAmigosDesplegada = false
-                                    listaPartidasPausadaDesplegada = true
-                                }
-                            },
-                            modifier = Modifier 
-                                .fillMaxWidth(),
-                            colors = buttonColors(
-                                containerColor = colorResource(id = R.color.azulFondo)
-                            ),
-                            shape = RoundedCornerShape(12.dp)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // CONTENIDO VARIABLE (Carga, Vacío o Lista)
+                Box(modifier = Modifier.weight(1f, fill = false)) { // Permite que la lista sea scrolleable si es larga
+                    if (cargaDatos) {
+                        Box(
+                            Modifier.fillMaxWidth().height(100.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                            ) {
-                                Text(
-                                    amigo.nombre,
-                                    fontFamily = quattrocentoBold,
-                                    color = Color.Black
-                                )
-                                Text(
-                                    text = if (esNuevaPartida) {
-                                        "INVITAR PARTIDA"
-                                    }
-                                    else {
-                                        "SELECCIONAR PARTIDA"
+                            Text("CARGANDO AMIGOS", textAlign = TextAlign.Center, color = Color.Gray)
+                        }
+                    } else if (listaAmigos.isEmpty()) {
+                        Text(
+                            "NO TIENES AMIGOS",
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+                            textAlign = TextAlign.Center,
+                            color = Color.Gray
+                        )
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(listaAmigos.size) { index ->
+                                val amigo = listaAmigos[index]
+                                Button(
+                                    onClick = {
+                                        if (esNuevaPartida) {
+                                            oponente = amigo.nombre
+                                            esperar = true
+                                            listaAmigosDesplegada = false
+                                            manejadorPartidaAPI.enviarInvitacion(
+                                                remitente = datosUsuario?.nombre ?: "",
+                                                destinatario = amigo.nombre
+                                            )
+                                            val intent = Intent(context, Buscar_PartidaActivity::class.java).apply {
+                                                putExtra("MODO_JUEGO", "PRIVADA")
+                                            }
+                                            context.startActivity(intent)
+                                        } else {
+                                            amigoSeleccionadoParaReanudar = amigo
+                                            manejadorPartidaAPI.obtenerPartidasPausadas(
+                                                datosUsuario?.nombre ?: "",
+                                                amigo.nombre
+                                            )
+                                            listaAmigosDesplegada = false
+                                            listaPartidasPausadaDesplegada = true
+                                        }
                                     },
-                                    color = colorResource(
-                                        id = R.color.azulFondo
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.LightGray // Cambiado para que el texto sea legible
                                     ),
-                                    fontSize = 12.sp
-                                )
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            amigo.nombre,
+                                            fontFamily = quattrocentoBold,
+                                            color = colorResource(id = R.color.azulFondo)
+                                        )
+                                        Text(
+                                            text = if (esNuevaPartida) "INVITAR" else "REANUDAR",
+                                            color = Color.DarkGray,
+                                            fontSize = 12.sp,
+                                            fontFamily = quattrocentoBold
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -615,90 +603,100 @@ fun MainMenuScreen(
 
         AnimatedVisibility(
             visible = listaPartidasPausadaDesplegada,
-            modifier = Modifier
-                .align(Alignment.Center)
+            modifier = Modifier.align(Alignment.Center)
         ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White,
+            // 1. ENVOLVEMOS TODO EN UN COLUMN para que los elementos se apilen verticalmente
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f) // Un poco menos del ancho total para que no toque los bordes
+                    .background(Color.White, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ){
-                        Text(
-                            "REANUDAR PARTIDA PRIVADA",
-                            fontFamily = quattrocentoBold,
-                            fontSize = 16.sp,
-                            color = colorResource(id = R.color.azulFondo)
-                        )
-                        IconButton(
-                            onClick = {
-                                listaPartidasPausadaDesplegada = false
-                                amigoSeleccionadoParaReanudar = null
-                            }
-                        ){
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            val partidasPrivadasAmigo = listaPartidasPausadas.filter {
-                it.optString("oponente") == amigoSeleccionadoParaReanudar?.nombre
-            }
-
-            if (cargaDatos) {
-                Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                // CABECERA
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "BUSCANDO PARTIDAS PAUSADAS",
-                        textAlign = TextAlign.Center,
-                        color = Color.Gray
+                        "REANUDAR PARTIDA PRIVADA",
+                        fontFamily = quattrocentoBold,
+                        fontSize = 16.sp,
+                        color = colorResource(id = R.color.azulFondo)
                     )
+                    IconButton(
+                        onClick = {
+                            listaPartidasPausadaDesplegada = false
+                            amigoSeleccionadoParaReanudar = null
+                        }
+                    ) {
+                        // Añadimos un icono para que el botón de cerrar sea visible
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.Gray)
+                    }
                 }
-            } 
-            else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(partidasPrivadasAmigo) { partida ->
-                        val idPartida = partida.optInt("partida_id")
 
-                        Button(
-                            onClick = {
-                                oponente = amigoSeleccionadoParaReanudar?.nombre ?: ""
-                                esperar = true
-                                listaPartidasPausadaDesplegada = false
+                Spacer(modifier = Modifier.height(10.dp))
 
-                                manejadorPartidaAPI.solicitarReanudar(
-                                    remitente = datosUsuario?.nombre ?: "",
-                                    destinatario = oponente,
-                                    idPartida = idPartida
+                val partidasPrivadasAmigo = listaPartidasPausadas.filter {
+                    it.optString("oponente") == amigoSeleccionadoParaReanudar?.nombre
+                }
+
+                if (cargaDatos) {
+                    Box(
+                        Modifier.fillMaxWidth().height(100.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "BUSCANDO PARTIDAS PAUSADAS",
+                            textAlign = TextAlign.Center,
+                            color = Color.Gray
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        // Ajustamos el alto para que no intente ocupar toda la pantalla
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(partidasPrivadasAmigo) { partida ->
+                            val idPartida = partida.optInt("partida_id")
+                            val fecha = partida.optString("fecha_pausa", "") // Asumiendo que tienes este dato
+
+                            Button(
+                                onClick = {
+                                    oponente = amigoSeleccionadoParaReanudar?.nombre ?: ""
+                                    esperar = true
+                                    listaPartidasPausadaDesplegada = false
+
+                                    manejadorPartidaAPI.solicitarReanudar(
+                                        remitente = datosUsuario?.nombre ?: "",
+                                        destinatario = oponente,
+                                        idPartida = idPartida
+                                    )
+
+                                    val intent = Intent(context, Buscar_PartidaActivity::class.java).apply {
+                                        putExtra("MODO_JUEGO", "PRIVADA")
+                                    }
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                // 2. TEXTO DENTRO DEL BOTÓN (Para que no esté vacío)
+                                Text(
+                                    text = "Partida ID: $idPartida ${if(fecha.isNotEmpty()) " - $fecha" else ""}",
+                                    color = colorResource(id = R.color.azulFondo),
+                                    fontFamily = quattrocentoBold
                                 )
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            colors = buttonColors(
-                                containerColor = Color.LightGray
-                            )
-                        ) {
+                            }
                         }
                     }
                 }
             }
         }
 
-        AnimatedVisibility(
+        /*AnimatedVisibility(
             visible = esperar,
             modifier = Modifier
                 .align(Alignment.Center)
@@ -720,7 +718,7 @@ fun MainMenuScreen(
                         color = Color.Gray
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp)) 
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     CircularProgressIndicator(
                         color = colorResource(
@@ -730,7 +728,7 @@ fun MainMenuScreen(
                             .size(40.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp)) 
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
                         text = "ESPERANDO AMIGO...",
@@ -742,7 +740,7 @@ fun MainMenuScreen(
                     val minutos = tiempo / 60
                     val segundos = tiempo % 60
                     Text(
-                        text = String.format("%02d:%02.d", minutos, segundos),
+                        text = String.format("%02d:%02d", minutos, segundos),
                         fontFamily = quattrocentoBold,
                         fontSize = 30.sp,
                         color = Color.Black
@@ -766,10 +764,10 @@ fun MainMenuScreen(
                             fontFamily = quattrocentoBold,
                             color = Color.Black
                         )
-                    } 
+                    }
                 }
             }
-        }
+        }*/
 
         // ==========================================
         // 3. CABECERA (Contadores y Perfil)
@@ -791,22 +789,42 @@ fun MainMenuScreen(
                 )
 
 
-                //🛡️ PROTECCIÓN ANTI-CRASH: Si la imagen no existe (0), ponemos el logo por defecto
-                val idSeguro = if (imageResId != 0) imageResId else R.drawable.onitama_text
-
-                Image(
-                    painterResource(idSeguro),
-                    contentDescription = "Imagen de perfil",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .align(Alignment.CenterEnd)
-                        .clip(CircleShape)
-                        .clickable(onClick = {
-                            val intent = Intent(context, ProfileActivity::class.java)
-                            context.startActivity(intent)
-                        })
-                )
+                //Si la imagen no existe (0), ponemos la inicial del username
+                if (imageResId != 0) {
+                    Image(
+                        painter = painterResource(imageResId),
+                        contentDescription = "Imagen de perfil",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(80.dp)
+                            .align(Alignment.CenterEnd)
+                            .clip(CircleShape)
+                            .clickable(onClick = {
+                                val intent = Intent(context, Perfil_Activity::class.java)
+                                context.startActivity(intent)
+                            })
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .align(Alignment.CenterEnd)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                            .clickable(onClick = {
+                                val intent = Intent(context, Perfil_Activity::class.java)
+                                context.startActivity(intent)
+                            }),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = datosUsuario?.nombre?.take(1)?.uppercase() ?: "",
+                            color = colorResource(id = R.color.azulFondo),
+                            fontSize = 32.sp,
+                            fontFamily = quattrocentoBold
+                        )
+                    }
+                }
 
                 // B) Título del juego
                 Image(
@@ -879,7 +897,10 @@ fun MainMenuScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = {},
+                    onClick = {
+                        val intent = Intent(context, Tableros_Activity::class.java)
+                              context.startActivity(intent)
+                        (context as? Activity)?.finish()},
                     enabled = !esperar,
                     modifier = Modifier.size(60.dp)
                 ){
@@ -892,6 +913,7 @@ fun MainMenuScreen(
                             context, 
                             Cartas_activity::class.java)
                         context.startActivity(intent)
+                        (context as? Activity)?.finish()
                     },
                     enabled = !esperar,
                     modifier = Modifier.size(60.dp)
@@ -917,8 +939,8 @@ fun MainMenuScreen(
                 IconButton(
                     onClick = {
                         val intent = Intent(
-                            context, 
-                            Cartas_activity::class.java)
+                            context,
+                            Tienda_Activity::class.java)
                         context.startActivity(intent)
                         (context as? Activity)?.finish()
                     },

@@ -44,9 +44,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.onitama.AutoLogin
 import com.example.onitama.R
+import com.example.onitama.ui.activities.Buscar_PartidaActivity
 import com.example.onitama.ui.activities.MenuPrincipalActivity
 import com.example.onitama.ui.activities.cartas.Cartas_activity
 import com.example.onitama.ui.perfil.Perfil_Activity
+import com.example.onitama.ui.tableros.Tableros_Activity
+import com.example.onitama.ui.tienda.Tienda_Activity
+import kotlin.jvm.java
 
 /**
  * Pantalla de amigos.
@@ -235,8 +239,26 @@ fun PantallaAmigos(viewModel: ViewModelAmigos = viewModel()) {
                             esAmigo = esAmigo,
                             onSeguir = { viewModel.seguir(item.nombre) },
                             onDejarDeSeguir = { viewModel.dejarDeSeguir(item.nombre) },
-                            onPartidaPrivada = { viewModel.enviarPartidaPrivada(item.nombre) },
-                            onReanudar = { viewModel.solicitarReanudacion(item.nombre) }
+                            onPartidaPrivada = { 
+                                viewModel.enviarPartidaPrivada(item.nombre) 
+                                val intent = Intent (
+                                    context,
+                                    Buscar_PartidaActivity::class.java
+                                ).apply {
+                                    putExtra("MODO_JUEGO", "PRIVADA")
+                                }
+                                context.startActivity(intent)    
+                            },
+                            onReanudar = { 
+                                viewModel.solicitarReanudacion(item.nombre) 
+                                val intent = Intent (
+                                    context,
+                                    Buscar_PartidaActivity::class.java
+                                ).apply {
+                                    putExtra("MODO_JUEGO", "PRIVADA")
+                                }
+                                context.startActivity(intent) 
+                            }
                         )
                     }
                 }
@@ -262,7 +284,11 @@ fun PantallaAmigos(viewModel: ViewModelAmigos = viewModel()) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = {},
+                    onClick = {
+                        val intent = Intent(context, Tableros_Activity::class.java)
+                        context.startActivity(intent)
+                        (context as? Activity)?.finish()
+                    },
                     modifier = Modifier.size(60.dp)
                 ){
                     Image(painterResource(R.drawable.tablero),
@@ -281,8 +307,6 @@ fun PantallaAmigos(viewModel: ViewModelAmigos = viewModel()) {
                         contentDescription = "Cards")
                 }
 
-                Spacer(modifier = Modifier.width(80.dp)) // Hueco para el botón central
-
                 IconButton(
                     onClick = {
                         val intent = Intent(context, MenuPrincipalActivity::class.java)
@@ -294,10 +318,14 @@ fun PantallaAmigos(viewModel: ViewModelAmigos = viewModel()) {
                     Image(painterResource(R.drawable.espadas),
                         contentDescription = "Jugar")
                 }
+
+                Spacer(modifier = Modifier.width(80.dp))
+
+
                 IconButton(
                     onClick = {
-                        al intent = Intent(
-                            context, 
+                        val intent = Intent(
+                            context,
                             Tienda_Activity::class.java)
                         context.startActivity(intent)
                         (context as? Activity)?.finish()
@@ -309,13 +337,12 @@ fun PantallaAmigos(viewModel: ViewModelAmigos = viewModel()) {
                         contentDescription = "Tienda")
                 }
             }
-
-            // Botón central "Amigos" sobresaliendo
+            // Botón "Amigos" sobresaliendo
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 5.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .padding(bottom = 5.dp, end = 90.dp),
+                horizontalAlignment = Alignment.End
             ) {
                 IconButton(
                     onClick = {},
@@ -328,7 +355,7 @@ fun PantallaAmigos(viewModel: ViewModelAmigos = viewModel()) {
                     fontFamily = quattrocentoBold,
                     fontSize = 12.sp,
                     color = Color.White,
-                    modifier = Modifier.offset(y = (-8).dp)
+                    modifier = Modifier.offset(y = (-8).dp, x =(-5).dp)
                 )
             }
         }

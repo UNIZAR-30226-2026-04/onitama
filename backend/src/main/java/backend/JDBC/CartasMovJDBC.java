@@ -18,7 +18,7 @@ public final class CartasMovJDBC implements CartasMovDAO {
 
     public CartasMovJDBC() {
         try {
-            String url = "jdbc:postgresql://localhost:5432/postgres"; 
+            String url = "jdbc:postgresql://database:5432/postgres"; 
             String user = "postgres";
             String password = "postgres";
             

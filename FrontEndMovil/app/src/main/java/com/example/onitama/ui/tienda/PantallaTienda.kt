@@ -51,6 +51,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.font.FontWeight
+import com.example.onitama.ui.amigos.Amigos_Activity
+import com.example.onitama.ui.tableros.Tableros_Activity
+import kotlin.jvm.java
 
 @Composable
 fun PantallaTienda(viewModel: ViewModelTienda = viewModel()) {
@@ -250,7 +253,11 @@ fun PantallaTienda(viewModel: ViewModelTienda = viewModel()) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = {},
+                    onClick = {
+                        val intent = Intent(context, Tableros_Activity::class.java)
+                        context.startActivity(intent)
+                        (context as? Activity)?.finish()
+                    },
                     modifier = Modifier.size(60.dp)
                 ){
                     Image(painterResource(R.drawable.tablero),
@@ -269,8 +276,6 @@ fun PantallaTienda(viewModel: ViewModelTienda = viewModel()) {
                         contentDescription = "Cards")
                 }
 
-                Spacer(modifier = Modifier.width(80.dp)) // Hueco para el botón central
-
                 IconButton(
                     onClick = {
                         val intent = Intent(context, MenuPrincipalActivity::class.java)
@@ -284,7 +289,7 @@ fun PantallaTienda(viewModel: ViewModelTienda = viewModel()) {
                 }
                 IconButton(
                     onClick = {
-                        al intent = Intent(
+                        val intent = Intent(
                             context, 
                             Amigos_Activity::class.java)
                         context.startActivity(intent)
@@ -296,14 +301,15 @@ fun PantallaTienda(viewModel: ViewModelTienda = viewModel()) {
                         painterResource(R.drawable.amigos),
                         contentDescription = "Tienda")
                 }
+                Spacer(modifier = Modifier.width(80.dp))
             }
 
             // Botón central "Carrito" sobresaliendo
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 5.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .padding(bottom = 5.dp, end = 15.dp),
+                horizontalAlignment = Alignment.End
             ) {
                 IconButton(
                     onClick = {},
@@ -312,11 +318,11 @@ fun PantallaTienda(viewModel: ViewModelTienda = viewModel()) {
                     Image(painterResource(R.drawable.carrito), contentDescription = "Amigos")
                 }
                 Text(
-                    text = "AMIGOS",
+                    text = "TIENDA",
                     fontFamily = quattrocentoBold,
                     fontSize = 12.sp,
                     color = Color.White,
-                    modifier = Modifier.offset(y = (-8).dp)
+                    modifier = Modifier.offset(y = (-5).dp, x = (-5).dp)
                 )
             }
         }

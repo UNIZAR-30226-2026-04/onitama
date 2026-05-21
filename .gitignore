@@ -1,6 +1,4 @@
-<<<<<<< HEAD
 bin/
-=======
 # JAVA DONE
 
 # Compiled class file
@@ -31,8 +29,10 @@ replay_pid*
 
 # JAVASCRIPT TODO
 # KOTLIN DONE
->>>>>>> 6fa1b37ce5fc28744fa82950401c26f7440b1677
 backend/dependency-reduced-pom.xml
 backend/target/maven-archiver/pom.properties
 backend/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst
 backend/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst
+
+# extra
+practica5/*

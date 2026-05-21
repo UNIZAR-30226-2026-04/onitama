@@ -40,7 +40,7 @@ class ViewModelRegistro() : ViewModel() {
         _estadoUI.value = _estadoUI.value.copy(contrasenyaR = contrasenyaR)
     }
 
-    fun onAvatarChange(avatar: String){
+    fun onAvatarChange(avatar: String?){
         _estadoUI.value = _estadoUI.value.copy(avatar = avatar)
     }
 
@@ -118,7 +118,7 @@ class ViewModelRegistro() : ViewModel() {
             } catch (e: Exception) {
             _estadoUI.value = _estadoUI.value.copy(
                 isLoading = false,
-                error = e.message ?: "Error al registrar"
+                error = e.message ?: "Error al registrar, puede que ese usuario ya exista"
             )
             ManejadorGlobal.desconectar()
         }

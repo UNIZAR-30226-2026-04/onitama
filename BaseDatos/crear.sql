@@ -69,8 +69,7 @@ CREATE TABLE Amistades (
     Jugador_2 VARCHAR(100),
     PRIMARY KEY (Jugador_1, Jugador_2),
     FOREIGN KEY (Jugador_1) REFERENCES Jugador(Nombre_US),
-    FOREIGN KEY (Jugador_2) REFERENCES Jugador(Nombre_US),
-    CONSTRAINT orden_amistad CHECK (Jugador_1 < Jugador_2)
+    FOREIGN KEY (Jugador_2) REFERENCES Jugador(Nombre_US)
 );
 
 -- Notificaciones unificadas: amistad, invitación partida, pausa, reanudar

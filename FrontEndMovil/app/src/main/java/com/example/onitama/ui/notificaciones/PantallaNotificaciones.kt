@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.example.onitama.AutoLogin
 import com.example.onitama.R
 import com.example.onitama.api.Amigos
+import com.example.onitama.ui.activities.Buscar_PartidaActivity
 import com.example.onitama.ui.activities.MenuPrincipalActivity
 import com.example.onitama.ui.activities.cartas.Cartas_activity
 import com.example.onitama.ui.amigos.Amigos_Activity
@@ -60,6 +61,7 @@ fun PantallaNotificaciones(
     val context = LocalContext.current
     val datosUsuario by AutoLogin.sesion.collectAsState()
     val listaNotif by viewModel.notificaciones.collectAsState()
+    val listaNotifPartida by viewModel.notificacionesPartida.collectAsState()
 
     Box(
         modifier = Modifier
@@ -192,7 +194,7 @@ fun PantallaNotificaciones(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            if (listaNotif.isEmpty()) {
+            if (listaNotif.isEmpty() && listaNotifPartida.isEmpty()) {
                 Text(
                     text = "No tienes notificaciones pendientes",
                     fontFamily = quattrocentoBold,
@@ -207,108 +209,56 @@ fun PantallaNotificaciones(
                 ) {
                     items(listaNotif) { notif ->
                         NotificacionItem(
-                            notif = notif,
+                            notif = "${notif.remitente} te ha enviado una solicitud de amistad",
                             fontFamily = quattrocentoBold,
                             onAceptar = { viewModel.aceptar(notif, datosUsuario?.nombre ?: "") },
                             onRechazar = { viewModel.rechazar(notif) }
                         )
                     }
-                }
-            }
-        }
 
-        // ==========================================
-        // 3. BARRA INFERIOR DE TAREAS
-        // ==========================================
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter) // Se ancla abajo del todo
-        ) {
-            // Fondo y botones laterales de la barra
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(63.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(colorResource(id = R.color.azulBarraTareas)),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = {},
-                    modifier = Modifier.size(60.dp)
-                ) {
-                    Image(
-                        painterResource(R.drawable.tablero),
-                        contentDescription = "Skins"
-                    )
-                }
-                IconButton(
-                    onClick = {
-                        val intent = Intent(context, Cartas_activity::class.java)
-                        context.startActivity(intent)
-                        (context as? Activity)?.finish()
-                    },
+                    items(listaNotifPartida) { notif ->
+                        when (notif) {
+                            is Amigos.MensajeInvitacionPartida -> {
+                                NotificacionItem(
+                                    notif = "${notif.remitente} te ha invitado a una partida privada",
+                                    fontFamily = quattrocentoBold,
+                                    onAceptar = {
+                                        viewModel.aceptarInvitacionPartida(notif.idNotificacion, datosUsuario?.nombre ?: "")
+                                        val intent = Intent (
+                                            context,
+                                            Buscar_PartidaActivity::class.java
+                                        ).apply {
+                                            putExtra("MODO_JUEGO", "PRIVADA")
+                                        }
+                                        context.startActivity(intent)
+                                    },
+                                    onRechazar = { viewModel.rechazarInvitacionPartida(notif.idNotificacion, datosUsuario?.nombre ?: "") }
+                                )
+                            }
 
-                    modifier = Modifier.size(60.dp)
-                ) {
-                    Image(
-                        painterResource(R.drawable.cards),
-                        contentDescription = "Cards"
-                    )
-                }
+                            is Amigos.MensajeSolicitudReanudar -> {
+                                NotificacionItem(
+                                    notif = "${notif.remitente} quiere reanudar una partida privada",
+                                    fontFamily = quattrocentoBold,
+                                    onAceptar = { 
+                                        viewModel.aceptarReanudacionPartida(notif.idNotificacion, datosUsuario?.nombre ?: "") 
+                                        val intent = Intent (
+                                            context,
+                                            Buscar_PartidaActivity::class.java
+                                        ).apply {
+                                            putExtra("MODO_JUEGO", "PRIVADA")
+                                            addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY) //así la activity de búsqueda se borrará en cuanto la partida empiece
+                                        }
+                                        context.startActivity(intent)
+                                    },
+                                    onRechazar = { viewModel.rechazarReanudacionPartida(notif.idNotificacion, datosUsuario?.nombre ?: "") }
+                                )
+                            }
 
-                Spacer(modifier = Modifier.width(80.dp)) // Hueco para el botón central
-
-                IconButton(
-                    onClick = {
-                        val intent = Intent(context, Amigos_Activity::class.java)
-                        context.startActivity(intent)
-                        (context as? Activity)?.finish()
-                    },
-                    modifier = Modifier.size(60.dp)
-                ) {
-                    Image(
-                        painterResource(R.drawable.amigos),
-                        contentDescription = "Amigos"
-                    )
+                            else -> {}
+                        }
+                    }
                 }
-                IconButton(
-                    onClick = {},
-                    modifier = Modifier.size(60.dp)
-                ) {
-                    Image(
-                        painterResource(R.drawable.carrito),
-                        contentDescription = "Tienda"
-                    )
-                }
-            }
-
-            // Botón central "A JUGAR" sobresaliendo
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 5.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                IconButton(
-                    onClick = {
-                        val intent = Intent(context, MenuPrincipalActivity::class.java)
-                        context.startActivity(intent)
-                        (context as? Activity)?.finish()
-                    },
-                    modifier = Modifier.size(70.dp)
-                ) {
-                    Image(painterResource(R.drawable.espadas), contentDescription = "Jugar")
-                }
-                Text(
-                    text = "¡A JUGAR!",
-                    fontFamily = quattrocentoBold,
-                    fontSize = 12.sp,
-                    color = Color.White,
-                    modifier = Modifier.offset(y = (-8).dp)
-                )
             }
         }
     }
@@ -316,7 +266,7 @@ fun PantallaNotificaciones(
 
 @Composable
 fun NotificacionItem(
-    notif: Amigos.MensajeSolicitudAmistadS,
+    notif: String,
     fontFamily: FontFamily,
     onAceptar: () -> Unit,
     onRechazar: () -> Unit
@@ -329,7 +279,7 @@ fun NotificacionItem(
             .padding(16.dp)
     ) {
         Text(
-            text = "${notif.remitente} te ha enviado una solicitud de amistad",
+            text = notif,
             fontFamily = fontFamily,
             fontSize = 16.sp,
             color = Color.Black

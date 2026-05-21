@@ -98,8 +98,16 @@ fun PantallaInicioSesion(
                         text = "Iniciar sesión",
                         style = MaterialTheme.typography.titleLarge
                     )
-
-                    Spacer(modifier = Modifier.height(32.dp))
+                    if(estado.error != null){
+                        Text(
+                            text = estado.error!!,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    else{
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
 
                     // Campo para introducir el correo electrónico
                     OutlinedTextField(

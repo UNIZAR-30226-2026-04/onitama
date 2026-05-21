@@ -1,6 +1,8 @@
 package com.example.onitama.ui.tienda
 
+import android.content.Context
 import android.util.Log
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.onitama.api.ManejadorGlobal
@@ -55,6 +57,7 @@ class ViewModelTienda : ViewModel() {
                         try {
                             val msg = jsonSerializer.decodeFromString<Skin.MensajeCompraSkinOk>(json.toString())
                             _cores.value = msg.cores
+                            com.example.onitama.AutoLogin.actualizarCores(msg.cores)
                             _skins.value = _skins.value.map {
                                 if (it.skin_id == msg.skin_id) it.copy(owned = true) else it
                             }
@@ -66,6 +69,7 @@ class ViewModelTienda : ViewModel() {
                         try {
                             val msg = jsonSerializer.decodeFromString<Skin.MensajeSkinActivada>(json.toString())
                             _skinActivaId.value = msg.skin_activa
+                            com.example.onitama.AutoLogin.actualizarSkin(msg.skin_activa)
                             _skins.value = _skins.value.map {
                                 it.copy(es_activa = it.skin_id == msg.skin_activa)
                             }
