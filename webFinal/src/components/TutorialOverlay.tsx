@@ -1,8 +1,8 @@
 "use client";
-// OJO: La movida principal de este overlay es no usar opacidades raras ni cosas z-index raras para tapar los fondos.
+// OJO: La accion principal de este overlay es no usar opacidades raras ni cosas z-index raras para tapar los fondos.
 // Lo que hacemos es que el spotlight colapsa a 0x0 cuando pasa de un paso a otro y se vuelve a inflar.
 // Así nos libramos de los fogonazos espantosos que pegaba la pantalla antes al saltar componentes.
-// El tooltip hace un fade suave y ya, no os rayeis tocando los estilos en linea q se rompen facil.
+// El tooltip hace un fade suave y ya, no tocar los estilos en linea que se rompen facil.
 import React, { useEffect, useState, useCallback, useRef } from "react";
 
 export interface PasoTutorial {

@@ -102,7 +102,7 @@ function getMockOponente(dificultad: Dificultad) {
  *             Se adapta según skin + equipo.
  */
 function MiniGrid({
-  carta, equipo, colorDots = "#3b82f6", size = 5,
+  carta, equipo, colorDots = "#00c8ff", size = 5,
 }: {
   carta: CartaMovDef; equipo: EquipoID; colorDots?: string; size?: number;
 }) {
@@ -132,17 +132,17 @@ function MiniGrid({
           return (
             <div
               key={`${f}-${c}`}
-              className={`rounded-[1px] ${esC ? "bg-[#9a8a72]" : "bg-[#c8bba8]"}`}
+              className={`rounded-[1px]`}
               style={{
                 width: size,
                 height: size,
+                background: esC ? "#b85c38" : esA ? colorDots : "rgba(196,181,160,0.2)",
                 ...(esA
                   ? {
-                    background: colorDots,
                     boxShadow:
                       colorDots === "#f8fafc"
                         ? "inset 0 0 0 1px rgba(15,23,42,0.45)"
-                        : undefined,
+                        : "0 0 4px " + colorDots,
                   }
                   : {}),
               }}
@@ -157,7 +157,7 @@ function MiniGrid({
 // ─── Tarjeta de movimiento ────────────────────────────────────────────────────
 
 function CartaBtn({
-  carta, equipo, colorDots = "bg-blue-500",
+  carta, equipo, colorDots = "#00c8ff",
   seleccionada = false, onClick, desactivada = false,
   size = "default",
 }: {
@@ -179,23 +179,23 @@ function CartaBtn({
       disabled={desactivada}
       title={carta.nombre}
       className={`flex items-stretch ${gap} rounded-xl ${pad} border-2 transition-all duration-150 ${titleCls} w-full overflow-hidden ${seleccionada
-        ? "border-blue-400 bg-blue-900/60 text-blue-100 scale-[1.03]"
+        ? "border-[#00c8ff] bg-[rgba(0,200,255,0.15)] text-[#f0ebe1] scale-[1.03] shadow-[0_0_15px_rgba(0,200,255,0.2)]"
         : desactivada
-          ? "border-[#c8b89a]/50 bg-[#f5ede0] text-[#5c4a35]/60 cursor-default"
-          : "border-[#c8b89a] bg-[#f5ede0] text-[#2d1a0a] hover:bg-[#ede0cc] hover:border-[#a8906a] cursor-pointer"
+          ? "border-[rgba(196,181,160,0.1)] bg-[rgba(10,21,32,0.4)] text-[#8a9bb0]/50 cursor-default grayscale"
+          : "border-[rgba(196,181,160,0.2)] bg-[rgba(10,21,32,0.7)] text-[#f0ebe1] hover:bg-[rgba(196,181,160,0.1)] hover:border-[rgba(196,181,160,0.4)] cursor-pointer backdrop-blur-md"
         }`}
     >
-      <div className={`relative ${imgBox} shrink-0 rounded-lg overflow-hidden bg-[#2d1a0a]/15 border border-[#c8b89a]/30`}>
+      <div className={`relative ${imgBox} shrink-0 rounded-lg overflow-hidden bg-[rgba(196,181,160,0.05)] border border-[rgba(196,181,160,0.15)]`}>
         <Image
           src={getImagenCarta(carta.nombre)}
           alt={carta.nombre}
           fill
-          className={compact ? "object-contain p-0.5" : "object-contain p-1"}
+          className={compact ? "object-contain p-0.5 filter drop-shadow-md" : "object-contain p-1 filter drop-shadow-md"}
           sizes={imgSizes}
         />
       </div>
       <div className="flex flex-col gap-0.5 min-w-0 flex-1 justify-center items-center">
-        <span className={`font-bold uppercase tracking-wide leading-none ${titleCls} truncate text-center`}>
+        <span className={`font-bold uppercase tracking-wide leading-none ${titleCls} truncate text-center ${seleccionada ? "text-[#00c8ff]" : "text-[#c4b5a0]"}`}>
           {carta.nombre}
         </span>
         <MiniGrid carta={carta} equipo={equipo} colorDots={colorDots} size={gridSize} />
@@ -218,30 +218,30 @@ function CartaCola({
   return (
     <div className="flex flex-col items-center gap-1">
       <div
-        className={`flex items-center gap-2 rounded-xl px-3 py-2 border transition-all ${esLaSiguiente
-          ? "border-yellow-600 bg-yellow-200 text-yellow-900 shadow-md scale-[1.02]"
-          : "border-[#c8b89a]/60 bg-[#f5ede0] text-[#2d1a0a]"
+        className={`flex items-center gap-2 rounded-xl px-3 py-2 border transition-all backdrop-blur-sm ${esLaSiguiente
+          ? "border-[#b85c38] bg-[rgba(184,92,56,0.15)] text-[#f0ebe1] shadow-[0_0_10px_rgba(184,92,56,0.2)] scale-[1.02]"
+          : "border-[rgba(196,181,160,0.15)] bg-[rgba(10,21,32,0.5)] text-[#8a9bb0]"
           }`}
         title={carta.nombre}
       >
-        <div className="relative w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-white/50">
+        <div className="relative w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-[rgba(196,181,160,0.05)] border border-[rgba(196,181,160,0.1)]">
           <Image
             src={getImagenCarta(carta.nombre)}
             alt={carta.nombre}
             fill
-            className="object-contain p-0.5"
+            className="object-contain p-0.5 filter drop-shadow-sm"
             sizes="40px"
           />
         </div>
         <div className="flex flex-col gap-0.5">
-          <span className="text-[10px] font-bold uppercase tracking-wide truncate">
+          <span className="text-[10px] font-bold uppercase tracking-wide truncate text-[#c4b5a0]">
             {carta.nombre}
           </span>
           <MiniGrid carta={carta} equipo={equipo} colorDots={colorDots} size={5} />
         </div>
       </div>
       {esLaSiguiente && (
-        <span className="text-[9px] font-bold uppercase tracking-widest text-yellow-600/90">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-[#b85c38]">
           Siguiente
         </span>
       )}
@@ -269,20 +269,24 @@ function Celda({
   const esMia = esTrampaEquipo === miEquipoActual && !esDisparada;
 
   let bg = baseClase;
-  if (esDisparada) bg = `${baseClase} cursor-not-allowed ring-1 ring-inset ring-stone-700/40`;
-  else if (esSeleccionada) bg = "bg-yellow-300";
-  else if (esMovimientoValido) bg = "bg-[#93c5fd] cursor-pointer hover:bg-blue-300";
-  else if (esZonaAccion && !ficha) bg = "bg-green-300/80 cursor-pointer hover:bg-green-400";
-  else if (esObjetivoAccion) bg = "bg-red-400/80 cursor-pointer hover:bg-red-500 animate-pulse";
-  else if (esZonaAccion) bg = "bg-green-200/50 cursor-pointer hover:bg-green-300";
-  else if (esUltimoMov) bg = "bg-yellow-100";
+  let customBorder = bordeClase;
+  if (esDisparada) bg = `${baseClase} cursor-not-allowed ring-1 ring-inset ring-[rgba(184,92,56,0.3)] grayscale`;
+  else if (esSeleccionada) bg = "bg-[rgba(184,92,56,0.8)] shadow-[inset_0_0_20px_rgba(184,92,56,0.8)]";
+  else if (esMovimientoValido) {
+    bg = "bg-[rgba(0,200,255,0.15)] cursor-pointer hover:bg-[rgba(0,200,255,0.3)]";
+    customBorder = "border-[rgba(0,200,255,0.4)]";
+  }
+  else if (esZonaAccion && !ficha) bg = "bg-[rgba(16,185,129,0.25)] cursor-pointer hover:bg-[rgba(16,185,129,0.4)]";
+  else if (esObjetivoAccion) bg = "bg-[rgba(239,68,68,0.3)] cursor-pointer hover:bg-[rgba(239,68,68,0.5)] animate-pulse";
+  else if (esZonaAccion) bg = "bg-[rgba(16,185,129,0.15)] cursor-pointer hover:bg-[rgba(16,185,129,0.25)]";
+  else if (esUltimoMov) bg = "bg-[rgba(196,181,160,0.15)] shadow-[inset_0_0_15px_rgba(196,181,160,0.1)]";
 
   return (
     <button
       type="button"
       onClick={esDisparada ? undefined : onClick}
       disabled={esDisparada}
-      className={`aspect-square flex items-center justify-center relative border transition-colors duration-100 ${bordeClase} ${bg} overflow-hidden ${esMia ? "ring-2 ring-inset ring-red-600" : ""}`}
+      className={`aspect-square flex items-center justify-center relative border transition-colors duration-150 ${customBorder} ${bg} overflow-hidden ${esMia ? "ring-2 ring-inset ring-[rgba(184,92,56,0.8)]" : ""}`}
     >
       {/* Casilla disparada: lápida (casilla sigue injugable) */}
       {esDisparada && (
@@ -1557,7 +1561,7 @@ function PartidaInterna({
   const boardStyle = getBoardStyle(skinActiva);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "#111d2c" }}>
+    <div translate="no" className="h-screen flex flex-col overflow-hidden" style={{ background: "#111d2c" }}>
       <TutorialOverlay pasos={pasosTutorialJuego} activo={tutorialActivo} onFinish={() => setTutorialActivo(false)} />
 
       {/* ═══ HEADER ════════════════════════════════════════════════════════ */}
@@ -1590,8 +1594,8 @@ function PartidaInterna({
 
       {/* ═══ MODAL: FIN DE PARTIDA ══════════════════════════════════════════ */}
       {hayFinPartida && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-10 flex flex-col items-center gap-5 shadow-2xl max-w-xs w-full mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-[rgba(10,21,32,0.9)] backdrop-blur-md border border-[rgba(0,200,255,0.2)] shadow-[0_0_50px_rgba(0,200,255,0.15)] rounded-2xl p-10 flex flex-col items-center gap-5 max-w-xs w-full mx-4">
             <div className="relative w-20 h-20 shrink-0">
               <Image
                 src={esVictoria ? "/emoteVictoria.png" : "/emoteDerrota.png"}
@@ -1600,17 +1604,17 @@ function PartidaInterna({
                 className="object-contain"
               />
             </div>
-            <h2 className="text-2xl font-bold text-white uppercase tracking-widest text-center">
+            <h2 className="text-2xl font-bold text-[#f0ebe1] uppercase tracking-widest text-center">
               {esVictoria ? "¡Victoria!" : "Derrota"}
             </h2>
-            <p className="text-white/50 text-xs uppercase tracking-widest">{razonFinLabel}</p>
-            <p className="text-white/60 text-sm text-center">
+            <p className="text-[#8a9bb0] text-xs uppercase tracking-widest">{razonFinLabel}</p>
+            <p className="text-[#c4b5a0] text-sm text-center">
               {descripcionFin}
             </p>
             <button
               type="button"
               onClick={volverAPartidas}
-              className="w-full py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-[#e8e8e8] text-[#1a2d4a] hover:bg-white transition-all"
+              className="btn-oni-primary w-full py-3"
             >
               Volver a partidas
             </button>
@@ -1639,23 +1643,23 @@ function PartidaInterna({
 
       {/* ═══ OVERLAY: TIEMPO AGOTADO (pausa/cancelación automática) ════════ */}
       {partidaInterrumpida && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-10 flex flex-col items-center gap-5 shadow-2xl max-w-xs w-full mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-[rgba(10,21,32,0.9)] backdrop-blur-md border border-[rgba(0,200,255,0.2)] shadow-[0_0_50px_rgba(0,200,255,0.15)] rounded-2xl p-10 flex flex-col items-center gap-5 max-w-xs w-full mx-4">
             <div className="text-5xl">⏰</div>
-            <h2 className="text-2xl font-bold text-white uppercase tracking-widest text-center">
+            <h2 className="text-2xl font-bold text-[#f0ebe1] uppercase tracking-widest text-center">
               Tiempo agotado
             </h2>
             {partidaInterrumpida.tipo === "PAUSADA" ? (
               <>
-                <p className="text-white/50 text-xs uppercase tracking-widest">PARTIDA PAUSADA</p>
-                <p className="text-white/60 text-sm text-center">
+                <p className="text-[#8a9bb0] text-xs uppercase tracking-widest">PARTIDA PAUSADA</p>
+                <p className="text-[#c4b5a0] text-sm text-center">
                   Se acabó el tiempo. La partida privada ha quedado pausada y podréis reanudarla cuando queráis.
                 </p>
               </>
             ) : (
               <>
-                <p className="text-white/50 text-xs uppercase tracking-widest">PARTIDA CANCELADA</p>
-                <p className="text-white/60 text-sm text-center">
+                <p className="text-[#8a9bb0] text-xs uppercase tracking-widest">PARTIDA CANCELADA</p>
+                <p className="text-[#c4b5a0] text-sm text-center">
                   Se acabó el tiempo. La partida pública ha sido cancelada sin ganador.
                 </p>
               </>
@@ -1667,7 +1671,7 @@ function PartidaInterna({
                 desconectarPartida();
                 router.push("/partidas");
               }}
-              className="w-full py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-[#e8e8e8] text-[#1a2d4a] hover:bg-white transition-all"
+              className="btn-oni-primary w-full py-3"
             >
               Volver al lobby
             </button>
@@ -1677,27 +1681,27 @@ function PartidaInterna({
 
       {/* ═══ MODAL: CONFIRMAR ABANDONO ══════════════════════════════════════ */}
       {mostrarModalAbandono && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm">
-          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-[rgba(10,21,32,0.9)] backdrop-blur-md border border-[rgba(239,68,68,0.3)] shadow-[0_0_50px_rgba(239,68,68,0.15)] rounded-2xl p-8 flex flex-col items-center gap-5 max-w-sm w-full mx-4">
             <span className="text-4xl">⚠️</span>
-            <h2 className="text-xl font-bold text-white uppercase tracking-widest text-center">
+            <h2 className="text-xl font-bold text-[#f0ebe1] uppercase tracking-widest text-center">
               ¿Abandonar partida?
             </h2>
-            <p className="text-white/60 text-sm text-center">
+            <p className="text-[#c4b5a0] text-sm text-center">
               Si abandonas, perderás la partida y tu oponente será declarado ganador.
             </p>
             <div className="flex gap-3 w-full">
               <button
                 type="button"
                 onClick={() => setMostrarModalAbandono(false)}
-                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
+                className="btn-oni-ghost flex-1 py-3"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleConfirmarAbandonar}
-                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-red-700 text-white hover:bg-red-600 transition-colors"
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-[rgba(239,68,68,0.8)] text-white hover:bg-[rgba(239,68,68,1)] transition-colors"
               >
                 Abandonar
               </button>
@@ -1708,27 +1712,27 @@ function PartidaInterna({
 
       {/* ═══ MODAL: SOLICITAR PAUSA (PRIVADA) ═══════════════════════════════ */}
       {mostrarModalPausa && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm">
-          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-[rgba(10,21,32,0.9)] backdrop-blur-md border border-[rgba(245,158,11,0.3)] shadow-[0_0_50px_rgba(245,158,11,0.15)] rounded-2xl p-8 flex flex-col items-center gap-5 max-w-sm w-full mx-4">
             <span className="text-4xl">⏸️</span>
-            <h2 className="text-xl font-bold text-white uppercase tracking-widest text-center">
+            <h2 className="text-xl font-bold text-[#f0ebe1] uppercase tracking-widest text-center">
               ¿Solicitar pausa?
             </h2>
-            <p className="text-white/60 text-sm text-center">
+            <p className="text-[#c4b5a0] text-sm text-center">
               Se enviará una solicitud de pausa a tu rival. Si acepta, la partida quedará pausada para reanudarla más adelante.
             </p>
             <div className="flex gap-3 w-full">
               <button
                 type="button"
                 onClick={() => setMostrarModalPausa(false)}
-                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
+                className="btn-oni-ghost flex-1 py-3"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleConfirmarPausa}
-                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-amber-700 text-white hover:amber-600 transition-colors"
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-[rgba(245,158,11,0.8)] text-white hover:bg-[rgba(245,158,11,1)] transition-colors"
               >
                 Solicitar pausa
               </button>
@@ -1739,27 +1743,27 @@ function PartidaInterna({
 
       {/* ═══ MODAL: SOLICITUD DE PAUSA ENTRANTE ═════════════════════════════ */}
       {solicitudPausaEntrante && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm">
-          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-[rgba(10,21,32,0.9)] backdrop-blur-md border border-[rgba(245,158,11,0.3)] shadow-[0_0_50px_rgba(245,158,11,0.15)] rounded-2xl p-8 flex flex-col items-center gap-5 max-w-sm w-full mx-4">
             <span className="text-4xl">⏸️</span>
-            <h2 className="text-xl font-bold text-white uppercase tracking-widest text-center">
+            <h2 className="text-xl font-bold text-[#f0ebe1] uppercase tracking-widest text-center">
               Solicitud de pausa
             </h2>
-            <p className="text-white/60 text-sm text-center">
-              <span className="text-white font-semibold">@{solicitudPausaEntrante.remitente}</span> quiere pausar la partida para reanudarla más adelante. ¿Aceptas?
+            <p className="text-[#c4b5a0] text-sm text-center">
+              <span className="text-[#f0ebe1] font-semibold">@{solicitudPausaEntrante.remitente}</span> quiere pausar la partida para reanudarla más adelante. ¿Aceptas?
             </p>
             <div className="flex gap-3 w-full">
               <button
                 type="button"
                 onClick={handleRechazarPausaEntrante}
-                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
+                className="btn-oni-ghost flex-1 py-3"
               >
                 Rechazar
               </button>
               <button
                 type="button"
                 onClick={handleAceptarPausaEntrante}
-                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-amber-700 text-white hover:bg-amber-600 transition-colors"
+                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-[rgba(245,158,11,0.8)] text-white hover:bg-[rgba(245,158,11,1)] transition-colors"
               >
                 Aceptar
               </button>
@@ -1774,7 +1778,7 @@ function PartidaInterna({
         {/* ─── PANEL IZQUIERDO: oponente ──────────────────────────────────── */}
         {/* El oponente siempre es el equipo contrario al jugador local */}
         {/* Equipo 1 = Azul, Equipo 2 = Rojo */}
-        <aside id="tutorial-oponente" className="w-64 shrink-0 flex flex-col gap-3 px-3 pt-3 pb-2 bg-[#162235] border-r border-white/10 overflow-hidden min-h-0">
+        <aside id="tutorial-oponente" className="w-64 shrink-0 flex flex-col gap-3 px-3 pt-3 pb-2 bg-[rgba(10,21,32,0.6)] backdrop-blur-md border-r border-[rgba(0,200,255,0.15)] overflow-hidden min-h-0">
           <div className="flex flex-col items-center gap-1">
             <div className={`${!esModoServidor && nombreOponente.startsWith("Iron Bot") ? "w-16 h-16" : "w-11 h-11"} rounded-full overflow-hidden shrink-0 ${!esModoServidor && nombreOponente.startsWith("Iron Bot")
               ? "bg-transparent border-0"
@@ -1874,10 +1878,10 @@ function PartidaInterna({
         </aside>
 
         {/* ─── CENTRO: tablero + cola de cartas ───────────────────────────── */}
-        <main id="tutorial-tablero" className="flex-1 bg-[#dbeafe] flex flex-col items-center justify-center gap-2 px-3 min-h-0 min-w-0 overflow-hidden">
+        <main id="tutorial-tablero" className="flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0 min-w-0 overflow-hidden relative" style={{ background: "radial-gradient(ellipse at center, rgba(10,21,32,1) 0%, rgba(5,13,21,1) 100%)" }}>
 
           {estado.modoAccion && (
-            <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest animate-bounce shadow-md">
+            <div className="bg-[rgba(184,92,56,0.15)] border border-[rgba(184,92,56,0.5)] text-[#f0ebe1] px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest animate-bounce shadow-[0_0_15px_rgba(184,92,56,0.2)]">
               {estado.modoAccion === "REVIVIR" && "✨ Selecciona una casilla vacía en tu mitad del campo para colocar un peón"}
               {estado.modoAccion === "SALVAR_REY" && "👑 Selecciona una casilla vacía en tu mitad del campo para mover al Rey"}
               {estado.modoAccion === "SACRIFICIO_PROPIO" && "🩸 Paso 1: Selecciona un peón propio para sacrificar"}
@@ -1888,7 +1892,7 @@ function PartidaInterna({
 
           <div className="relative shrink-0" style={{ width: "min(min(52vh, 440px), calc(100vw - 520px))", aspectRatio: "1" }}>
             <div
-              className="grid border-2 border-[#1a2d4a]/30 shadow-2xl bg-white w-full h-full"
+              className="grid border border-[rgba(0,200,255,0.15)] shadow-[0_0_40px_rgba(0,200,255,0.05)] bg-[rgba(10,21,32,0.6)] backdrop-blur-md w-full h-full rounded-sm overflow-hidden"
               style={{
                 gridTemplateColumns: `repeat(${DIM}, 1fr)`,
               }}
@@ -1914,11 +1918,11 @@ function PartidaInterna({
                   const esBlanca = (fila + col) % 2 === 0;
                   const baseClase =
                     boardStyle === "ajedrez"
-                      ? (esBlanca ? "bg-[#3a3a3a] hover:bg-[#4a4a4a]" : "bg-[#c8c5c1] hover:bg-[#b8b5b1]")
+                      ? (esBlanca ? "bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)]" : "bg-[rgba(0,0,0,0.4)] hover:bg-[rgba(0,0,0,0.5)]")
                       : boardStyle === "clasico-futbol"
-                        ? "bg-emerald-700/90 hover:bg-emerald-600/90"
-                        : "bg-gray-100 hover:bg-gray-200";
-                  const bordeClase = boardStyle === "clasico-futbol" ? "border-white/35" : "border-gray-300";
+                        ? "bg-emerald-900/90 hover:bg-emerald-800/90"
+                        : "bg-[rgba(255,255,255,0.02)] hover:bg-[rgba(255,255,255,0.06)]";
+                  const bordeClase = boardStyle === "clasico-futbol" ? "border-white/10" : "border-[rgba(255,255,255,0.05)]";
 
                   const enMiMitadCelda = miEquipoActual === 1 ? fila <= 3 : fila >= 3;
                   let esZonaAcc = false;
@@ -1971,8 +1975,8 @@ function PartidaInterna({
             )}
           </div>
 
-          <div id="tutorial-mazo" className="flex items-center justify-center gap-2 shrink-0">
-            <p className="text-[#1a2d4a]/70 font-bold text-[9px] uppercase tracking-widest shrink-0">Mazo:</p>
+          <div id="tutorial-mazo" className="flex items-center justify-center gap-2 shrink-0 z-10">
+            <p className="text-[#8a9bb0] font-bold text-[9px] uppercase tracking-widest shrink-0">Mazo:</p>
             {estado.cartasSiguientes.filter(Boolean).map((carta, i) => {
               // Color según el equipo que recibirá esa carta al salir de la cola.
               // i=0 la recibe el equipo que mueve ahora; i=1 el contrario; i=2 el actual...
@@ -1994,7 +1998,7 @@ function PartidaInterna({
         </main>
 
         {/* ─── PANEL DERECHO: acciones del jugador ────────────────────────── */}
-        <aside id="tutorial-panel-acciones" className="w-64 shrink-0 flex flex-col min-h-0 gap-2 px-3 pt-3 pb-3 bg-[#162235] border-l border-white/10 overflow-hidden">
+        <aside id="tutorial-panel-acciones" className="w-64 shrink-0 flex flex-col min-h-0 gap-2 px-3 pt-3 pb-3 bg-[rgba(10,21,32,0.6)] backdrop-blur-md border-l border-[rgba(0,200,255,0.15)] overflow-hidden">
           {/* Botón ABANDONAR (reemplaza PAUSAR) */}
           <button
             type="button"
@@ -2199,8 +2203,8 @@ function PartidaInterna({
       {/* ═══ MODAL PARA ELEGIR CARTA DE ACCIÓN ════════════════════════════════════════ */}
       {estado.fasePartida === "ELEGIR_CARTA_ACCION" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#1a2d4a] border border-[#a8906a]/50 rounded-2xl p-8 flex flex-col items-center gap-5 max-w-lg w-full mx-4 relative overflow-hidden shadow-[0_0_50px_rgba(30,58,138,0.3)]">
-            <h2 className="text-xl font-bold text-[#f5ede0] uppercase tracking-widest text-center shadow-sm">
+          <div className="bg-[rgba(10,21,32,0.9)] backdrop-blur-md border border-[rgba(0,200,255,0.2)] shadow-[0_0_50px_rgba(0,200,255,0.15)] rounded-2xl p-8 flex flex-col items-center gap-5 max-w-lg w-full mx-4 relative overflow-hidden">
+            <h2 className="text-xl font-bold text-[#f0ebe1] uppercase tracking-widest text-center shadow-sm">
               Selecciona tu Carta de Acción
             </h2>
             <div className="flex flex-wrap gap-4 w-full justify-center">

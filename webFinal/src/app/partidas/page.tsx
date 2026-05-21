@@ -917,66 +917,103 @@ export default function PartidasPage() {
   const notifPendientes = notificaciones.length;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div translate="no" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#0a1520" }}>
       {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <header className="bg-[#1a2d4a] px-6 py-3 flex items-center justify-between shrink-0 gap-4">
-        <div className="flex items-center" aria-label="Onitama">
+      <header style={{
+        background: "rgba(10,21,32,0.97)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid rgba(0,200,255,0.08)",
+        padding: "0 28px",
+        height: 64,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexShrink: 0,
+        position: "relative",
+        gap: 16,
+      }}>
+        {/* Accent line top */}
+        <div aria-hidden style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(to right, transparent, rgba(184,92,56,0.7) 30%, rgba(201,168,76,0.5) 60%, transparent)", pointerEvents:"none" }} />
+
+        <div style={{ display:"flex", alignItems:"center" }} aria-label="Onitama">
           <Image
             src="/nombre.png"
             alt="Onitama"
             width={130}
             height={36}
             priority
-            className="h-9 w-auto object-contain"
+            style={{ height: 34, width: "auto", objectFit: "contain" }}
           />
         </div>
 
-        <div id="tutorial-header-info" className="flex items-center gap-4 sm:gap-6 min-w-0 flex-1 justify-end">
+        <div id="tutorial-header-info" style={{ display:"flex", alignItems:"center", gap: 20, flex: 1, justifyContent: "flex-end" }}>
+          {/* Avatar */}
           <button
             type="button"
             onClick={() => handleMenuClick("cuenta")}
-            className={`w-11 h-11 shrink-0 rounded-full border-2 flex items-center justify-center overflow-hidden transition-colors ${panelActivo === "cuenta"
-              ? "bg-white/20 border-white/60"
-              : "bg-[#2a4a6a] border-white/30 hover:bg-white/10"
-              }`}
+            style={{
+              width: 40, height: 40, flexShrink: 0, borderRadius: "50%",
+              border: panelActivo === "cuenta" ? "2px solid #b85c38" : "2px solid rgba(196,181,160,0.25)",
+              overflow: "hidden", background: "rgba(26,45,74,0.6)",
+              cursor: "pointer", transition: "border-color 0.2s ease",
+              boxShadow: panelActivo === "cuenta" ? "0 0 12px rgba(184,92,56,0.4)" : "none",
+            }}
             title="Mi cuenta"
             aria-label="Abrir Mi cuenta"
           >
             <AvatarCircle nombre={jugador.nombre} avatarId={jugador.avatar_id} sizeClass="w-full h-full" textClass="text-sm" />
           </button>
-          <div className="flex items-center gap-2">
-            <Image src="/katanas.png" alt="Katanas" width={22} height={22} className="h-5 w-auto shrink-0" />
-            <span className="text-white font-semibold text-sm tabular-nums">
+          {/* Puntos */}
+          <div style={{ display:"flex", alignItems:"center", gap: 7 }}>
+            <Image src="/katanas.png" alt="Katanas" width={20} height={20} style={{ height: 18, width: "auto", flexShrink: 0 }} />
+            <span style={{ color: "#c4b5a0", fontWeight: 600, fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
               {mounted ? jugador.puntos.toLocaleString() : "---"}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Image src="/core.png" alt="Cores" width={22} height={22} className="h-5 w-auto shrink-0" />
-            <span className="text-white font-semibold text-sm tabular-nums">
+          {/* Cores */}
+          <div style={{ display:"flex", alignItems:"center", gap: 7 }}>
+            <Image src="/core.png" alt="Cores" width={20} height={20} style={{ height: 18, width: "auto", flexShrink: 0 }} />
+            <span style={{ color: "#c9a84c", fontWeight: 600, fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
               {mounted ? jugador.cores.toLocaleString() : "---"}
             </span>
           </div>
-          <div className="hidden sm:block h-8 w-px bg-white/20 shrink-0" aria-hidden />
-          {/* Botón tutorial */}
+          <div style={{ width: 1, height: 28, background: "rgba(196,181,160,0.15)", flexShrink: 0 }} aria-hidden />
+          {/* Tutorial */}
           <button
             id="tutorial-btn-tutorial"
             type="button"
             onClick={() => setMostrarModalTutorial(true)}
-            className="shrink-0 w-8 h-8 rounded-full border border-white/30 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors text-sm font-bold"
+            style={{
+              flexShrink: 0, width: 30, height: 30, borderRadius: "50%",
+              border: "1px solid rgba(0,200,255,0.3)", background: "transparent",
+              color: "rgba(0,200,255,0.7)", cursor: "pointer", fontSize: 13,
+              fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "border-color 0.2s ease, color 0.2s ease",
+            }}
             title="Tutorial de la aplicación"
             aria-label="Abrir tutorial"
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor="rgba(0,200,255,0.7)"; (e.currentTarget as HTMLButtonElement).style.color="#00c8ff"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor="rgba(0,200,255,0.3)"; (e.currentTarget as HTMLButtonElement).style.color="rgba(0,200,255,0.7)"; }}
           >
             ?
           </button>
+          {/* Logout */}
           <button
             id="tutorial-btn-logout"
             type="button"
             onClick={() => setMostrarModalCerrarSesion(true)}
-            className="shrink-0 p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            style={{
+              flexShrink: 0, padding: 8, background: "transparent", border: "none",
+              color: "rgba(196,181,160,0.6)", cursor: "pointer",
+              transition: "color 0.2s ease",
+            }}
             title="Salir"
             aria-label="Cerrar sesión"
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color="#f87171"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color="rgba(196,181,160,0.6)"; }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22 }}>
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
@@ -989,104 +1026,143 @@ export default function PartidasPage() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ─── Sidebar ─────────────────────────────────────────────────── */}
-        <aside className="w-60 bg-[#7b8fa8] flex flex-col shrink-0">
+        <aside style={{
+          width: 220, flexShrink: 0, display: "flex", flexDirection: "column",
+          background: "rgba(10,21,32,0.98)",
+          borderRight: "1px solid rgba(0,200,255,0.07)",
+        }}>
+          {/* Accent line top */}
+          <div aria-hidden style={{ height: 2, background: "linear-gradient(to right, transparent, rgba(184,92,56,0.5), transparent)", opacity: 0.7 }} />
+
           <button
             id="tutorial-btn-jugar"
             type="button"
             onClick={() => setPanelActivo(null)}
-            className="px-6 pt-6 pb-3 text-left w-full hover:bg-white/10 transition-colors"
+            style={{
+              padding: "20px 20px 14px",
+              textAlign: "left", width: "100%", background: "transparent",
+              border: "none", cursor: "pointer", borderBottom: "1px solid rgba(196,181,160,0.06)",
+              transition: "background 0.2s ease",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="rgba(184,92,56,0.06)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="transparent"; }}
           >
-            <span className="text-white font-bold text-lg tracking-wide uppercase flex items-center gap-3">
-              <Image
-                src="/luchadores.png"
-                alt=""
-                width={24}
-                height={24}
-                className="w-6 h-6 object-contain"
-              />
+            <span style={{ color: "#b85c38", fontWeight: 700, fontSize: 12, letterSpacing: "0.25em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 10 }}>
+              <Image src="/luchadores.png" alt="" width={20} height={20} style={{ width: 18, height: 18, objectFit: "contain" }} />
               ¡A jugar!
             </span>
           </button>
 
-          <nav className="flex flex-col mt-2">
-            {MENU_LATERAL.map((item) => (
-              <button
-                key={item.id}
-                id={`tutorial-menu-${item.id}`}
-                type="button"
-                onClick={() => handleMenuClick(item.id)}
-                className={`flex items-center text-sm font-semibold tracking-widest uppercase px-6 py-4 text-left transition-colors border-b border-white/10 last:border-0
-                  ${panelActivo === item.id
-                    ? "bg-white/20 text-white"
-                    : "text-white/90 hover:bg-white/10"
-                  }`}
-              >
-                <span className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="relative shrink-0">
-                    <Image
-                      src={item.icono}
-                      alt=""
-                      width={22}
-                      height={22}
-                      className="w-[22px] h-[22px] object-contain"
-                    />
+          <nav style={{ display: "flex", flexDirection: "column", marginTop: 4, flex: 1 }}>
+            {MENU_LATERAL.map((item) => {
+              const activo = panelActivo === item.id;
+              return (
+                <button
+                  key={item.id}
+                  id={`tutorial-menu-${item.id}`}
+                  type="button"
+                  onClick={() => handleMenuClick(item.id)}
+                  style={{
+                    display: "flex", alignItems: "center",
+                    fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase",
+                    padding: "14px 18px 14px 18px", textAlign: "left", cursor: "pointer",
+                    borderTop: "none", borderRight: "none", borderBottom: "1px solid rgba(196,181,160,0.05)",
+                    borderLeft: activo ? "3px solid #b85c38" : "3px solid transparent",
+                    background: activo ? "rgba(184,92,56,0.12)" : "transparent",
+                    color: activo ? "#f0ebe1" : "rgba(196,181,160,0.65)",
+                    transition: "background 0.15s ease, color 0.15s ease",
+                    width: "100%",
+                  }}
+                  onMouseEnter={e => { if (!activo) { (e.currentTarget as HTMLButtonElement).style.background="rgba(184,92,56,0.06)"; (e.currentTarget as HTMLButtonElement).style.color="rgba(196,181,160,0.9)"; } }}
+                  onMouseLeave={e => { if (!activo) { (e.currentTarget as HTMLButtonElement).style.background="transparent"; (e.currentTarget as HTMLButtonElement).style.color="rgba(196,181,160,0.65)"; } }}
+                >
+                  <span style={{ position: "relative", flexShrink: 0, marginRight: 12 }}>
+                    <Image src={item.icono} alt="" width={20} height={20} style={{ width: 18, height: 18, objectFit: "contain", opacity: activo ? 1 : 0.6 }} />
                     {item.id === "notificaciones" && notifPendientes > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                      <span style={{
+                        position: "absolute", top: -6, right: -6,
+                        background: "#ef4444", color: "#fff", fontSize: 9, fontWeight: 700,
+                        borderRadius: "50%", minWidth: 16, height: 16,
+                        display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px"
+                      }}>
                         {notifPendientes}
                       </span>
                     )}
                   </span>
-                  <span className="truncate">{item.label}</span>
-                </span>
-              </button>
-            ))}
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+                </button>
+              );
+            })}
           </nav>
         </aside>
 
         {/* ─── Área principal ──────────────────────────────────────────── */}
-        <main className="flex-1 bg-stone-100 overflow-y-auto">
+        <main style={{ flex: 1, backgroundColor: "#0c1925", overflowY: "auto", position: "relative" }}>
           {mensajePrivada && (
-            <div className="mx-6 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 text-sm flex items-center justify-between">
+            <div style={{
+              margin: "20px 24px 0",
+              background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)",
+              padding: "12px 16px", color: "#c9a84c", fontSize: 13,
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+            }}>
               <span>{mensajePrivada}</span>
-              <button
-                type="button"
-                onClick={() => setMensajePrivada(null)}
-                className="text-amber-700 hover:text-amber-900 font-bold"
-                aria-label="Cerrar mensaje"
-              >
-                ×
-              </button>
+              <button type="button" onClick={() => setMensajePrivada(null)} style={{ background:"none", border:"none", color:"#c9a84c", cursor:"pointer", fontWeight:700, fontSize:18, lineHeight:1 }} aria-label="Cerrar mensaje">×</button>
             </div>
           )}
 
           {/* Pantalla principal: tarjetas de partida */}
           {!panelActivo && (
-            <div className="flex items-center justify-center min-h-full px-8 py-10">
-              <div className="flex flex-wrap gap-10 items-center justify-center">
-                {TIPOS_PARTIDA.map((tipo) => (
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100%", padding: "60px 32px", position:"relative" }}>
+              {/* Fondo grid sutil */}
+              <div className="oni-grid-drift" style={{ position:"absolute", inset:"-10%", width:"120%", height:"120%", pointerEvents:"none", overflow:"hidden" }} aria-hidden>
+                <svg style={{ width:"100%", height:"100%", opacity:0.03 }} preserveAspectRatio="xMidYMid slice">
+                  <defs><pattern id="partidas-grid" width={60} height={60} patternUnits="userSpaceOnUse"><path d="M 60 0 L 0 0 0 60" fill="none" stroke="#00c8ff" strokeWidth="0.5"/></pattern></defs>
+                  <rect width="200%" height="200%" fill="url(#partidas-grid)"/>
+                </svg>
+              </div>
+
+              <div style={{ display:"flex", flexWrap:"wrap", gap:32, alignItems:"center", justifyContent:"center", position:"relative", zIndex:1 }}>
+                {TIPOS_PARTIDA.map((tipo, idx) => (
                   <div
                     key={tipo.id}
                     id={`tutorial-tarjeta-${tipo.id}`}
-                    className="flex flex-col items-center gap-4"
+                    className={`oni-scale-${idx + 1}`}
+                    style={{ display:"flex", flexDirection:"column", alignItems:"center", gap: 0 }}
                   >
                     <button
                       type="button"
-                      className="group"
                       aria-label={tipo.nombre}
                       onClick={() => handleIniciarPartida(tipo.id)}
+                      style={{
+                        background: "transparent", border: "none", padding: 0, cursor: "pointer",
+                        display: "block",
+                      }}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={tipo.imagen}
                         alt={tipo.nombre}
-                        className="w-44 h-44 rounded-full object-cover shadow-lg group-hover:scale-105 group-hover:shadow-xl transition-all duration-200"
+                        style={{
+                          width: 176, height: 176, borderRadius: "50%",
+                          objectFit: "cover",
+                          border: "2px solid rgba(184,92,56,0.3)",
+                          boxShadow: "0 0 32px rgba(184,92,56,0.15), 0 8px 32px rgba(0,0,0,0.5)",
+                          transition: "transform 0.25s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s ease",
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLImageElement).style.transform="scale(1.07)"; (e.currentTarget as HTMLImageElement).style.boxShadow="0 0 48px rgba(184,92,56,0.4), 0 16px 48px rgba(0,0,0,0.6)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLImageElement).style.transform="scale(1)"; (e.currentTarget as HTMLImageElement).style.boxShadow="0 0 32px rgba(184,92,56,0.15), 0 8px 32px rgba(0,0,0,0.5)"; }}
                       />
                     </button>
-                    <div className="bg-stone-300 rounded-lg px-4 py-3 text-center w-52 shadow-sm">
-                      <p className="text-xs font-bold text-stone-700 uppercase tracking-wide">
+                    <div style={{
+                      background: "rgba(13,26,42,0.85)", backdropFilter: "blur(8px)",
+                      border: "1px solid rgba(184,92,56,0.2)",
+                      padding: "16px 20px", textAlign: "center", width: 210, marginTop: 16,
+                    }}>
+                      <div style={{ width:"100%", height:1, background:"linear-gradient(to right, transparent, rgba(184,92,56,0.6), transparent)", marginBottom:12 }} />
+                      <p style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 13, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 6 }}>
                         {tipo.nombre}
                       </p>
-                      <p className="text-xs text-stone-600 mt-1">{tipo.descripcion}</p>
+                      <p style={{ fontSize: 11, color: "#8a9bb0", lineHeight: 1.6, letterSpacing: "0.02em" }}>{tipo.descripcion}</p>
                     </div>
                   </div>
                 ))}
@@ -1241,62 +1317,71 @@ export default function PartidasPage() {
       {/* ─── Modal: Partida privada (doble pestaña) ───────────────────── */}
       {mostrarModalPartidaPrivada && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-stone-900 uppercase tracking-wide">Partida privada</h2>
+          <div className="w-full max-w-4xl glass-card" style={{ padding: "32px 28px", position: "relative" }}>
+            {/* Accent top line */}
+            <div className="oni-copper-line" style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+              <h2 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 22, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.15em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 10 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b85c38" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Partida privada
+              </h2>
               <button
                 type="button"
                 onClick={() => setMostrarModalPartidaPrivada(false)}
-                className="text-3xl leading-none text-stone-500 hover:text-stone-800"
+                style={{ background: "none", border: "none", color: "#8a9bb0", cursor: "pointer", fontSize: 22, lineHeight: 1, padding: 4 }}
                 aria-label="Cerrar"
               >
                 ×
               </button>
             </div>
 
-            <div className="mt-5 flex border-b border-stone-300">
-              <button
-                type="button"
-                onClick={() => setTabPartidaPrivada("crear")}
-                className={`px-5 py-3 text-sm font-semibold uppercase tracking-wider ${tabPartidaPrivada === "crear"
-                  ? "border-b-2 border-[#1a2d4a] text-[#1a2d4a]"
-                  : "text-stone-500 hover:text-stone-700"
-                  }`}
-              >
-                Crear nueva partida
-              </button>
-              <button
-                type="button"
-                onClick={() => setTabPartidaPrivada("reanudar")}
-                className={`px-5 py-3 text-sm font-semibold uppercase tracking-wider ${tabPartidaPrivada === "reanudar"
-                  ? "border-b-2 border-[#1a2d4a] text-[#1a2d4a]"
-                  : "text-stone-500 hover:text-stone-700"
-                  }`}
-              >
-                Reanudar partida
-              </button>
+            {/* Pestañas */}
+            <div style={{ display: "flex", borderBottom: "1px solid rgba(196,181,160,0.1)", marginBottom: 24 }}>
+              {(["crear", "reanudar"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setTabPartidaPrivada(tab)}
+                  style={{
+                    padding: "10px 24px", fontSize: 12, fontWeight: 700,
+                    textTransform: "uppercase", letterSpacing: "0.15em",
+                    background: "none", border: "none", cursor: "pointer",
+                    borderBottom: tabPartidaPrivada === tab ? "2px solid #b85c38" : "2px solid transparent",
+                    color: tabPartidaPrivada === tab ? "#b85c38" : "#8a9bb0",
+                    transition: "color 0.2s, border-color 0.2s",
+                    fontFamily: "var(--font-rajdhani), sans-serif",
+                  }}
+                >
+                  {tab === "crear" ? "Crear nueva partida" : "Reanudar partida"}
+                </button>
+              ))}
             </div>
 
             {tabPartidaPrivada === "crear" && (
-              <div className="mt-5">
+              <div>
                 {amigos.length === 0 ? (
-                  <p className="text-stone-500 text-sm">No tienes amigos disponibles para invitar.</p>
+                  <div style={{ textAlign: "center", padding: "48px 0", color: "#8a9bb0" }}>
+                    <p style={{ fontWeight: 600 }}>No tienes amigos disponibles para invitar.</p>
+                    <p style={{ fontSize: 13, marginTop: 4, opacity: 0.7 }}>Añade amigos desde el panel «Mis amigos».</p>
+                  </div>
                 ) : (
-                  <ul className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                  <ul style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
                     {amigos.map((amigo) => (
-                      <li key={amigo.nombre} className="flex items-center gap-3 bg-stone-50 rounded-xl px-4 py-3">
+                      <li key={amigo.nombre} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(10,21,32,0.5)", border: "1px solid rgba(196,181,160,0.1)", borderRadius: 10, padding: "10px 14px" }}>
                         <AvatarCircle nombre={amigo.nombre} avatarId={amigo.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" />
-                        <div className="flex-1">
-                          <p className="font-semibold text-stone-800">{amigo.nombre}</p>
-                          <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
-                            <Image src="/katanas.png" alt="Katanas" width={12} height={12} className="h-3 w-auto" />
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontWeight: 600, color: "#f0ebe1", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 16 }}>{amigo.nombre}</p>
+                          <p style={{ fontSize: 12, color: "#8a9bb0", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                            <Image src="/katanas.png" alt="Katanas" width={12} height={12} style={{ height: 12, width: "auto" }} />
                             <span>{amigo.puntos}</span>
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleInvitarPartidaPrivada(amigo)}
-                          className="text-xs font-semibold px-4 py-2 rounded-lg bg-[#1a2d4a] text-white hover:bg-[#203a60]"
+                          className="btn-oni-primary"
+                          style={{ fontSize: 11, padding: "6px 16px", fontFamily: "var(--font-rajdhani), sans-serif" }}
                         >
                           Invitar
                         </button>
@@ -1308,18 +1393,20 @@ export default function PartidasPage() {
             )}
 
             {tabPartidaPrivada === "reanudar" && (
-              <div className="mt-5">
+              <div>
                 {amigos.length === 0 ? (
-                  <p className="text-stone-500 text-sm">No tienes amigos disponibles.</p>
+                  <div style={{ textAlign: "center", padding: "48px 0", color: "#8a9bb0" }}>
+                    <p style={{ fontWeight: 600 }}>No tienes amigos disponibles.</p>
+                  </div>
                 ) : !amigoSeleccionadoReanudar ? (
                   <>
-                    <p className="text-stone-500 text-sm mb-3">Selecciona un amigo para ver sus partidas pausadas:</p>
-                    <ul className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                    <p style={{ color: "#8a9bb0", fontSize: 13, marginBottom: 12 }}>Selecciona un amigo para ver sus partidas pausadas:</p>
+                    <ul style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 320, overflowY: "auto", paddingRight: 4 }}>
                       {amigos.map((amigo) => (
-                        <li key={amigo.nombre} className="flex items-center gap-3 bg-stone-50 rounded-xl px-4 py-3">
+                        <li key={amigo.nombre} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(10,21,32,0.5)", border: "1px solid rgba(196,181,160,0.1)", borderRadius: 10, padding: "10px 14px" }}>
                           <AvatarCircle nombre={amigo.nombre} avatarId={amigo.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" />
-                          <div className="flex-1">
-                            <p className="font-semibold text-stone-800">{amigo.nombre}</p>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontWeight: 600, color: "#f0ebe1", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 16 }}>{amigo.nombre}</p>
                           </div>
                           <button
                             type="button"
@@ -1432,34 +1519,25 @@ export default function PartidasPage() {
 
       {/* ─── Pantalla de espera: invitación privada en curso ───────────── */}
       {mostrarModalCerrarSesion && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-[#1a2d4a] border border-white/20 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
-            <span className="text-4xl" aria-hidden>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-12 h-12 text-white/70 mx-auto">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </span>
-            <h2 className="text-xl font-bold text-white uppercase tracking-widest text-center">
+        <div style={{ position:"fixed", inset:0, zIndex:60, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(5,13,21,0.88)", backdropFilter:"blur(8px)", padding:16 }}>
+          <div className="glass-card" style={{ maxWidth:380, width:"100%", padding:"44px 36px", display:"flex", flexDirection:"column", alignItems:"center", gap:20, position:"relative" }}>
+            <div className="oni-copper-line" style={{ position:"absolute", top:0, left:0, right:0 }} />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" style={{ width:44, height:44 }}>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <h2 style={{ fontFamily:"var(--font-rajdhani), sans-serif", fontSize:22, fontWeight:700, color:"#f0ebe1", letterSpacing:"0.1em", textTransform:"uppercase", textAlign:"center" }}>
               ¿Cerrar sesión?
             </h2>
-            <p className="text-white/60 text-sm text-center">
+            <p style={{ color:"#8a9bb0", fontSize:13, textAlign:"center", lineHeight:1.6 }}>
               Se cerrará la conexión con el servidor y volverás a la página de inicio.
             </p>
-            <div className="flex gap-3 w-full">
-              <button
-                type="button"
-                onClick={() => setMostrarModalCerrarSesion(false)}
-                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
-              >
+            <div style={{ display:"flex", gap:10, width:"100%" }}>
+              <button type="button" onClick={() => setMostrarModalCerrarSesion(false)} className="btn-oni-ghost" style={{ flex:1, fontFamily:"var(--font-rajdhani), sans-serif" }}>
                 Cancelar
               </button>
-              <button
-                type="button"
-                onClick={handleConfirmarCerrarSesion}
-                className="flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-sm bg-red-700 text-white hover:bg-red-600 transition-colors"
-              >
+              <button type="button" onClick={handleConfirmarCerrarSesion} className="btn-oni-danger" style={{ flex:1, fontFamily:"var(--font-rajdhani), sans-serif" }}>
                 Salir
               </button>
             </div>
@@ -1468,45 +1546,42 @@ export default function PartidasPage() {
       )}
 
       {confirmacionSkin && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 flex flex-col items-center gap-4 shadow-2xl max-w-sm w-full">
-            <h3 className="text-lg font-bold text-stone-800 uppercase tracking-widest text-center">
+        <div style={{ position:"fixed", inset:0, zIndex:70, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(5,13,21,0.88)", backdropFilter:"blur(8px)", padding:16 }}>
+          <div className="glass-card" style={{ maxWidth:380, width:"100%", padding:"40px 32px", display:"flex", flexDirection:"column", alignItems:"center", gap:18, position:"relative" }}>
+            <div className="oni-copper-line" style={{ position:"absolute", top:0, left:0, right:0 }} />
+            <h3 style={{ fontFamily:"var(--font-rajdhani), sans-serif", fontSize:20, fontWeight:700, color:"#f0ebe1", letterSpacing:"0.1em", textTransform:"uppercase", textAlign:"center" }}>
               {confirmacionSkin.tipo === "comprar" ? "Confirmar compra" : "Confirmar selección"}
             </h3>
-            <p className="text-sm text-stone-600 text-center">
+            <p style={{ color:"#8a9bb0", fontSize:13, textAlign:"center", lineHeight:1.6 }}>
               {confirmacionSkin.tipo === "comprar"
                 ? `¿Quieres comprar la skin ${getSkinNombre(confirmacionSkin.skinId)}?`
                 : `¿Quieres activar la skin ${getSkinNombre(confirmacionSkin.skinId)}?`}
             </p>
             {confirmacionSkin.tipo === "comprar" && (
-              <div className="flex flex-col items-center gap-1.5 text-sm text-stone-700">
-                <div className="flex items-center gap-2">
-                  <span>Tus cores:</span>
-                  <Image src="/core.png" alt="Cores" width={16} height={16} />
-                  <span className="font-semibold">{jugador.cores.toLocaleString()}</span>
+              <div style={{ display:"flex", flexDirection:"column", gap:8, width:"100%", background:"rgba(10,21,32,0.6)", border:"1px solid rgba(196,181,160,0.1)", padding:"14px 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ color:"#8a9bb0", fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase" }}>Tus cores</span>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <Image src="/core.png" alt="Cores" width={14} height={14} />
+                    <span style={{ color:"#c9a84c", fontWeight:700, fontSize:14 }}>{jugador.cores.toLocaleString()}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span>Coste:</span>
-                  <Image src="/core.png" alt="Cores" width={16} height={16} />
-                  <span className="font-semibold">
-                    {skins.find((s) => s.skin_id === confirmacionSkin.skinId)?.precio ?? getSkinPrecio(confirmacionSkin.skinId)}
-                  </span>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ color:"#8a9bb0", fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase" }}>Coste</span>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <Image src="/core.png" alt="Cores" width={14} height={14} />
+                    <span style={{ color:"#b85c38", fontWeight:700, fontSize:14 }}>
+                      {skins.find((s) => s.skin_id === confirmacionSkin.skinId)?.precio ?? getSkinPrecio(confirmacionSkin.skinId)}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
-            <div className="flex gap-3 w-full">
-              <button
-                type="button"
-                onClick={() => setConfirmacionSkin(null)}
-                className="flex-1 py-2.5 rounded-xl font-semibold text-sm border border-stone-300 text-stone-600 hover:bg-stone-100"
-              >
+            <div style={{ display:"flex", gap:10, width:"100%" }}>
+              <button type="button" onClick={() => setConfirmacionSkin(null)} className="btn-oni-ghost" style={{ flex:1, fontFamily:"var(--font-rajdhani), sans-serif" }}>
                 Cancelar
               </button>
-              <button
-                type="button"
-                onClick={handleConfirmarAccionSkin}
-                className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-[#1a2d4a] text-white hover:bg-[#203a60]"
-              >
+              <button type="button" onClick={handleConfirmarAccionSkin} className="btn-oni-primary" style={{ flex:1, fontFamily:"var(--font-rajdhani), sans-serif" }}>
                 Confirmar
               </button>
             </div>
@@ -1515,24 +1590,28 @@ export default function PartidasPage() {
       )}
 
       {invitacionPrivadaEnCurso && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1522]/90 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg bg-[#1a2d4a] rounded-2xl border border-white/10 p-8 text-white text-center shadow-2xl flex flex-col items-center gap-5">
-            <svg className="animate-spin h-10 w-10 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+        <div style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(5,13,21,0.92)", backdropFilter:"blur(8px)", padding:16 }}>
+          <div className="glass-card" style={{ maxWidth:480, width:"100%", padding:"52px 44px", textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:20, position:"relative" }}>
+            <div className="oni-copper-line" style={{ position:"absolute", top:0, left:0, right:0 }} />
+            {/* Spinner hex */}
+            <svg style={{ animation:"spin 1.6s linear infinite", width:52, height:52 }} viewBox="0 0 52 52" fill="none" aria-hidden>
+              <style>{"@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }"}</style>
+              <polygon points="26,2 50,14 50,38 26,50 2,38 2,14" stroke="#b85c38" strokeWidth="1.5" opacity="0.4"/>
+              <polygon points="26,8 44,18 44,34 26,44 8,34 8,18" stroke="#c9a84c" strokeWidth="1" opacity="0.7"/>
             </svg>
-            <h3 className="text-2xl font-bold uppercase tracking-widest">Esperando respuesta</h3>
-            <p className="text-white/70">
-              Has invitado a <span className="font-semibold">@{invitacionPrivadaEnCurso.destinatario}</span> a una partida privada.
+            <h3 style={{ fontFamily:"var(--font-rajdhani), sans-serif", fontSize:22, fontWeight:700, color:"#f0ebe1", letterSpacing:"0.1em", textTransform:"uppercase" }}>Esperando respuesta</h3>
+            <p style={{ color:"#8a9bb0", fontSize:14, lineHeight:1.6 }}>
+              Has invitado a <span style={{ color:"#f0ebe1", fontWeight:600 }}>@{invitacionPrivadaEnCurso.destinatario}</span> a una partida privada.
             </p>
-            <p className="font-mono text-4xl text-yellow-300">
+            <p style={{ fontFamily:"monospace", fontSize:42, color:"#c9a84c", fontWeight:700, letterSpacing:"0.05em", lineHeight:1 }}>
               {String(Math.floor(tiempoEsperaPrivada / 60)).padStart(2, "0")}:
               {String(tiempoEsperaPrivada % 60).padStart(2, "0")}
             </p>
             <button
               type="button"
               onClick={() => handleCancelarNotificacion(invitacionPrivadaEnCurso.idNotificacion)}
-              className="px-5 py-2 rounded-xl font-bold uppercase tracking-widest text-sm border border-red-500/50 text-red-400 hover:bg-red-500/20 transition-colors"
+              className="btn-oni-danger"
+              style={{ fontFamily:"var(--font-rajdhani), sans-serif", padding:"10px 28px" }}
             >
               Cancelar solicitud
             </button>
@@ -1868,114 +1947,112 @@ function PanelMiCuenta({
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8">
-      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2 flex items-center gap-3">
-        <Image src="/MiCuenta.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: "32px 24px" }}>
+      <h2 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 24, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+        <Image src="/MiCuenta.png" alt="" width={24} height={24} style={{ width: 24, height: 24, objectFit: "contain", filter: "invert(1) sepia(1) saturate(5) hue-rotate(340deg)" }} />
         Mi cuenta
       </h2>
-      <p className="text-stone-500 text-sm mb-8">
+      <p style={{ color: "#8a9bb0", fontSize: 14, marginBottom: 32 }}>
         Datos de tu perfil y preferencias de la cuenta.
       </p>
 
-      <div className="rounded-2xl border border-stone-200 bg-white shadow-sm p-6 mb-8 relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="relative group">
-              <AvatarCircle nombre={jugador.nombre} avatarId={jugador.avatar_id} sizeClass="w-20 h-20 shrink-0" textClass="text-3xl" />
+      <div className="glass-card" style={{ padding: "32px 24px", marginBottom: 32, display: "flex", flexDirection: "column", gap: 24 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <div style={{ position: "relative", width: 80, height: 80, borderRadius: "50%", border: "2px solid rgba(184,92,56,0.3)", boxShadow: "0 0 20px rgba(184,92,56,0.15)", overflow: "hidden" }}>
+              <AvatarCircle nombre={jugador.nombre} avatarId={jugador.avatar_id} sizeClass="w-full h-full" textClass="text-3xl" />
               <button
                 onClick={() => { setAvatarSeleccionado(jugador.avatar_id || "avatar_01"); setModalAvatar(true); }}
-                className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-full text-xs font-semibold uppercase tracking-wider transition-opacity"
+                style={{ position: "absolute", inset: 0, background: "rgba(10,21,32,0.7)", color: "#f0ebe1", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+                onMouseLeave={e => e.currentTarget.style.opacity = "0"}
               >
                 Cambiar
               </button>
             </div>
             <div>
-              <p className="text-xl font-semibold text-stone-900">@{jugador.nombre}</p>
-              <p className="text-sm text-stone-500">{jugador.correo}</p>
+              <p style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 22, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.05em" }}>@{jugador.nombre}</p>
+              <p style={{ color: "rgba(138,155,176,0.8)", fontSize: 13 }}>{jugador.correo}</p>
             </div>
           </div>
           <button
             onClick={() => { setPassError(""); setPassExito(false); setPassForm({ actual: "", nueva: "", confirmar: "" }); setModalPass(true); }}
-            className="px-4 py-2 border border-stone-300 rounded-lg text-sm font-semibold text-stone-700 hover:bg-stone-50 transition-colors shrink-0"
+            className="btn-oni-ghost"
+            style={{ fontFamily: "var(--font-rajdhani), sans-serif", padding: "10px 20px" }}
           >
             Cambiar contraseña
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="rounded-xl bg-stone-50 border border-stone-100 px-4 py-3">
-            <p className="text-[10px] uppercase tracking-widest text-stone-400 mb-1">Katanas</p>
-            <div className="flex items-center gap-2">
-              <Image src="/katanas.png" alt="" width={20} height={20} className="h-5 w-auto" />
-              <span className="font-mono font-bold text-stone-800">{jugador.puntos.toLocaleString()}</span>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16 }}>
+          <div style={{ background: "rgba(10,21,32,0.6)", border: "1px solid rgba(196,181,160,0.1)", borderRadius: 8, padding: "12px 16px" }}>
+            <p style={{ fontSize: 10, color: "#8a9bb0", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 6 }}>Katanas</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Image src="/katanas.png" alt="" width={18} height={18} />
+              <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 18, color: "#c9a84c" }}>{jugador.puntos.toLocaleString()}</span>
             </div>
           </div>
-          <div className="rounded-xl bg-stone-50 border border-stone-100 px-4 py-3">
-            <p className="text-[10px] uppercase tracking-widest text-stone-400 mb-1">Cores</p>
-            <div className="flex items-center gap-2">
-              <Image src="/core.png" alt="" width={20} height={20} className="h-5 w-auto" />
-              <span className="font-mono font-bold text-stone-800">{jugador.cores.toLocaleString()}</span>
+          <div style={{ background: "rgba(10,21,32,0.6)", border: "1px solid rgba(196,181,160,0.1)", borderRadius: 8, padding: "12px 16px" }}>
+            <p style={{ fontSize: 10, color: "#8a9bb0", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 6 }}>Cores</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Image src="/core.png" alt="" width={18} height={18} />
+              <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 18, color: "#b85c38" }}>{jugador.cores.toLocaleString()}</span>
             </div>
           </div>
-          <div className="rounded-xl bg-stone-50 border border-stone-100 px-4 py-3">
-            <p className="text-[10px] uppercase tracking-widest text-stone-400 mb-1">Partidas jugadas</p>
-            <span className="font-mono font-bold text-stone-800 text-lg">{jugador.partidas_jugadas}</span>
+          <div style={{ background: "rgba(10,21,32,0.6)", border: "1px solid rgba(196,181,160,0.1)", borderRadius: 8, padding: "12px 16px" }}>
+            <p style={{ fontSize: 10, color: "#8a9bb0", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 6 }}>Jugadas</p>
+            <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 18, color: "#f0ebe1" }}>{jugador.partidas_jugadas}</span>
           </div>
-          <div className="rounded-xl bg-stone-50 border border-stone-100 px-4 py-3">
-            <p className="text-[10px] uppercase tracking-widest text-stone-400 mb-1">Partidas ganadas</p>
-            <span className="font-mono font-bold text-stone-800 text-lg">{jugador.partidas_ganadas}</span>
+          <div style={{ background: "rgba(10,21,32,0.6)", border: "1px solid rgba(196,181,160,0.1)", borderRadius: 8, padding: "12px 16px" }}>
+            <p style={{ fontSize: 10, color: "#8a9bb0", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 6 }}>Ganadas</p>
+            <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 18, color: "#00c8ff" }}>{jugador.partidas_ganadas}</span>
           </div>
         </div>
       </div>
 
       <div>
-        <h3 className="text-sm font-bold text-stone-700 uppercase tracking-widest mb-4">
+        <h3 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 16, fontWeight: 700, color: "#c4b5a0", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 16 }}>
           Últimas partidas públicas
         </h3>
         {cargandoPartidasPublicas ? (
-          <p className="text-stone-400 text-sm animate-pulse">Cargando historial…</p>
+          <p style={{ color: "#8a9bb0", fontSize: 14, animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }}>Cargando historial…</p>
         ) : ultimas.length === 0 ? (
-          <p className="text-stone-500 text-sm rounded-xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-center">
-            No hay partidas públicas registradas o no hay conexión con el servidor.
-          </p>
+          <div className="glass-card" style={{ padding: "32px", textAlign: "center", borderStyle: "dashed" }}>
+            <p style={{ color: "rgba(138,155,176,0.6)", fontSize: 14 }}>No hay partidas públicas registradas o no hay conexión con el servidor.</p>
+          </div>
         ) : (
-          <ul className="space-y-2">
+          <ul style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {ultimas.map((p, idx) => (
-              <FilaHistorialPartidaCard
-                key={`${p.oponente}-${p.tiempo}-${idx}`}
-                rivalNombre={p.oponente}
-                jugadorNombre={jugador.nombre}
-                estado={p.estado}
-                ganador={p.ganador}
-                tiempo={p.tiempo}
-              />
+              <FilaHistorialPartidaCard key={`${p.oponente}-${p.tiempo}-${idx}`} rivalNombre={p.oponente} jugadorNombre={jugador.nombre} estado={p.estado} ganador={p.ganador} tiempo={p.tiempo} />
             ))}
           </ul>
         )}
       </div>
 
-      {/* Modal Cambiar Avatar */}
+      {/* Modales de Mi Cuenta (Avatar y Pass) actualizados a estética oscura */}
       {modalAvatar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
-            <button onClick={() => setModalAvatar(false)} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(5,13,21,0.88)", backdropFilter: "blur(8px)", padding: 16 }}>
+          <div className="glass-card" style={{ maxWidth: 500, width: "100%", padding: "32px", position: "relative" }}>
+            <button onClick={() => setModalAvatar(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#8a9bb0", cursor: "pointer" }}>
+              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <h3 className="text-lg font-bold uppercase tracking-widest text-stone-800 mb-6">Selecciona un Avatar</h3>
-            <div className="grid grid-cols-4 gap-4 mb-6">
+            <h3 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 18, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 24 }}>Selecciona un Avatar</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
               {AVATARES_DISPONIBLES.map(id => (
                 <button
                   key={id}
                   onClick={() => setAvatarSeleccionado(id)}
-                  className={`relative aspect-square rounded-full overflow-hidden border-4 transition-all ${avatarSeleccionado === id ? "border-[#b85c38] shadow-lg scale-105" : "border-transparent hover:border-stone-200"}`}
+                  style={{ position: "relative", aspectRatio: "1/1", borderRadius: "50%", border: avatarSeleccionado === id ? "3px solid #b85c38" : "3px solid transparent", padding: 0, background: "none", cursor: "pointer", transition: "transform 0.2s, border-color 0.2s", transform: avatarSeleccionado === id ? "scale(1.05)" : "scale(1)" }}
+                  onMouseEnter={e => { if (avatarSeleccionado !== id) e.currentTarget.style.borderColor = "rgba(196,181,160,0.3)"; }}
+                  onMouseLeave={e => { if (avatarSeleccionado !== id) e.currentTarget.style.borderColor = "transparent"; }}
                 >
                   <AvatarCircle nombre={jugador.nombre} avatarId={id} sizeClass="w-full h-full" textClass="text-xl" />
                 </button>
               ))}
             </div>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setModalAvatar(false)} className="px-4 py-2 rounded-lg font-semibold text-stone-500 hover:bg-stone-100 transition-colors">Cancelar</button>
-              <button onClick={handleGuardarAvatar} disabled={guardandoAvatar || avatarSeleccionado === jugador.avatar_id} className="px-5 py-2 rounded-lg font-semibold bg-[#b85c38] text-white hover:bg-[#a04e2e] transition-colors disabled:opacity-50 flex items-center gap-2">
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+              <button onClick={() => setModalAvatar(false)} className="btn-oni-ghost" style={{ fontFamily: "var(--font-rajdhani), sans-serif" }}>Cancelar</button>
+              <button onClick={handleGuardarAvatar} disabled={guardandoAvatar || avatarSeleccionado === jugador.avatar_id} className="btn-oni-primary" style={{ fontFamily: "var(--font-rajdhani), sans-serif", opacity: (guardandoAvatar || avatarSeleccionado === jugador.avatar_id) ? 0.5 : 1 }}>
                 {guardandoAvatar ? "Guardando..." : "Guardar foto"}
               </button>
             </div>
@@ -1983,84 +2060,48 @@ function PanelMiCuenta({
         </div>
       )}
 
-      {/* Modal Cambiar Contraseña */}
       {modalPass && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
-            <button onClick={() => setModalPass(false)} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(5,13,21,0.88)", backdropFilter: "blur(8px)", padding: 16 }}>
+          <div className="glass-card" style={{ maxWidth: 400, width: "100%", padding: "32px", position: "relative" }}>
+            <button onClick={() => setModalPass(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#8a9bb0", cursor: "pointer" }}>
+              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <h3 className="text-lg font-bold uppercase tracking-widest text-stone-800 mb-4">Cambiar contraseña</h3>
+            <h3 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 18, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 20 }}>Cambiar contraseña</h3>
             {passExito ? (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              <div style={{ textAlign: "center", padding: "24px 0" }}>
+                <div style={{ width: 48, height: 48, background: "rgba(16,185,129,0.1)", color: "#10b981", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                  <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                 </div>
-                <p className="text-emerald-700 font-semibold">¡Contraseña actualizada!</p>
+                <p style={{ color: "#34d399", fontWeight: 600 }}>¡Contraseña actualizada!</p>
               </div>
             ) : (
               <form onSubmit={handleGuardarPass}>
-                {passError && <p className="mb-4 text-red-600 bg-red-50 p-2 rounded text-sm">{passError}</p>}
-                <div className="mb-4">
-                  <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-1">Contraseña actual</label>
-                  <input
-                    type={mostrarPassModal ? "text" : "password"}
-                    value={passForm.actual}
-                    onChange={e => setPassForm(prev => ({ ...prev, actual: e.target.value }))}
-                    className="w-full bg-stone-50 border border-stone-200 text-stone-800 px-4 py-2 rounded-lg outline-none focus:border-[#b85c38] focus:ring-1 focus:ring-[#b85c38] transition-all"
-                    required
-                  />
+                {passError && <p style={{ marginBottom: 16, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", padding: "8px 12px", borderRadius: 4, fontSize: 13 }}>{passError}</p>}
+                
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#8a9bb0", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Contraseña actual</label>
+                  <input type={mostrarPassModal ? "text" : "password"} value={passForm.actual} onChange={e => setPassForm(prev => ({ ...prev, actual: e.target.value }))} required className="input-oni w-full" />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-1">Nueva contraseña</label>
-                  <input
-                    type={mostrarPassModal ? "text" : "password"}
-                    value={passForm.nueva}
-                    onChange={e => setPassForm(prev => ({ ...prev, nueva: e.target.value }))}
-                    className="w-full bg-stone-50 border border-stone-200 text-stone-800 px-4 py-2 rounded-lg outline-none focus:border-[#b85c38] focus:ring-1 focus:ring-[#b85c38] transition-all"
-                    required
-                  />
-                  <p className="text-[10px] text-stone-400 mt-1.5 leading-tight">{HINT_CONTRASENA}</p>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#8a9bb0", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Nueva contraseña</label>
+                  <input type={mostrarPassModal ? "text" : "password"} value={passForm.nueva} onChange={e => setPassForm(prev => ({ ...prev, nueva: e.target.value }))} required className="input-oni w-full" />
+                  <p style={{ fontSize: 10, color: "rgba(138,155,176,0.6)", marginTop: 6, lineHeight: 1.4 }}>{HINT_CONTRASENA}</p>
                 </div>
-                <div className="mb-6">
-                  <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-1">Confirmar contraseña</label>
-                  <input
-                    type={mostrarPassModal ? "text" : "password"}
-                    value={passForm.confirmar}
-                    onChange={e => setPassForm(prev => ({ ...prev, confirmar: e.target.value }))}
-                    className="w-full bg-stone-50 border border-stone-200 text-stone-800 px-4 py-2 rounded-lg outline-none focus:border-[#b85c38] focus:ring-1 focus:ring-[#b85c38] transition-all"
-                    required
-                  />
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#8a9bb0", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Confirmar contraseña</label>
+                  <input type={mostrarPassModal ? "text" : "password"} value={passForm.confirmar} onChange={e => setPassForm(prev => ({ ...prev, confirmar: e.target.value }))} required className="input-oni w-full" />
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setMostrarPassModal(v => !v)}
-                    className="inline-flex items-center gap-2 px-1 py-1 rounded-md text-stone-500 hover:text-stone-700 hover:bg-stone-100 transition-colors"
-                    title={mostrarPassModal ? "Ocultar contraseñas" : "Mostrar contraseñas"}
-                    aria-label={mostrarPassModal ? "Ocultar contraseñas" : "Mostrar contraseñas"}
-                  >
-                    {mostrarPassModal ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                    <span className="text-xs font-semibold">
-                      {mostrarPassModal ? "Ocultar" : "Mostrar"}
-                    </span>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 8 }}>
+                  <button type="button" onClick={() => setMostrarPassModal(!mostrarPassModal)} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#8a9bb0", cursor: "pointer", fontSize: 12 }}>
+                    {mostrarPassModal ? "Ocultar" : "Mostrar"}
                   </button>
-                  <div className="flex justify-end gap-3">
-                    <button type="button" onClick={() => setModalPass(false)} className="px-4 py-2 rounded-lg font-semibold text-stone-500 hover:bg-stone-100 transition-colors">Cancelar</button>
-                    <button type="submit" disabled={guardandoPass} className="px-5 py-2 rounded-lg font-semibold bg-[#1a2d4a] text-white hover:bg-[#203a60] transition-colors disabled:opacity-50">
-                      {guardandoPass ? "Guardando..." : "Actualizar"}
-                    </button>
-                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10, width: "100%" }}>
+                  <button type="button" onClick={() => setModalPass(false)} className="btn-oni-ghost" style={{ flex: 1, padding: "10px 16px", fontSize: 12, fontFamily: "var(--font-rajdhani), sans-serif" }}>Cancelar</button>
+                  <button type="submit" disabled={guardandoPass} className="btn-oni-primary" style={{ flex: 1, padding: "10px 16px", fontSize: 12, fontFamily: "var(--font-rajdhani), sans-serif", opacity: guardandoPass ? 0.5 : 1 }}>
+                    {guardandoPass ? "Guardando..." : "Actualizar"}
+                  </button>
                 </div>
               </form>
             )}
@@ -2073,21 +2114,21 @@ function PanelMiCuenta({
 
 function CardPreviewSkin({ skinId }: { skinId: SkinId }) {
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
-        <p className="text-xs font-bold uppercase tracking-wider text-stone-600 mb-2">Equipo rojo</p>
-        <div className="flex items-center gap-2">
-          <Image src={getPiezaSrc("peon", 2, skinId)} alt="Peón rojo" width={36} height={36} />
-          <Image src={getPiezaSrc("rey", 2, skinId)} alt="Rey rojo" width={36} height={36} />
-          <Image src={getPiezaSrc("templo", 2, skinId)} alt="Templo rojo" width={36} height={36} />
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 12 }}>
+      <div style={{ background: "rgba(184,92,56,0.1)", border: "1px solid rgba(184,92,56,0.2)", borderRadius: 12, padding: 12 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#b85c38", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Equipo rojo</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Image src={getPiezaSrc("peon", 2, skinId)} alt="Peón rojo" width={36} height={36} style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} />
+          <Image src={getPiezaSrc("rey", 2, skinId)} alt="Rey rojo" width={36} height={36} style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} />
+          <Image src={getPiezaSrc("templo", 2, skinId)} alt="Templo rojo" width={36} height={36} style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} />
         </div>
       </div>
-      <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
-        <p className="text-xs font-bold uppercase tracking-wider text-stone-600 mb-2">Equipo azul</p>
-        <div className="flex items-center gap-2">
-          <Image src={getPiezaSrc("peon", 1, skinId)} alt="Peón azul" width={36} height={36} />
-          <Image src={getPiezaSrc("rey", 1, skinId)} alt="Rey azul" width={36} height={36} />
-          <Image src={getPiezaSrc("templo", 1, skinId)} alt="Templo azul" width={36} height={36} />
+      <div style={{ background: "rgba(0,200,255,0.1)", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 12, padding: 12 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#00c8ff", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Equipo azul</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Image src={getPiezaSrc("peon", 1, skinId)} alt="Peón azul" width={36} height={36} style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} />
+          <Image src={getPiezaSrc("rey", 1, skinId)} alt="Rey azul" width={36} height={36} style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} />
+          <Image src={getPiezaSrc("templo", 1, skinId)} alt="Templo azul" width={36} height={36} style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} />
         </div>
       </div>
     </div>
@@ -2109,32 +2150,33 @@ function PanelMisTableros({
 }) {
   const compradas = skins.filter((s) => s.owned);
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
-      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2 flex items-center gap-3">
-        <Image src="/MisTableros.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: "32px 24px" }}>
+      <h2 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 24, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+        <Image src="/MisTableros.png" alt="" width={24} height={24} style={{ width: 24, height: 24, objectFit: "contain", filter: "invert(1) sepia(1) saturate(5) hue-rotate(340deg)" }} />
         Mis tableros
       </h2>
-      <p className="text-stone-500 text-sm mb-6">Skin activa actual: <span className="font-semibold">{getSkinNombre(normalizarSkinId(jugador.skin_activa))}</span></p>
+      <p style={{ color: "#8a9bb0", fontSize: 14, marginBottom: 24 }}>Skin activa actual: <span style={{ fontWeight: 700, color: "#f0ebe1" }}>{getSkinNombre(normalizarSkinId(jugador.skin_activa))}</span></p>
       {cargando ? (
-        <p className="text-stone-500 animate-pulse">Cargando skins...</p>
+        <p style={{ color: "#8a9bb0", animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }}>Cargando skins...</p>
       ) : compradas.length === 0 ? (
-        <p className="text-stone-500">Aún no tienes skins compradas.</p>
+        <p style={{ color: "rgba(138,155,176,0.8)" }}>Aún no tienes skins compradas.</p>
       ) : (
-        <div className="space-y-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {compradas.map((s) => (
-            <div key={s.skin_id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-3 mb-3">
+            <div key={s.skin_id} className="glass-card" style={{ padding: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
                 <div>
-                  <p className="text-lg font-bold text-stone-800">{getSkinNombre(s.skin_id)}</p>
+                  <p style={{ fontSize: 18, fontWeight: 700, color: "#f0ebe1", fontFamily: "var(--font-rajdhani), sans-serif", letterSpacing: "0.05em" }}>{getSkinNombre(s.skin_id)}</p>
                 </div>
                 {s.es_activa ? (
-                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">Activa</span>
+                  <span style={{ background: "rgba(16,185,129,0.1)", color: "#10b981", border: "1px solid rgba(16,185,129,0.2)", padding: "4px 12px", borderRadius: 16, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Activa</span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => onUsarSkin(s.skin_id)}
                     disabled={accionSkinEnCurso === `usar-${s.skin_id}`}
-                    className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#1a2d4a] text-white hover:bg-[#203a60] disabled:opacity-50"
+                    className="btn-oni-primary"
+                    style={{ fontFamily: "var(--font-rajdhani), sans-serif", opacity: (accionSkinEnCurso === `usar-${s.skin_id}`) ? 0.5 : 1 }}
                   >
                     {accionSkinEnCurso === `usar-${s.skin_id}` ? "Aplicando..." : "Usar"}
                   </button>
@@ -2163,46 +2205,45 @@ function PanelTiendaSkins({
   onComprarSkin: (skinId: SkinId) => void;
 }) {
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
-      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-2 flex items-center gap-3">
-        <Image src="/Tienda.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: "32px 24px" }}>
+      <h2 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 24, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+        <Image src="/Tienda.png" alt="" width={24} height={24} style={{ width: 24, height: 24, objectFit: "contain", filter: "invert(1) sepia(1) saturate(5) hue-rotate(340deg)" }} />
         Tienda
       </h2>
-      <p className="text-stone-500 text-sm mb-6 flex items-center gap-2">
+      <p style={{ color: "#8a9bb0", fontSize: 14, marginBottom: 24, display: "flex", alignItems: "center", gap: 8 }}>
         <span>Tus cores:</span>
         <Image src="/core.png" alt="Cores" width={16} height={16} />
-        <span className="font-semibold">{jugador.cores.toLocaleString()}</span>
+        <span style={{ fontWeight: 700, color: "#b85c38" }}>{jugador.cores.toLocaleString()}</span>
       </p>
       {cargando ? (
-        <p className="text-stone-500 animate-pulse">Cargando catálogo...</p>
+        <p style={{ color: "#8a9bb0", animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }}>Cargando catálogo...</p>
       ) : (
-        <div className="space-y-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {skins
             .filter((s) => s.skin_id !== "Skin0")
             .map((s) => {
               const sinCores = jugador.cores < s.precio;
               return (
-                <div key={s.skin_id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between gap-3 mb-3">
+                <div key={s.skin_id} className="glass-card" style={{ padding: 24 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
                     <div>
-                      <p className="text-lg font-bold text-stone-800">{getSkinNombre(s.skin_id)}</p>
-                      <p className="text-xs text-stone-500 uppercase tracking-wider flex items-center gap-1">
+                      <p style={{ fontSize: 18, fontWeight: 700, color: "#f0ebe1", fontFamily: "var(--font-rajdhani), sans-serif", letterSpacing: "0.05em" }}>{getSkinNombre(s.skin_id)}</p>
+                      <p style={{ fontSize: 12, color: "#8a9bb0", textTransform: "uppercase", letterSpacing: "0.1em", display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
                         <Image src="/core.png" alt="Cores" width={12} height={12} />
                         <span>{s.precio} cores</span>
                       </p>
                     </div>
                     {s.es_activa ? (
-                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">Activa</span>
+                      <span style={{ background: "rgba(16,185,129,0.1)", color: "#10b981", border: "1px solid rgba(16,185,129,0.2)", padding: "4px 12px", borderRadius: 16, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Activa</span>
                     ) : s.owned ? (
-                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-stone-200 text-stone-600">
-                        Ya adquirida
-                      </span>
+                      <span style={{ background: "rgba(196,181,160,0.1)", color: "#8a9bb0", border: "1px solid rgba(196,181,160,0.2)", padding: "4px 12px", borderRadius: 16, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Ya adquirida</span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => onComprarSkin(s.skin_id)}
                         disabled={sinCores || accionSkinEnCurso === `comprar-${s.skin_id}`}
-                        className="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-500 disabled:opacity-50"
+                        className="btn-oni-primary"
+                        style={{ fontFamily: "var(--font-rajdhani), sans-serif", opacity: (sinCores || accionSkinEnCurso === `comprar-${s.skin_id}`) ? 0.5 : 1 }}
                       >
                         {accionSkinEnCurso === `comprar-${s.skin_id}` ? "Comprando..." : sinCores ? "Sin cores" : "Comprar"}
                       </button>
@@ -2258,24 +2299,20 @@ function PanelAmigos({
   onCerrarModalPartidas,
 }: PanelAmigosProps) {
   return (
-    <div className="max-w-xl mx-auto px-6 py-8">
-      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-6 flex items-center gap-3">
-        <Image src="/MisAmigos.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
+    <div style={{ maxWidth: 600, margin: "0 auto", padding: "32px 24px" }}>
+      <h2 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 24, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+        <Image src="/MisAmigos.png" alt="" width={24} height={24} style={{ width: 24, height: 24, objectFit: "contain", filter: "invert(1) sepia(1) saturate(5) hue-rotate(340deg)" }} />
         Mis amigos
       </h2>
 
       {/* Pestañas */}
-      <div className="flex border-b border-stone-300 mb-6">
+      <div style={{ display: "flex", borderBottom: "1px solid rgba(196,181,160,0.1)", marginBottom: 24 }}>
         {(["lista", "buscar"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => onCambiarTab(tab)}
-            className={`px-6 py-3 text-sm font-semibold uppercase tracking-wider transition-colors
-              ${tabActiva === tab
-                ? "border-b-2 border-[#1a2d4a] text-[#1a2d4a]"
-                : "text-stone-500 hover:text-stone-700"
-              }`}
+            style={{ padding: "12px 24px", fontSize: 14, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", transition: "color 0.2s, border-color 0.2s", borderBottom: tabActiva === tab ? "2px solid #b85c38" : "2px solid transparent", color: tabActiva === tab ? "#b85c38" : "#8a9bb0", background: "none" }}
           >
             {tab === "lista" ? "Mis amigos" : "Buscar"}
           </button>
@@ -2286,40 +2323,38 @@ function PanelAmigos({
       {tabActiva === "lista" && (
         <div>
           {amigos.length === 0 ? (
-            <div className="text-center py-16 text-stone-400">
+            <div style={{ textAlign: "center", padding: "64px 0", color: "#8a9bb0" }}>
               <Image
                 src="/MisAmigos.png"
                 alt=""
                 width={64}
                 height={64}
-                className="w-16 h-16 object-contain mx-auto mb-3 opacity-70"
+                style={{ width: 64, height: 64, objectFit: "contain", margin: "0 auto 12px", opacity: 0.3, filter: "invert(1)" }}
               />
-              <p className="font-semibold">Aún no tienes amigos añadidos.</p>
-              <p className="text-sm mt-1">
+              <p style={{ fontWeight: 600 }}>Aún no tienes amigos añadidos.</p>
+              <p style={{ fontSize: 14, marginTop: 4 }}>
                 Usa la pestaña &ldquo;Buscar&rdquo; para encontrar jugadores.
               </p>
             </div>
           ) : (
             <>
-              <ul className="space-y-2">
+              <ul style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {amigos.map((amigo) => (
                   <li
                     key={amigo.nombre}
-                    className={`flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm border ${amigoSeleccionado?.nombre === amigo.nombre
-                      ? "border-[#1a2d4a]"
-                      : "border-transparent"
-                      }`}
+                    className="glass-card"
+                    style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, border: amigoSeleccionado?.nombre === amigo.nombre ? "1px solid #b85c38" : "1px solid rgba(196,181,160,0.1)" }}
                   >
                     <button
                       type="button"
-                      className="flex items-center gap-3 flex-1 text-left"
+                      style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, textAlign: "left", background: "none", border: "none", color: "inherit", cursor: "pointer" }}
                       onClick={() => onSeleccionarAmigo(amigo)}
                     >
                       <AvatarCircle nombre={amigo.nombre} avatarId={amigo.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" />
                       <div>
-                        <p className="font-medium text-stone-800">{amigo.nombre}</p>
-                        <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
-                          <Image src="/katanas.png" alt="Katanas" width={12} height={12} className="h-3 w-auto" />
+                        <p style={{ fontWeight: 600, color: "#f0ebe1", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 18 }}>{amigo.nombre}</p>
+                        <p style={{ fontSize: 12, color: "#8a9bb0", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                          <Image src="/katanas.png" alt="Katanas" width={12} height={12} style={{ height: 12, width: "auto" }} />
                           <span>{amigo.puntos}</span>
                         </p>
                       </div>
@@ -2327,14 +2362,14 @@ function PanelAmigos({
                     <button
                       type="button"
                       onClick={() => onBorrarAmigo(amigo)}
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                      className="btn-oni-ghost"
+                      style={{ color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}
                     >
                       Borrar
                     </button>
                   </li>
                 ))}
               </ul>
-
             </>
           )}
         </div>
@@ -2348,21 +2383,22 @@ function PanelAmigos({
             value={textoBusqueda}
             onChange={(e) => onCambiarBusqueda(e.target.value)}
             placeholder="Escribe un nombre de usuario…"
-            className="w-full px-4 py-3 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#1a2d4a] focus:border-transparent mb-4"
+            className="input-oni"
+            style={{ width: "100%", marginBottom: 16 }}
           />
 
           {buscando && (
-            <p className="text-sm text-stone-400 text-center py-4">Buscando…</p>
+            <p style={{ fontSize: 14, color: "#8a9bb0", textAlign: "center", padding: "16px 0", animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }}>Buscando…</p>
           )}
 
           {!buscando && textoBusqueda.trim().length >= 1 && resultados.length === 0 && (
-            <p className="text-sm text-stone-400 text-center py-4">
+            <p style={{ fontSize: 14, color: "#8a9bb0", textAlign: "center", padding: "16px 0" }}>
               No se encontraron jugadores.
             </p>
           )}
 
           {!buscando && resultados.length > 0 && (
-            <ul className="space-y-2">
+            <ul style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {resultados.map((j) => {
                 const esMismoUsuario = j.nombre === jugador.nombre;
                 const esAmigo = amigos.some((a) => a.nombre === j.nombre);
@@ -2371,19 +2407,20 @@ function PanelAmigos({
                 return (
                   <li
                     key={j.nombre}
-                    className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm"
+                    className="glass-card"
+                    style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}
                   >
-                    <AvatarCircle nombre={j.nombre} avatarId={j.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" bgClass="bg-[#7b8fa8]" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-stone-800 truncate">{j.nombre}</p>
-                      <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
-                        <Image src="/katanas.png" alt="Katanas" width={12} height={12} className="h-3 w-auto" />
+                    <AvatarCircle nombre={j.nombre} avatarId={j.avatar_id} sizeClass="w-9 h-9" textClass="text-sm" />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, color: "#f0ebe1", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 18, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{j.nombre}</p>
+                      <p style={{ fontSize: 12, color: "#8a9bb0", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                        <Image src="/katanas.png" alt="Katanas" width={12} height={12} style={{ height: 12, width: "auto" }} />
                         <span>{j.puntos}</span>
                       </p>
                     </div>
                     {!esMismoUsuario && (
                       esAmigo ? (
-                        <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-100 text-green-700">
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: "6px 12px", borderRadius: 8, background: "rgba(16,185,129,0.1)", color: "#10b981", border: "1px solid rgba(16,185,129,0.2)" }}>
                           Ya sois amigos
                         </span>
                       ) : (
@@ -2391,11 +2428,8 @@ function PanelAmigos({
                           type="button"
                           onClick={() => onEnviarSolicitud(j.nombre)}
                           disabled={yaEnviado}
-                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors
-                                ${yaEnviado
-                              ? "bg-stone-200 text-stone-400 cursor-default"
-                              : "bg-[#1a2d4a] text-white hover:bg-[#203a60]"
-                            }`}
+                          className={yaEnviado ? "btn-oni-ghost" : "btn-oni-primary"}
+                          style={{ fontSize: 11, padding: "6px 12px", opacity: yaEnviado ? 0.5 : 1 }}
                         >
                           {yaEnviado ? "Enviada ✓" : "Solicitar"}
                         </button>
@@ -2412,48 +2446,47 @@ function PanelAmigos({
 
       {/* Modal grande: historial con amigo */}
       {mostrarModalPartidasAmigo && amigoSeleccionado && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl p-6 md:p-8 relative">
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", background: "rgba(5,13,21,0.88)", backdropFilter: "blur(8px)", padding: 16 }}>
+          <div className="glass-card" style={{ maxWidth: 800, width: "100%", padding: "32px", position: "relative" }}>
             <button
               type="button"
               onClick={onCerrarModalPartidas}
-              className="absolute right-5 top-4 text-3xl leading-none text-black hover:text-stone-600"
+              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#8a9bb0", cursor: "pointer", fontSize: 24, lineHeight: 1 }}
               aria-label="Cerrar"
             >
               ×
             </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 items-start">
-              <div className="flex flex-col items-center">
+            <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 24, alignItems: "start" }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <AvatarCircle
                   nombre={amigoSeleccionado.nombre}
                   avatarId={amigoSeleccionado.avatar_id}
                   sizeClass="w-28 h-28"
-                  textClass="text-3xl text-stone-500"
-                  bgClass="bg-stone-200"
+                  textClass="text-3xl"
                 />
-                <p className="mt-3 text-xl font-semibold text-stone-800">@{amigoSeleccionado.nombre}</p>
-                <p className="mt-2 text-sm text-stone-600 flex items-center gap-1">
-                  <Image src="/katanas.png" alt="Katanas" width={16} height={16} className="h-4 w-auto" />
+                <p style={{ marginTop: 12, fontSize: 20, fontWeight: 700, color: "#f0ebe1", fontFamily: "var(--font-rajdhani), sans-serif", letterSpacing: "0.05em" }}>@{amigoSeleccionado.nombre}</p>
+                <p style={{ marginTop: 8, fontSize: 14, color: "#8a9bb0", display: "flex", alignItems: "center", gap: 4 }}>
+                  <Image src="/katanas.png" alt="Katanas" width={16} height={16} style={{ height: 16, width: "auto" }} />
                   <span>{amigoSeleccionado.puntos}</span>
                 </p>
               </div>
 
               <div>
-                <h3 className="text-2xl font-extrabold uppercase tracking-wide text-stone-800 mb-4">
+                <h3 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 24, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#f0ebe1", marginBottom: 16 }}>
                   Tus últimas partidas contra @{amigoSeleccionado.nombre}
                 </h3>
 
                 {cargandoPartidasAmigo ? (
-                  <div className="rounded-2xl bg-stone-200 text-stone-600 px-6 py-6 text-center font-semibold">
+                  <div className="glass-card" style={{ padding: 24, textAlign: "center", color: "#8a9bb0", animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }}>
                     Cargando historial...
                   </div>
                 ) : partidasConAmigo.length === 0 ? (
-                  <div className="rounded-2xl bg-stone-200 text-stone-700 px-6 py-6 text-center font-semibold">
+                  <div className="glass-card" style={{ padding: 24, textAlign: "center", color: "#8a9bb0" }}>
                     No tiene partidas jugadas.
                   </div>
                 ) : (
-                  <ul className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                  <ul style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
                     {partidasConAmigo.map((p, idx) => (
                       <FilaHistorialPartidaCard
                         key={`${p.oponente}-${p.estado}-${p.tiempo}-${idx}`}
@@ -2495,40 +2528,41 @@ function PanelNotificaciones({
   const items = notificaciones;
 
   return (
-    <div className="max-w-xl mx-auto px-6 py-8">
-      <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest mb-6 flex items-center gap-3">
-        <Image src="/Notificiones.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
+    <div style={{ maxWidth: 600, margin: "0 auto", padding: "32px 24px" }}>
+      <h2 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 24, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+        <Image src="/Notificiones.png" alt="" width={24} height={24} style={{ width: 24, height: 24, objectFit: "contain", filter: "invert(1) sepia(1) saturate(5) hue-rotate(340deg)" }} />
         Notificaciones
       </h2>
 
       {items.length === 0 ? (
-        <div className="text-center py-16 text-stone-400">
+        <div style={{ textAlign: "center", padding: "64px 0", color: "#8a9bb0" }}>
           <Image
             src="/Notificiones.png"
             alt=""
             width={64}
             height={64}
-            className="w-16 h-16 object-contain mx-auto mb-3 opacity-70"
+            style={{ width: 64, height: 64, objectFit: "contain", margin: "0 auto 12px", opacity: 0.3, filter: "invert(1)" }}
           />
-          <p className="font-semibold">Sin notificaciones pendientes.</p>
-          <p className="text-sm mt-1">Aquí aparecerán solicitudes de amistad e invitaciones privadas.</p>
+          <p style={{ fontWeight: 600 }}>Sin notificaciones pendientes.</p>
+          <p style={{ fontSize: 14, marginTop: 4 }}>Aquí aparecerán solicitudes de amistad e invitaciones privadas.</p>
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {items.map((notif) => (
             <li
               key={notif.idNotificacion}
-              className="bg-white rounded-xl px-4 py-4 shadow-sm flex items-center gap-3"
+              className="glass-card"
+              style={{ padding: "16px", display: "flex", alignItems: "center", gap: 16 }}
             >
               {/* Avatar */}
               <AvatarCircle nombre={notif.remitente} avatarId={notif.avatar_id} sizeClass="w-10 h-10 shrink-0" textClass="text-sm" />
 
               {/* Texto */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-stone-800 truncate">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontWeight: 600, color: "#f0ebe1", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 18, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {notif.remitente}
                 </p>
-                <p className="text-xs text-stone-400">
+                <p style={{ fontSize: 13, color: "#8a9bb0", marginTop: 2 }}>
                   {notif.tipo === "SOLICITUD_AMISTAD"
                     ? "Te ha enviado una solicitud de amistad"
                     : "Te ha invitado a una partida privada"}
@@ -2536,7 +2570,7 @@ function PanelNotificaciones({
               </div>
 
               {/* Acciones */}
-              <div className="flex gap-2 shrink-0">
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                 <button
                   type="button"
                   onClick={() =>
@@ -2544,7 +2578,8 @@ function PanelNotificaciones({
                       ? onAceptarAmistad(notif)
                       : onAceptarInvitacionPartida(notif)
                   }
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#1a2d4a] text-white hover:bg-[#203a60] transition-colors"
+                  className="btn-oni-primary"
+                  style={{ fontSize: 11, padding: "6px 12px" }}
                 >
                   Aceptar
                 </button>
@@ -2555,7 +2590,8 @@ function PanelNotificaciones({
                       ? onRechazarAmistad(notif)
                       : onRechazarInvitacionPartida(notif)
                   }
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-stone-200 text-stone-600 hover:bg-stone-300 transition-colors"
+                  className="btn-oni-ghost"
+                  style={{ fontSize: 11, padding: "6px 12px" }}
                 >
                   Rechazar
                 </button>
@@ -2725,10 +2761,10 @@ function PanelMisCartas({
     .sort((a, b) => a.puntos_necesarios - b.puntos_necesarios);
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
-      <div className="flex items-end justify-between mb-2">
-        <h2 className="text-xl font-bold text-stone-800 uppercase tracking-widest flex items-center gap-3">
-          <Image src="/MisCartas.png" alt="" width={24} height={24} className="w-6 h-6 object-contain" />
+    <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 8 }}>
+        <h2 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 24, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.15em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 12 }}>
+          <Image src="/MisCartas.png" alt="" width={24} height={24} style={{ width: 24, height: 24, objectFit: "contain", filter: "invert(1) sepia(1) saturate(5) hue-rotate(340deg)" }} />
           Mis cartas
         </h2>
       </div>
@@ -2762,16 +2798,18 @@ function PanelMisCartas({
       </div>
 
       <>
-        <div className="flex items-start md:items-center justify-between mb-6 gap-4">
-          <p className="text-stone-500 text-sm flex flex-wrap items-center gap-2">
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, gap: 16 }}>
+          <p style={{ color: "#8a9bb0", fontSize: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
             <span>{tabCartas === "poderes" ? "Poderes que pueden" : "Cartas que pueden"} aparecer en tus partidas según tu ELO actual (</span>
-            <Image src="/katanas.png" alt="Katanas" width={16} height={16} className="object-contain" />
-            <span className="font-semibold">{jugador.puntos.toLocaleString()}</span>
+            <Image src="/katanas.png" alt="Katanas" width={16} height={16} style={{ objectFit: "contain" }} />
+            <span style={{ fontWeight: 700, color: "#c9a84c" }}>{jugador.puntos.toLocaleString()}</span>
             <span>):</span>
           </p>
           <button
             onClick={() => setMostrarInfoMovimientos(true)}
-            className="text-stone-400 hover:text-stone-700 transition-colors bg-white border border-stone-200 rounded-full p-1.5 shadow-sm hover:shadow shrink-0"
+            style={{ background: "rgba(184,92,56,0.15)", border: "1px solid rgba(184,92,56,0.4)", borderRadius: "50%", padding: 7, cursor: "pointer", color: "#b85c38", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s, border-color 0.2s" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(184,92,56,0.3)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(184,92,56,0.7)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(184,92,56,0.15)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(184,92,56,0.4)"; }}
             title="Información sobre la aparición de cartas"
             aria-label="Información sobre la aparición de cartas"
           >
@@ -2787,32 +2825,31 @@ function PanelMisCartas({
           <div className="space-y-8 animate-in fade-in duration-300">
 
             {/* Barra de Progreso de Maestría */}
-            <div className="bg-white px-4 py-3 rounded-xl shadow-sm border border-stone-200">
-              <div className="flex justify-between items-center mb-2">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-stone-800 font-bold uppercase tracking-widest text-xs">Maestría</h4>
-                  <span className="text-stone-300 text-[10px] hidden sm:inline">|</span>
-                  <p className="text-stone-500 text-xs">{tituloMaestria}</p>
+            <div className="glass-card" style={{ padding: "16px 20px", marginBottom: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <h4 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 14, fontWeight: 700, color: "#f0ebe1", textTransform: "uppercase", letterSpacing: "0.15em" }}>Maestría</h4>
+                  <span style={{ color: "rgba(196,181,160,0.3)" }}>|</span>
+                  <p style={{ color: "#8a9bb0", fontSize: 13 }}>{tituloMaestria}</p>
                 </div>
-                <div className="text-right text-sm">
-                  <span className="font-extrabold text-emerald-600">{cartasDesbloqueadasOriginal.length}</span>
-                  <span className="text-stone-400 font-semibold text-[10px]"> / {cartasActuales.length}</span>
+                <div style={{ textAlign: "right", fontSize: 14 }}>
+                  <span style={{ fontWeight: 800, color: "#00c8ff" }}>{cartasDesbloqueadasOriginal.length}</span>
+                  <span style={{ color: "rgba(138,155,176,0.6)", fontWeight: 600, fontSize: 11 }}> / {cartasActuales.length}</span>
                 </div>
               </div>
-              <div className="w-full bg-stone-100 rounded-full h-1.5 overflow-hidden shadow-inner">
+              <div style={{ width: "100%", background: "rgba(10,21,32,0.8)", borderRadius: 8, height: 6, overflow: "hidden", border: "1px solid rgba(0,200,255,0.15)" }}>
                 <div
-                  className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000 ease-in-out relative"
-                  style={{ width: `${porcentajeDesbloqueado}%` }}
+                  style={{ height: "100%", background: "linear-gradient(90deg, #00c8ff 0%, #0077ff 100%)", borderRadius: 8, transition: "width 1s ease-in-out", position: "relative", width: `${porcentajeDesbloqueado}%` }}
                 >
-                  <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]"></div>
+                  <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.2)", animation: "shimmer 2s infinite" }}></div>
                 </div>
               </div>
             </div>
 
             {/* Buscador y Filtros */}
-            <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 flex flex-col md:flex-row gap-4 justify-between items-center">
-              <div className="relative w-full md:w-64">
-                <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div className="glass-card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ position: "relative", width: "100%" }}>
+                <svg xmlns="http://www.w3.org/2000/svg" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#8a9bb0" }} width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
@@ -2820,27 +2857,19 @@ function PanelMisCartas({
                   placeholder="Buscar carta..."
                   value={filtroTexto}
                   onChange={(e) => setFiltroTexto(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 border border-stone-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all font-semibold text-stone-700"
+                  className="input-oni w-full"
+                  style={{ paddingLeft: 36 }}
                 />
               </div>
 
-              <div className="flex bg-white rounded-lg border border-stone-300 p-1 shadow-sm w-full md:w-auto">
-                <button
-                  onClick={() => setFiltroEstado("todas")}
-                  className={`flex-1 md:flex-none px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-colors ${filtroEstado === 'todas' ? 'bg-stone-800 text-white shadow' : 'text-stone-500 hover:text-stone-800 hover:bg-stone-100'}`}
-                >
+              <div style={{ display: "flex", background: "rgba(10,21,32,0.8)", border: "1px solid rgba(196,181,160,0.1)", padding: 4, borderRadius: 8 }}>
+                <button onClick={() => setFiltroEstado("todas")} className={`btn-oni-${filtroEstado === 'todas' ? 'primary' : 'ghost'}`} style={{ flex: 1, padding: "8px 0", fontSize: 11, fontFamily: "var(--font-rajdhani), sans-serif" }}>
                   Todas
                 </button>
-                <button
-                  onClick={() => setFiltroEstado("desbloqueadas")}
-                  className={`flex-1 md:flex-none px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-colors ${filtroEstado === 'desbloqueadas' ? 'bg-emerald-600 text-white shadow' : 'text-stone-500 hover:text-emerald-700 hover:bg-emerald-50'}`}
-                >
+                <button onClick={() => setFiltroEstado("desbloqueadas")} className={`btn-oni-${filtroEstado === 'desbloqueadas' ? 'primary' : 'ghost'}`} style={{ flex: 1, padding: "8px 0", fontSize: 11, fontFamily: "var(--font-rajdhani), sans-serif" }}>
                   Desbloqueadas
                 </button>
-                <button
-                  onClick={() => setFiltroEstado("bloqueadas")}
-                  className={`flex-1 md:flex-none px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-colors ${filtroEstado === 'bloqueadas' ? 'bg-stone-300 text-stone-800 shadow' : 'text-stone-500 hover:text-stone-800 hover:bg-stone-100'}`}
-                >
+                <button onClick={() => setFiltroEstado("bloqueadas")} className={`btn-oni-${filtroEstado === 'bloqueadas' ? 'primary' : 'ghost'}`} style={{ flex: 1, padding: "8px 0", fontSize: 11, fontFamily: "var(--font-rajdhani), sans-serif" }}>
                   Bloqueadas
                 </button>
               </div>
@@ -2849,29 +2878,24 @@ function PanelMisCartas({
             {/* Cartas Desbloqueadas */}
             {(filtroEstado === "todas" || filtroEstado === "desbloqueadas") && (
               <div>
-                <h3 className="text-lg font-bold text-stone-700 uppercase tracking-wider mb-4 border-b border-stone-300 pb-2 flex justify-between items-center">
+                <h3 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 16, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 16, borderBottom: "1px solid rgba(196,181,160,0.1)", paddingBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span>Disponibles</span>
-                  <span className="bg-stone-200 text-stone-600 px-2 py-0.5 rounded text-xs">{desbloqueadas.length}</span>
+                  <span style={{ background: "rgba(0,200,255,0.1)", color: "#00c8ff", padding: "2px 8px", borderRadius: 4, fontSize: 12 }}>{desbloqueadas.length}</span>
                 </h3>
                 {desbloqueadas.length === 0 ? (
-                  <p className="text-stone-500 text-sm">No hay cartas que coincidan con la búsqueda.</p>
+                  <p style={{ color: "#8a9bb0", fontSize: 14 }}>No hay cartas que coincidan con la búsqueda.</p>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
                     {desbloqueadas.map((c) => {
                       if (tabCartas === "poderes") {
                         return (
-                          <div key={c.nombre} className="relative group cursor-pointer" onClick={() => setCartaAmpliada(c)}>
-                            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-200"></div>
-                            <div className="relative h-full flex flex-col justify-between">
-                              <CartaAccionFicha
-                                nombre={c.nombre}
-                                descripcion={getDescripcionCartaAccion(c.descripcion ?? "")}
-                                variante="mano"
-                                className="h-full pointer-events-none"
-                              />
+                          <div key={c.nombre} style={{ position: "relative", cursor: "pointer" }} onClick={() => setCartaAmpliada(c)} className="group">
+                            <div style={{ position: "absolute", inset: -4, background: "linear-gradient(to right, rgba(0,200,255,0.4), rgba(0,119,255,0.4))", borderRadius: 16, filter: "blur(8px)", opacity: 0, transition: "opacity 0.3s" }} className="group-hover:opacity-100"></div>
+                            <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                              <CartaAccionFicha nombre={c.nombre} descripcion={getDescripcionCartaAccion(c.descripcion ?? "")} variante="mano" className="h-full pointer-events-none" />
                             </div>
-                            <div className="absolute top-2 right-2 bg-emerald-100/90 backdrop-blur-sm text-emerald-800 text-[9px] font-bold px-2 py-1 rounded-full shadow-sm flex items-center gap-1 z-20">
-                              {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} className="object-contain" />
+                            <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(10,21,32,0.8)", backdropFilter: "blur(4px)", border: "1px solid rgba(0,200,255,0.3)", color: "#00c8ff", fontSize: 10, fontWeight: 700, padding: "4px 8px", borderRadius: 12, display: "flex", alignItems: "center", gap: 4, zIndex: 20 }}>
+                              {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} style={{ objectFit: "contain" }} />
                             </div>
                           </div>
                         );
@@ -2883,26 +2907,23 @@ function PanelMisCartas({
                           key={c.nombre}
                           type="button"
                           onClick={() => setCartaAmpliada(c)}
-                          className="rounded-2xl border border-emerald-200 bg-emerald-50/30 p-4 shadow-sm flex flex-col items-center hover:scale-[1.03] hover:shadow-md transition-all cursor-pointer text-left relative overflow-hidden group h-full"
+                          className="glass-card flex flex-col items-center cursor-pointer text-left relative overflow-hidden group h-full"
+                          style={{ padding: 16, transition: "transform 0.2s", display: "flex", flexDirection: "column" }}
+                          onMouseEnter={e => e.currentTarget.style.transform = "scale(1.03)"}
+                          onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
                         >
-                          <div className="absolute top-0 left-0 w-1 h-0 bg-emerald-500 transition-all duration-300 group-hover:h-full"></div>
-                          <p className="text-sm font-bold text-stone-800 uppercase tracking-wider mb-3 flex items-center justify-between w-full">
+                          <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: 0, background: "#00c8ff", transition: "height 0.3s" }} className="group-hover:h-full"></div>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#f0ebe1", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
                             <span>{c.nombre}</span>
-                            <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-100 px-1.5 py-0.5 rounded whitespace-nowrap flex items-center gap-1">
-                              Desbloqueo: {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} className="object-contain" />
+                            <span style={{ fontSize: 10, color: "#00c8ff", fontWeight: 600, background: "rgba(0,200,255,0.1)", padding: "2px 6px", borderRadius: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                              {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} style={{ objectFit: "contain" }} />
                             </span>
                           </p>
-                          <div className="bg-white rounded-lg p-3 shadow-inner w-full flex flex-col md:flex-row items-center justify-center gap-4 flex-1">
-                            <Image
-                              src={getImagenCarta(c.nombre)}
-                              alt={c.nombre}
-                              width={68}
-                              height={68}
-                              className="object-contain"
-                            />
+                          <div style={{ background: "rgba(10,21,32,0.6)", borderRadius: 8, padding: 12, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, flex: 1, border: "1px solid rgba(196,181,160,0.05)" }}>
+                            <Image src={getImagenCarta(c.nombre)} alt={c.nombre} width={68} height={68} style={{ objectFit: "contain" }} />
                             {cartaDef && (
-                              <div className="flex flex-col items-center md:border-l md:border-stone-200 md:pl-4">
-                                <MiniGrid carta={cartaDef} size={6} colorDots="#10b981" />
+                              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, borderTop: "1px solid rgba(196,181,160,0.1)", width: "100%" }}>
+                                <MiniGrid carta={cartaDef} size={6} colorDots="#00c8ff" />
                               </div>
                             )}
                           </div>
@@ -2917,31 +2938,26 @@ function PanelMisCartas({
             {/* Cartas Bloqueadas */}
             {(filtroEstado === "todas" || filtroEstado === "bloqueadas") && (
               <div>
-                <h3 className="text-lg font-bold text-stone-700 uppercase tracking-wider mb-4 border-b border-stone-300 pb-2 flex items-center justify-between">
+                <h3 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 16, fontWeight: 700, color: "#8a9bb0", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 16, borderBottom: "1px solid rgba(196,181,160,0.1)", paddingBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span>Bloqueadas</span>
-                  <span className="bg-stone-200 text-stone-600 px-2 py-0.5 rounded text-xs">{bloqueadas.length}</span>
+                  <span style={{ background: "rgba(196,181,160,0.1)", color: "#c4b5a0", padding: "2px 8px", borderRadius: 4, fontSize: 12 }}>{bloqueadas.length}</span>
                 </h3>
                 {bloqueadas.length === 0 ? (
-                  <p className="text-stone-500 text-sm">No hay cartas bloqueadas.</p>
+                  <p style={{ color: "#8a9bb0", fontSize: 14 }}>No hay cartas bloqueadas.</p>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
                     {bloqueadas.map((c) => {
                       if (tabCartas === "poderes") {
                         return (
-                          <div key={c.nombre} className="relative group cursor-pointer opacity-80 hover:opacity-100 grayscale hover:grayscale-0 transition-all duration-300" onClick={() => setCartaAmpliada(c)}>
-                            <div className="relative h-full flex flex-col justify-between">
-                              <CartaAccionFicha
-                                nombre={c.nombre}
-                                descripcion={getDescripcionCartaAccion(c.descripcion ?? "")}
-                                variante="mano"
-                                className="h-full pointer-events-none"
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center z-10 bg-stone-900/40 rounded-xl group-hover:bg-transparent transition-colors">
-                                <span className="text-4xl drop-shadow-md group-hover:scale-110 transition-transform" aria-label="Bloqueada">🔒</span>
+                          <div key={c.nombre} style={{ position: "relative", cursor: "pointer", opacity: 0.6, filter: "grayscale(100%)", transition: "all 0.3s" }} onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.filter = "grayscale(0%)"; }} onMouseLeave={e => { e.currentTarget.style.opacity = "0.6"; e.currentTarget.style.filter = "grayscale(100%)"; }} onClick={() => setCartaAmpliada(c)}>
+                            <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                              <CartaAccionFicha nombre={c.nombre} descripcion={getDescripcionCartaAccion(c.descripcion ?? "")} variante="mano" className="h-full pointer-events-none" />
+                              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, background: "rgba(10,21,32,0.5)", borderRadius: 12 }} className="group-hover:bg-transparent transition-colors">
+                                <span style={{ fontSize: 32, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.8))" }} aria-label="Bloqueada">🔒</span>
                               </div>
                             </div>
-                            <div className="absolute top-2 right-2 bg-stone-200/90 backdrop-blur-sm text-stone-600 text-[9px] font-bold px-2 py-1 rounded-full shadow-sm flex items-center gap-1 z-20">
-                              {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} className="object-contain opacity-60" />
+                            <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(10,21,32,0.8)", backdropFilter: "blur(4px)", border: "1px solid rgba(196,181,160,0.3)", color: "#c4b5a0", fontSize: 10, fontWeight: 700, padding: "4px 8px", borderRadius: 12, display: "flex", alignItems: "center", gap: 4, zIndex: 20 }}>
+                              {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} style={{ objectFit: "contain", opacity: 0.5 }} />
                             </div>
                           </div>
                         );
@@ -2953,29 +2969,26 @@ function PanelMisCartas({
                           key={c.nombre}
                           type="button"
                           onClick={() => setCartaAmpliada(c)}
-                          className="rounded-2xl border border-stone-200 bg-stone-100 p-4 shadow-sm flex flex-col items-center opacity-80 grayscale hover:opacity-100 hover:scale-[1.03] hover:shadow-md transition-all cursor-pointer text-left relative overflow-hidden group h-full"
+                          className="glass-card flex flex-col items-center cursor-pointer text-left relative overflow-hidden group h-full"
+                          style={{ padding: 16, opacity: 0.6, filter: "grayscale(100%)", transition: "all 0.3s", display: "flex", flexDirection: "column" }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.03)"; e.currentTarget.style.opacity = "1"; e.currentTarget.style.filter = "grayscale(0%)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.opacity = "0.6"; e.currentTarget.style.filter = "grayscale(100%)"; }}
                         >
-                          <div className="absolute top-0 left-0 w-1 h-0 bg-stone-400 transition-all duration-300 group-hover:h-full z-20"></div>
-                          <p className="text-sm font-bold text-stone-600 uppercase tracking-wider mb-3 flex items-center justify-between w-full">
+                          <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: 0, background: "#c4b5a0", transition: "height 0.3s" }} className="group-hover:h-full z-20"></div>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#c4b5a0", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
                             <span>{c.nombre}</span>
-                            <span className="text-[10px] text-stone-500 font-semibold bg-stone-200 px-1.5 py-0.5 rounded whitespace-nowrap flex items-center gap-1">
-                              Desbloqueo: {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} className="object-contain opacity-60" />
+                            <span style={{ fontSize: 10, color: "#8a9bb0", fontWeight: 600, background: "rgba(196,181,160,0.1)", padding: "2px 6px", borderRadius: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                              {c.puntos_necesarios.toLocaleString()} <Image src="/katanas.png" alt="Katanas" width={10} height={10} style={{ objectFit: "contain", opacity: 0.6 }} />
                             </span>
                           </p>
-                          <div className="bg-stone-200 rounded-lg p-3 shadow-inner w-full flex flex-col md:flex-row items-center justify-center gap-4 relative overflow-hidden flex-1">
-                            <div className="absolute inset-0 flex items-center justify-center z-10 bg-stone-200/40">
-                              <span className="text-4xl drop-shadow-md group-hover:scale-110 transition-transform" aria-label="Bloqueada">🔒</span>
+                          <div style={{ background: "rgba(10,21,32,0.4)", borderRadius: 8, padding: 12, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, flex: 1, border: "1px solid rgba(196,181,160,0.05)", position: "relative" }}>
+                            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, background: "rgba(10,21,32,0.5)" }} className="group-hover:bg-transparent">
+                               <span style={{ fontSize: 32, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.8))" }} aria-label="Bloqueada">🔒</span>
                             </div>
-                            <Image
-                              src={getImagenCarta(c.nombre)}
-                              alt={c.nombre}
-                              width={68}
-                              height={68}
-                              className="object-contain opacity-50"
-                            />
+                            <Image src={getImagenCarta(c.nombre)} alt={c.nombre} width={68} height={68} style={{ objectFit: "contain", opacity: 0.5 }} />
                             {cartaDef && (
-                              <div className="flex flex-col items-center md:border-l md:border-stone-300 md:pl-4 opacity-50">
-                                <MiniGrid carta={cartaDef} size={6} colorDots="#64748b" />
+                              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, borderTop: "1px solid rgba(196,181,160,0.1)", width: "100%", opacity: 0.5 }}>
+                                <MiniGrid carta={cartaDef} size={6} colorDots="#8a9bb0" />
                               </div>
                             )}
                           </div>
@@ -2992,52 +3005,48 @@ function PanelMisCartas({
       </>
       {/* Modal Información Movimientos */}
       {mostrarInfoMovimientos && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-stone-100 rounded-3xl shadow-2xl p-6 md:p-8 relative animate-in fade-in zoom-in duration-200 border border-stone-200">
-            <button
-              type="button"
-              onClick={() => setMostrarInfoMovimientos(false)}
-              className="absolute right-6 top-6 text-2xl leading-none text-stone-400 hover:text-stone-800 transition-colors focus:outline-none"
-              aria-label="Cerrar"
-            >
-              ×
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(5,13,21,0.88)", backdropFilter: "blur(8px)", padding: 16 }}>
+          <div className="glass-card" style={{ maxWidth: 500, width: "100%", padding: "32px", position: "relative" }}>
+            <button onClick={() => setMostrarInfoMovimientos(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#8a9bb0", cursor: "pointer" }}>
+              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-stone-800 rounded-lg text-white">
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+              <div style={{ background: "rgba(184,92,56,0.1)", color: "#b85c38", padding: 8, borderRadius: 8 }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-extrabold text-stone-800 uppercase tracking-widest">
+              <h3 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 22, fontWeight: 800, color: "#f0ebe1", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 El Destino y los Maestros
               </h3>
             </div>
 
-            <div className="space-y-4 text-base text-stone-600 leading-relaxed bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+            <div style={{ background: "rgba(10,21,32,0.6)", padding: 24, borderRadius: 16, border: "1px solid rgba(196,181,160,0.05)", display: "flex", flexDirection: "column", gap: 16, color: "rgba(196,181,160,0.8)", fontSize: 15, lineHeight: 1.6 }}>
               <p>
                 {tabCartas === "poderes"
-                  ? <>En el templo de Onitama, cada maestro empuña <strong>dos poderes</strong> únicos que desafían las normas, pero las leyes ancestrales imponen una regla sagrada: <strong>jamás recibirás un poder que aún no hayas logrado dominar en tu camino.</strong></>
-                  : <>En el templo de Onitama, el azar reparte cinco cartas entre ambos contendientes, pero las leyes de los maestros imponen una restricción sagrada: <strong>jamás recibirás una carta que aún no hayas logrado desbloquear en tu camino.</strong></>
+                  ? <>En el templo de Onitama, cada maestro empuña <strong style={{ color: "#f0ebe1" }}>dos poderes</strong> únicos que desafían las normas, pero las leyes ancestrales imponen una regla sagrada: <strong style={{ color: "#f0ebe1" }}>jamás recibirás un poder que aún no hayas logrado dominar en tu camino.</strong></>
+                  : <>En el templo de Onitama, el azar reparte cinco cartas entre ambos contendientes, pero las leyes de los maestros imponen una restricción sagrada: <strong style={{ color: "#f0ebe1" }}>jamás recibirás una carta que aún no hayas logrado desbloquear en tu camino.</strong></>
                 }
               </p>
-              <div className="bg-emerald-50 border-emerald-500 border rounded-xl p-4 mt-2">
-                <h4 className="font-bold text-emerald-900 uppercase tracking-wider text-sm flex items-center gap-2 mb-2">
+              <div style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 12, padding: 16, marginTop: 8 }}>
+                <h4 style={{ fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.1em", fontSize: 14, display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   La Regla del Oponente
                 </h4>
-                <p className="text-emerald-800 text-sm">
+                <p style={{ color: "rgba(16,185,129,0.8)", fontSize: 14, lineHeight: 1.5 }}>
                   {tabCartas === "poderes"
-                    ? <>Los poderes disponibles en una batalla están limitados por el maestro con menor rango. Puesto que <strong>ambos</strong> contendientes deben poseer el poder para que este pueda formar parte del nivel de la partida, <strong>aquellos con mayores requisitos de Katanas serán más raros de ver</strong>, requiriendo que te enfrentes a oponentes igual de experimentados.</>
-                    : <>Las cartas disponibles en una batalla están limitadas por el maestro con menor rango. Puesto que <strong>ambos</strong> contendientes deben poseer la carta para que esta pueda formar parte del reparto, <strong>aquellas con mayores requisitos de Katanas serán más raras de ver</strong>, requiriendo que te enfrentes a oponentes igual de experimentados.</>
+                    ? <>Los poderes disponibles en una batalla están limitados por el maestro con menor rango. Puesto que <strong style={{ color: "#10b981" }}>ambos</strong> contendientes deben poseer el poder para que este pueda formar parte del nivel de la partida, <strong style={{ color: "#10b981" }}>aquellos con mayores requisitos de Katanas serán más raros de ver</strong>, requiriendo que te enfrentes a oponentes igual de experimentados.</>
+                    : <>Las cartas disponibles en una batalla están limitadas por el maestro con menor rango. Puesto que <strong style={{ color: "#10b981" }}>ambos</strong> contendientes deben poseer la carta para que esta pueda formar parte del reparto, <strong style={{ color: "#10b981" }}>aquellas con mayores requisitos de Katanas serán más raras de ver</strong>, requiriendo que te enfrentes a oponentes igual de experimentados.</>
                   }
                 </p>
               </div>
             </div>
 
-            <div className="mt-8 flex justify-end">
+            <div style={{ marginTop: 32, display: "flex", justifyContent: "flex-end" }}>
               <button
                 type="button"
                 onClick={() => setMostrarInfoMovimientos(false)}
-                className="px-6 py-3 bg-stone-800 text-stone-100 font-bold uppercase tracking-widest text-sm rounded-xl hover:bg-stone-700 hover:scale-[1.02] transition-all shadow-md"
+                className="btn-oni-primary"
+                style={{ fontFamily: "var(--font-rajdhani), sans-serif", padding: "12px 24px" }}
               >
                 Comprendido
               </button>
@@ -3048,46 +3057,30 @@ function PanelMisCartas({
 
       {/* Modal Carta Ampliada */}
       {cartaAmpliada && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-sm sm:max-w-md md:max-w-lg bg-white rounded-3xl shadow-2xl p-6 md:p-8 relative flex flex-col items-center animate-in fade-in zoom-in duration-200">
-            <button
-              type="button"
-              onClick={() => setCartaAmpliada(null)}
-              className="absolute right-5 top-4 text-3xl leading-none text-stone-400 hover:text-stone-700 focus:outline-none"
-              aria-label="Cerrar"
-            >
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(5,13,21,0.88)", backdropFilter: "blur(8px)", padding: 16 }}>
+          <div className="glass-card" style={{ maxWidth: 500, width: "100%", padding: "32px", position: "relative", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <button onClick={() => setCartaAmpliada(null)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#8a9bb0", cursor: "pointer", fontSize: 24, lineHeight: 1 }}>
               ×
             </button>
-            <h3 className="text-3xl font-extrabold text-stone-800 uppercase tracking-wider mb-2 mt-4">
+            <h3 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: 32, fontWeight: 700, color: "#f0ebe1", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8, marginTop: 16 }}>
               {cartaAmpliada.nombre}
             </h3>
-            <p className="text-sm text-stone-500 font-semibold mb-6 italic text-center px-4">
+            <p style={{ color: "rgba(196,181,160,0.6)", fontSize: 14, fontStyle: "italic", textAlign: "center", marginBottom: 24, padding: "0 16px" }}>
               "{FRASES_EPICAS[cartaAmpliada.nombre] ?? "Una carta misteriosa que esconde un poder oculto."}"
             </p>
 
-            <div className="w-full bg-stone-100 rounded-2xl p-6 flex flex-col items-center justify-center gap-8 shadow-inner mb-6">
-              <div className="flex flex-col md:flex-row items-center justify-center gap-8 w-full">
+            <div style={{ width: "100%", background: "rgba(10,21,32,0.6)", borderRadius: 16, padding: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 24, border: "1px solid rgba(196,181,160,0.05)", marginBottom: 24 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24, width: "100%" }}>
                 {tabCartas === "poderes" ? (
-                  <div className="w-full max-w-[200px] sm:max-w-xs shadow-2xl rounded-2xl overflow-hidden ring-4 ring-white">
-                    <CartaAccionFicha
-                      nombre={cartaAmpliada.nombre}
-                      descripcion={getDescripcionCartaAccion(cartaAmpliada.descripcion ?? "")}
-                      variante="elegir"
-                      className="w-full min-h-[250px] sm:min-h-[300px] pointer-events-none"
-                    />
+                  <div style={{ width: "100%", maxWidth: 160, borderRadius: 16, overflow: "hidden", border: "2px solid rgba(0,200,255,0.3)", boxShadow: "0 0 20px rgba(0,200,255,0.15)" }}>
+                    <CartaAccionFicha nombre={cartaAmpliada.nombre} descripcion={getDescripcionCartaAccion(cartaAmpliada.descripcion ?? "")} variante="elegir" className="w-full min-h-[220px] pointer-events-none" />
                   </div>
                 ) : (
                   <>
-                    <Image
-                      src={getImagenCarta(cartaAmpliada.nombre)}
-                      alt={cartaAmpliada.nombre}
-                      width={160}
-                      height={160}
-                      className="object-contain drop-shadow-2xl"
-                    />
+                    <Image src={getImagenCarta(cartaAmpliada.nombre)} alt={cartaAmpliada.nombre} width={120} height={120} style={{ objectFit: "contain", filter: "drop-shadow(0 0 20px rgba(0,200,255,0.2))" }} />
                     {TODAS_LAS_CARTAS.find(cd => cd.nombre === cartaAmpliada.nombre) && (
-                      <div className="bg-white p-4 rounded-xl shadow-md border border-stone-200">
-                        <MiniGrid carta={TODAS_LAS_CARTAS.find(cd => cd.nombre === cartaAmpliada.nombre)!} size={10} colorDots="#1a2d4a" />
+                      <div style={{ background: "rgba(10,21,32,0.8)", padding: 12, borderRadius: 12, border: "1px solid rgba(0,200,255,0.15)" }}>
+                        <MiniGrid carta={TODAS_LAS_CARTAS.find(cd => cd.nombre === cartaAmpliada.nombre)!} size={8} colorDots="#00c8ff" />
                       </div>
                     )}
                   </>
@@ -3096,37 +3089,37 @@ function PanelMisCartas({
 
               {/* Estadísticas / Lore Generado */}
               {ENFOQUES_CARTAS[cartaAmpliada.nombre] && (
-                <div className="flex flex-wrap gap-3 w-full justify-center">
-                  <div className="bg-white px-4 py-2 border border-stone-200 rounded-lg flex items-center gap-2 shadow-sm text-xs font-bold text-stone-600 uppercase tracking-widest">
-                    <span>Enfoque:</span>
-                    <span className="text-stone-800">{ENFOQUES_CARTAS[cartaAmpliada.nombre].enfoque}</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", width: "100%" }}>
+                  <div style={{ background: "rgba(196,181,160,0.1)", padding: "8px 16px", border: "1px solid rgba(196,181,160,0.2)", borderRadius: 8, display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                    <span style={{ color: "#8a9bb0" }}>Enfoque:</span>
+                    <span style={{ color: "#f0ebe1" }}>{ENFOQUES_CARTAS[cartaAmpliada.nombre].enfoque}</span>
                     <span>{ENFOQUES_CARTAS[cartaAmpliada.nombre].icon}</span>
                   </div>
-                  <div className="bg-white px-4 py-2 border border-stone-200 rounded-lg flex items-center gap-2 shadow-sm text-xs font-bold text-stone-600 uppercase tracking-widest">
-                    <span>Alcance:</span>
-                    <span className="text-stone-800">{ENFOQUES_CARTAS[cartaAmpliada.nombre].alcance}</span>
+                  <div style={{ background: "rgba(196,181,160,0.1)", padding: "8px 16px", border: "1px solid rgba(196,181,160,0.2)", borderRadius: 8, display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                    <span style={{ color: "#8a9bb0" }}>Alcance:</span>
+                    <span style={{ color: "#f0ebe1" }}>{ENFOQUES_CARTAS[cartaAmpliada.nombre].alcance}</span>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="text-xs text-stone-400 uppercase tracking-widest font-bold flex items-center justify-between w-full">
-              <div className="flex items-center gap-2 bg-stone-100 px-3 py-2 rounded-lg border border-stone-200">
-                <span className="text-stone-500">Desbloqueo:</span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(10,21,32,0.8)", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(196,181,160,0.2)" }}>
+                <span style={{ color: "#8a9bb0" }}>Desbloqueo:</span>
                 <Image src="/katanas.png" alt="Katanas" width={14} height={14} />
-                <span className="text-stone-800">{cartaAmpliada.puntos_necesarios.toLocaleString()}</span>
+                <span style={{ color: "#f0ebe1" }}>{cartaAmpliada.puntos_necesarios.toLocaleString()}</span>
               </div>
 
               {jugador.puntos >= cartaAmpliada.puntos_necesarios ? (
-                <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200">
+                <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#10b981", background: "rgba(16,185,129,0.1)", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(16,185,129,0.3)" }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                   Disponible
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 text-stone-500 bg-stone-100 px-3 py-2 rounded-lg border border-stone-200">
-                  <span className="text-sm">🔒</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#8a9bb0", background: "rgba(196,181,160,0.1)", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(196,181,160,0.2)" }}>
+                  <span style={{ fontSize: 14 }}>🔒</span>
                   Bloqueada
                 </div>
               )}
