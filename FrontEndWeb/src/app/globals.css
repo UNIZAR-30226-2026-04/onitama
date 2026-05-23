@@ -37,20 +37,20 @@ body {
 input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"]),
 textarea,
 select {
-  color: #000 !important;
-  caret-color: #000;
+  color: #f0ebe1 !important;
+  caret-color: #f0ebe1;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #6b7280;
+  color: rgba(138, 155, 176, 0.6);
 }
 
 input:-webkit-autofill,
 textarea:-webkit-autofill,
 select:-webkit-autofill {
-  -webkit-text-fill-color: #000 !important;
-  caret-color: #000;
+  -webkit-text-fill-color: #f0ebe1 !important;
+  caret-color: #f0ebe1;
 }
 
 /* ═══════════════════════════════════════════════════
