@@ -206,7 +206,7 @@ fun PantallaRegistro(
                             val conseguido = viewModel.onCrearClick()
                             if(conseguido){
                                 Log.d("Registro", "Registro exitoso con ${estado.nombre}, ${estado.correo}")
-                                viewModel.onAvatarChange(null)
+                                viewModel.onAvatarChange("None")
                                 chooseAvatar = true
                             }
                             else{
@@ -261,7 +261,7 @@ fun PantallaRegistro(
 
                     Button(
                         onClick = {
-                            viewModel.onAvatarChange(null)
+                            viewModel.onAvatarChange("None")
                         },
                     ){
                         Text("Ninguno")
