@@ -96,7 +96,8 @@ class PartidaViewModel : ViewModel() {
                     cartas_accion_rival = datos.cartas_accion_oponente,
                     esReanudada = !esNueva,
                     trampa_eq1 = datos.trampa_j1_pos,
-                    trampa_eq2 = datos.trampa_j2_pos
+                    trampa_eq2 = datos.trampa_j2_pos,
+                    equipoNuestro = equipoPropio
                 )
 
 
@@ -165,7 +166,7 @@ class PartidaViewModel : ViewModel() {
                                 if(resultado.esReyCapturado) {
                                     razon = "REY CAPTURADO"
                                 }
-                                _estado.value = resultado.nuevoEstado//.copy(turnoActual = equipoPropio)
+                                _estado.value = resultado.nuevoEstado.copy(turnoActual = equipoPropio)
                             }
 
                             is Partida.RespuestaMovimientoInvalido -> {

@@ -666,7 +666,8 @@ fun crearEstadoServidor (
     /** Cartas de acción (para partidas reanudadas). Puede venir como array [propia, rival]
     *  o como campos individuales carta_accion_propia / carta_accion_rival. */
     cartas_accion_propia: List<Partida.CartaAccionJson>?,
-    cartas_accion_rival: List<Partida.CartaAccionJson>?
+    cartas_accion_rival: List<Partida.CartaAccionJson>?,
+    equipoNuestro: EquipoID
 ): EstadoJuego {
     Log.d("LOG de partida", "Partida reanudada?: $esReanudada")
     val tablero = if (esReanudada) {
@@ -675,6 +676,7 @@ fun crearEstadoServidor (
     else {
         crearTableroInicial()
     }
+
 
     val turnoActual = if ((turno ?: 0) % 2 == 0) {
         EquipoID.AZUL // El turno 0 (par) siempre es del Equipo 1 (Azul)
@@ -688,8 +690,8 @@ fun crearEstadoServidor (
     else {
         FasePartida.COLOCAR_TRAMPA
     }
-    
-    return EstadoJuego (
+
+    var estadoAPriori = EstadoJuego (
         fasePartida = faseP,
         tablero = tablero,
         turnoActual = turnoActual,
@@ -699,6 +701,32 @@ fun crearEstadoServidor (
         cartasAccionPropia = cartas_accion_propia?.map { it.nombre } ?: emptyList(),
         cartasAccionRival = cartas_accion_rival?.map { it.nombre } ?: emptyList()
     )
+    var estadoIntermedio = estadoAPriori
+    var estadoAPosteriori = estadoAPriori
+    val equipoContrario = if(equipoNuestro == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL
+    if (cartas_accion_propia != null) {
+        for( carta in cartas_accion_propia){
+            if(carta.estado == "ACTIVA"){
+                Log.d("LOG de partida", "Intentando aplicar carta acción propia: ${carta.nombre} al reanudar partida")
+                estadoIntermedio = aplicarCartaAccion(estadoAPriori, equipoNuestro, carta.nombre, 0, 0, 0, 0, "", carta.accion)
+                estadoIntermedio = estadoIntermedio.copy(cartaAccionYaUsada = true)
+            }
+            else if(carta.estado == "NO USABLE"){
+                Log.d("LOG de partida", "Intentando aplicar carta acción propia: ${carta.nombre} al reanudar partida")
+                estadoIntermedio = estadoIntermedio.copy(cartaAccionYaUsada = true)
+            }
+        }
+    }
+    if( cartas_accion_rival != null){
+        for( carta in cartas_accion_rival){
+            if(carta.estado == "ACTIVA"){
+                Log.d("LOG de partida", "Intentando aplicar carta acción del rival: ${carta.nombre} al reanudar partida")
+                estadoAPosteriori = aplicarCartaAccion(estadoIntermedio, equipoContrario, carta.nombre, 0, 0, 0, 0, "", carta.accion)
+            }
+        }
+    }
+    
+    return estadoAPosteriori
 
 }
 
@@ -879,13 +907,6 @@ fun ejecutarMovimiento (
         equipoCiego = estado.equipoCiego,
         restriccionSolo = resolverRestrccionSoloTrasMovimiento(estado.restriccionSolo, equipoActual)
     )
-
-    val puedeMoverDespues = tieneMovimientosPosibles(nuevoEstado, siguiente)
-
-    val gana = when {
-        esReyCapturado || victoriaPorTrono || !puedeMoverDespues -> equipoActual
-        else -> null
-    }
 
     val estadoFinal = deshacerEspejoTrasMovimientoRival(nuevoEstado, equipoActual)
 
