@@ -3,13 +3,10 @@ services:
   database:
     image: postgis/postgis:17-3.4
     container_name: proy-postgres
-    restart: unless-stopped
-    ports:
-      - "5432:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata_pr3:/var/lib/postgresql/data
       # cualquier .sql en esta carpeta (el entrypoint) se ejecuta automáticamente al crear el contenedor por primera vez
@@ -20,25 +17,24 @@ services:
       - ./BaseDatos/crear.sql:/docker-entrypoint-initdb.d/01_crear.sql
       - ./BaseDatos/construir.sql:/docker-entrypoint-initdb.d/02_construir.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   backend:
     build:
-      context: ./backend
+      context: ./BackEnd
       dockerfile: Dockerfile
     container_name: proy-backend
-    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
       - DB_HOST=database
       - DB_PORT=5432
-      - DB_NAME=postgres
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
     depends_on:
     # depends_on con healthcheck en backend garantiza que el backend no arranca
     # hasta que postgre esté listo para aceptar conexiones, así no nos saldrá nunca el error de conexión rechazada

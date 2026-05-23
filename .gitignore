@@ -36,3 +36,6 @@ backend/target/maven-status/maven-compiler-plugin/compile/default-compile/inputF
 
 # extra
 practica5/*
+
+# variable de entorno
+.env
