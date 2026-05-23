@@ -28,7 +28,7 @@ INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Buey', '(0,1),
 INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Grulla', '(1,-1),(-1,-1),(0,1)',0);
 INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Oso', '(1,0),(-1,0),(0,1)',0);
 INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Aguila', '(-1,0),(-1,1),(-1,-1)',0);
-INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Cobra', '(-1,0),(1,1),(1,-1)',0);
+INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES ('Cobra', '(-1,0),(1,1),(1,-1)',30);
 
 
 INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES ('Pensatorium', 'ESPEJO', 0);
@@ -38,5 +38,5 @@ INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES ('Requiem', 'SACRI
 INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES ('La Dama del Mar', 'SOLO_PARA_ADELANTE', 0);
 -- U&'...\00F1...' evita que PowerShell/Get-Content (ANSI) corrompa la ñ al canalizar a psql
 INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES (U&'Atrapasue\00F1os', 'ROBAR', 0);-- Puntos a 0 para probar(originales 1000)
-INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES ('Brujeria', 'CEGAR', 0);
+INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES ('Brujeria', 'CEGAR', 80);
 INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES ('Finisterra', 'SOLO_PARA_ATRAS', 0);

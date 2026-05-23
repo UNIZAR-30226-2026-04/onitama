@@ -45,7 +45,8 @@
         </activity>
         <activity
             android:name=".ui.activities.partida.PartidaActivity"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait"
+            android:launchMode="singleTask">
         </activity>
         <activity
             android:name=".ui.activities.cartas.Cartas_activity">
