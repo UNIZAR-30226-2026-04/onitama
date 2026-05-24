@@ -1,9 +1,7 @@
 package backend.VO;
 
 import java.sql.Timestamp;
-import backend.JDBC.NotificacionJDBC;
-import java.sql.SQLException;
-import backend.DAO.NotificacionDAO;
+import backend.gestor.GestorNotificaciones;
 
 /**
  * Value Object para notificaciones unificadas: amistad, invitación partida, pausa, reanudar.
@@ -26,7 +24,7 @@ public class Notificacion {
     private Timestamp fechaCreacion;
     private Timestamp fechaExpiracion;
     private Integer idPartida;
-    private NotificacionDAO dao;
+    private GestorNotificaciones gestor;
 
     public Notificacion(int idNotificacion, String tipo, String remitente, String destinatario,
                         String estado, Timestamp fechaCreacion, Timestamp fechaExpiracion, Integer idPartida) {
@@ -38,14 +36,14 @@ public class Notificacion {
         this.fechaCreacion = fechaCreacion;
         this.fechaExpiracion = fechaExpiracion;
         this.idPartida = idPartida;
-        dao = new NotificacionJDBC();
+        gestor = new GestorNotificaciones();
     }
 
     public boolean registrarNotificacion(){
         try {
-            idNotificacion = dao.crear(this);
+            idNotificacion = gestor.crear(this);
             return idNotificacion >= 0; 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             return false;
         }
     }

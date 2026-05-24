@@ -1,7 +1,5 @@
 package backend.VO;
 
-import java.sql.SQLException;
-
 import backend.ACCIONES.Accion;
 import backend.ACCIONES.Espejo;
 import backend.ACCIONES.Revivir;
@@ -10,13 +8,12 @@ import backend.ACCIONES.Sacrificio;
 import backend.ACCIONES.SalvarRey;
 import backend.ACCIONES.SoloAdelante;
 import backend.ACCIONES.SoloAtras;
-import backend.JDBC.CartasAccionJDBC;
-import backend.DAO.CartasAccionDAO;
+import backend.gestor.GestorCartasAccion;
 
 public class CartaAccion {
     private String nombre, accion, estado, img;
     private int puntosMin, equipo;
-    private CartasAccionDAO dao;
+    private GestorCartasAccion gestor;
     private Accion accionEjecutable;
     
     public CartaAccion(String nombre, String accion, int puntosMin, String img){
@@ -26,7 +23,7 @@ public class CartaAccion {
         this.img = img;
         this.estado = "VISION"; //Esta en modo vision (Para ver en la tienda)
         this.equipo = -1;
-        dao = new CartasAccionJDBC();
+        gestor = new GestorCartasAccion();
         switch (accion) {
             case "ESPEJO":
                 accionEjecutable = new Espejo();
@@ -61,7 +58,7 @@ public class CartaAccion {
         this.img = img;
         this.estado = estado;
         this.equipo = equipo;
-        dao = new CartasAccionJDBC();
+        gestor = new GestorCartasAccion();
         switch (accion) {
             case "ESPEJO":
                 accionEjecutable = new Espejo();
@@ -162,8 +159,8 @@ public class CartaAccion {
 
     public boolean registrarCartaAccion(){
         try {
-            return dao.crearCarta(this);
-        } catch (SQLException e) {
+            return gestor.crearCarta(this);
+        } catch (Exception e) {
             return false;
         }
     }
@@ -218,16 +215,16 @@ public class CartaAccion {
 
     public boolean actualizarBD(){
         try {
-            return dao.updatePuntosMin(nombre, puntosMin) | dao.updateAccion(nombre, accion);
-        } catch (SQLException e) {
+            return gestor.updatePuntosMin(nombre, puntosMin) | gestor.updateAccion(nombre, accion);
+        } catch (Exception e) {
             return false;
         }
     }
 
     public boolean actualizarDatosPartida(int IDPartida){
         try {
-            return dao.updateEstadoEnPartida(IDPartida, nombre, estado) | dao.asignarEquipo(IDPartida, nombre, equipo);
-        } catch (SQLException e) {
+            return gestor.updateEstadoEnPartida(IDPartida, nombre, estado) | gestor.asignarEquipo(IDPartida, nombre, equipo);
+        } catch (Exception e) {
             return false;
         }
     }

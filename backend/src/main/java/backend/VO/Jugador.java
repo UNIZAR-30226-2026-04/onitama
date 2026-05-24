@@ -1,13 +1,10 @@
 package backend.VO;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import backend.DAO.JugadorDAO;
-import backend.DAO.SkinDAO;
-import backend.JDBC.JugadorJDBC;
-import backend.JDBC.SkinJDBC;
+import backend.gestor.GestorJugador;
+import backend.gestor.GestorSkin;
 
 //Faltan las skins
 public class Jugador {
@@ -19,8 +16,8 @@ public class Jugador {
 
     private List<Jugador> amigos;
     private List<Skin> misSkines;
-    private JugadorDAO dao;
-    private SkinDAO daoSkin;
+    private GestorJugador gestorJugador;
+    private GestorSkin gestorSkin;
     
     //Constructor necesario para la BD (usado por JugadorJDBC.montarJugador)
     //IMPORTANTE: Este constructor espera que la contraseña YA esté hasheada
@@ -38,8 +35,8 @@ public class Jugador {
 
         amigos = new ArrayList<>();
         misSkines = new ArrayList<>();
-        dao = new JugadorJDBC();
-        daoSkin = new SkinJDBC();
+        gestorJugador = new GestorJugador();
+        gestorSkin = new GestorSkin();
     }
     
     //Constructor simplificado para registro (valores por defecto)
@@ -51,8 +48,10 @@ public class Jugador {
 
     public boolean registrarse(){
         try {
-            return dao.registrarse(this);
-        } catch (SQLException e) {
+            return gestorJugador.registrarse(this);
+        // he cambiado que tire Exception en lugar de SQLEx. pq debería haber abstracción e igual
+        // que hemos quitado interacciones con la bbdd usando jdbc estos errores no deberían ser SQL
+        } catch (Exception e) {
             return false;
         }
     }
@@ -75,8 +74,8 @@ public class Jugador {
      */
     public static Jugador iniciarSesion(String nombreUsuario, String passwordTextoPlano){
         try {
-            JugadorDAO dao = new JugadorJDBC();
-            Jugador jugador = dao.buscarJugador(nombreUsuario);
+            GestorJugador gestorJugador = new GestorJugador();
+            Jugador jugador = gestorJugador.buscarJugador(nombreUsuario);
             
             if (jugador == null) {
                 return null; // Usuario no existe
@@ -89,7 +88,7 @@ public class Jugador {
                 return null; // Contraseña incorrecta
             }
             
-        } catch (SQLException e) {
+        } catch (Exception e) {
             return null;
         }
     }
@@ -153,16 +152,16 @@ public class Jugador {
 
     public boolean actualizarBD(){
         try {
-            return dao.updateContrasenya(nombre, password) | dao.updateCorreo(nombre, correo) | dao.updatePuntos(nombre, puntos) | dao.updateCores(nombre, cores) | dao.updatePartidasGanadas(nombre, partidasGanadas) | dao.updatePartidasJugadas(nombre, partidasJugadas); //| para que se ejecuten todos
-        } catch (SQLException e) {
+            return gestorJugador.updateContrasenya(nombre, password) | gestorJugador.updateCorreo(nombre, correo) | gestorJugador.updatePuntos(nombre, puntos) | gestorJugador.updateCores(nombre, cores) | gestorJugador.updatePartidasGanadas(nombre, partidasGanadas) | gestorJugador.updatePartidasJugadas(nombre, partidasJugadas); //| para que se ejecuten todos
+        } catch (Exception e) {
             return false;
         }
     }
 
     public void cargarAmigos(){
         try {
-            amigos = dao.sacarAmigos(nombre);
-        } catch (SQLException e) {
+            amigos = gestorJugador.sacarAmigos(nombre);
+        } catch (Exception e) {
         }
     }
 
@@ -172,21 +171,21 @@ public class Jugador {
     
     public boolean borrarAmigo(Jugador amigo){
         try {
-            if(dao.borrarAmigo(nombre, amigo.getNombre())) {
+            if(gestorJugador.borrarAmigo(nombre, amigo.getNombre())) {
                 amigos.remove(amigo); 
                 return true;
             }
             return false;    
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             return false;
         }
     }
 
     public void cargarSkins(){
         try {
-            misSkines = daoSkin.sacarSkinJugador(nombre);
-        } catch (SQLException e) {
+            misSkines = gestorSkin.sacarSkinJugador(nombre);
+        } catch (Exception e) {
         }
     }
 
@@ -206,12 +205,12 @@ public class Jugador {
         misSkines.add(nueva); //Añadimos en la lista para evitar tener que estar cargando de la BD
         try {
             // Actualizar cores en la BD
-            boolean coresActualizados = dao.updateCores(nombre, cores);
+            boolean coresActualizados = gestorJugador.updateCores(nombre, cores);
             // Registrar la compra de la skin
-            boolean skinComprada = daoSkin.comprarSkin(nueva.getNombre(), nombre);
-            
-            return coresActualizados && skinComprada;
-        } catch (SQLException e) {
+            String skinComprada = gestorSkin.comprarSkin(nueva.getNombre(), nombre);
+            // comprarSkin ahora devuelve String, comprobamos si vale "OK"
+            return coresActualizados && "OK".equals(skinComprada);
+        } catch (Exception e) {
             // Si falla, revertir el descuento de cores en memoria
             this.cores += nueva.getPrecio();
             misSkines.remove(nueva);

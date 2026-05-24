@@ -28,6 +28,12 @@ public class GestorNotificaciones {
         this.partidaJdbc = new PartidaJDBC();
     }
 
+    // añadido para que el VO Notificacion pueda registrarse a través del gestor
+    // igual que hacen el resto de VOs, sin llamar al JDBC directamente
+    public int crear(Notificacion n) throws SQLException {
+    return notifJdbc.crear(n);
+    }
+
     // Acepta una notificación. La acción depende del tipo.
     public boolean aceptarNotificacion(int idNotificacion, String nombreQuienAcepta) throws SQLException {
         Notificacion n = notifJdbc.obtenerPorId(idNotificacion);

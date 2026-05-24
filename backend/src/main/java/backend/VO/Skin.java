@@ -1,13 +1,11 @@
 package backend.VO;
 
-import backend.JDBC.SkinJDBC;
-import java.sql.SQLException;
-import backend.DAO.SkinDAO;
+import backend.gestor.GestorSkin;
 
 public class Skin {
     private String nombre, colorTablero, colorAliado, colorEnemigo;
     private int precio;
-    private SkinDAO dao;
+    private GestorSkin gestor;
 
     public Skin(String nombre, String colorTablero, String colorAliado, String colorEnemigo, int precio){
         this.nombre = nombre;
@@ -15,13 +13,13 @@ public class Skin {
         this.colorAliado = colorAliado;
         this.colorEnemigo = colorEnemigo;
         this.precio = precio;
-        dao = new SkinJDBC();
+        gestor = new GestorSkin();
     }
 
     public boolean registrarSkin(){
         try {
-            return dao.crearSkin(this);
-        } catch (SQLException e) {
+            return gestor.crearSkin(this);
+        } catch (Exception e) {
             return false;
         }
     }
@@ -68,8 +66,8 @@ public class Skin {
 
     public boolean actualizarBD(){
         try {
-            return dao.updatePrecio(nombre, precio) | dao.updateTablero(nombre, colorTablero) | dao.updateAliadas(nombre, colorAliado) | dao.updateEnemigas(nombre, colorEnemigo); //| para que se ejecuten todos
-        } catch (SQLException e) {
+            return gestor.updatePrecio(nombre, precio) | gestor.updateTablero(nombre, colorTablero) | gestor.updateAliadas(nombre, colorAliado) | gestor.updateEnemigas(nombre, colorEnemigo); //| para que se ejecuten todos
+        } catch (Exception e) {
             return false;
         }
     }
