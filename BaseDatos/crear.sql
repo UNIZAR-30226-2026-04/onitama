@@ -1,9 +1,6 @@
 CREATE TABLE Skin (
     Nombre VARCHAR(50) PRIMARY KEY,
-    Precio INTEGER,
-    Color_tablero VARCHAR(20),
-    Color_Fichas_Aliadas VARCHAR(20),
-    Color_Fichas_Enemigas VARCHAR(20)
+    Precio INTEGER
 );
 
 -- cambiar colores en bbdd
@@ -20,7 +17,6 @@ CREATE TABLE Jugador (
     Skin_Activa VARCHAR(50) NOT NULL DEFAULT 'Skin0',
     FOREIGN KEY (Skin_Activa) REFERENCES Skin(Nombre)
 );
-
 
 
 CREATE TABLE Cartas_Mov (

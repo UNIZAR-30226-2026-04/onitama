@@ -40,9 +40,6 @@ public final class SkinJDBC implements SkinDAO {
             
             ps.setString(1, skin.getNombre());
             ps.setInt(2, skin.getPrecio());
-            ps.setString(3, skin.getTablero());
-            ps.setString(4, skin.getAliadas());
-            ps.setString(5, skin.getEnemigas());
             int filasAfectadas = ps.executeUpdate();
             return filasAfectadas > 0;
             
@@ -91,42 +88,6 @@ public final class SkinJDBC implements SkinDAO {
         }
     }
 
-    public boolean updateTablero(String nombre, String nuevoTablero) throws SQLException {
-        try(Connection c = dataSource.getConnection(); 
-            PreparedStatement p = c.prepareStatement("UPDATE Skin SET Color_tablero = ? WHERE Nombre = ?")) { 
-            p.setString(1, nuevoTablero); 
-            p.setString(2, nombre); 
-            p.executeUpdate(); 
-            return true;
-        }catch (SQLException e) {
-            return false; // Si hay una excepción, asumimos que no se creó
-        }
-    }
-
-    public boolean updateAliadas(String nombre, String nuevaAliada) throws SQLException {
-        try(Connection c = dataSource.getConnection(); 
-            PreparedStatement p = c.prepareStatement("UPDATE Skin SET Color_Fichas_Aliadas = ? WHERE Nombre = ?")) { 
-            p.setString(1, nuevaAliada); 
-            p.setString(2, nombre); 
-            p.executeUpdate(); 
-            return true;
-        }catch (SQLException e) {
-            return false; // Si hay una excepción, asumimos que no se creó
-        }
-    }
-
-    public boolean updateEnemigas(String nombre, String nuevaEnemiga) throws SQLException {
-        try(Connection c = dataSource.getConnection(); 
-            PreparedStatement p = c.prepareStatement("UPDATE Skin SET Color_Fichas_Enemigas = ? WHERE Nombre = ?")) { 
-            p.setString(1, nuevaEnemiga); 
-            p.setString(2, nombre); 
-            p.executeUpdate(); 
-            return true;
-        }catch (SQLException e) {
-            return false; // Si hay una excepción, asumimos que no se creó
-        }
-    }
-
     public List<Skin> sacarSkinDisp() throws SQLException {
         final String sql = "SELECT * FROM Skin";
 
@@ -145,7 +106,7 @@ public final class SkinJDBC implements SkinDAO {
     }
 
     public List<Skin> sacarSkinJugador(String nombreUS) throws SQLException {
-        final String sql = "SELECT s.Nombre, s.Precio, s.Color_tablero, s.Color_Fichas_Aliadas, s.Color_Fichas_Enemigas FROM Skin s, Jugador_Skins js WHERE js.Skin = s.Nombre AND js.Jugador = ?";
+        final String sql = "SELECT s.Nombre, s.Precio FROM Skin s, Jugador_Skins js WHERE js.Skin = s.Nombre AND js.Jugador = ?";
 
         List<Skin> jugador = new ArrayList<>();
 
@@ -175,9 +136,6 @@ public final class SkinJDBC implements SkinDAO {
     private Skin montarSkin(ResultSet rs) throws SQLException {
         return new Skin(
             rs.getString("Nombre"),
-            rs.getString("Color_tablero"),
-            rs.getString("Color_Fichas_Aliadas"),
-            rs.getString("Color_Fichas_Enemigas"),
             rs.getInt("Precio")
         );
     }

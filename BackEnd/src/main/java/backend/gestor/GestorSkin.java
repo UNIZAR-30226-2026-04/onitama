@@ -68,16 +68,4 @@ public class GestorSkin {
     public boolean updatePrecio(String nombre, int nuevoPrecio) throws SQLException {
         return skinJdbc.updatePrecio(nombre, nuevoPrecio);
     }
- 
-    public boolean updateTablero(String nombre, String nuevoTablero) throws SQLException {
-        return skinJdbc.updateTablero(nombre, nuevoTablero);
-    }
- 
-    public boolean updateAliadas(String nombre, String nuevaAliada) throws SQLException {
-        return skinJdbc.updateAliadas(nombre, nuevaAliada);
-    }
- 
-    public boolean updateEnemigas(String nombre, String nuevaEnemiga) throws SQLException {
-        return skinJdbc.updateEnemigas(nombre, nuevaEnemiga);
-    }
 }

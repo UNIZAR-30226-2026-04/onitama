@@ -12,7 +12,4 @@ public interface SkinDAO {
     boolean comprarSkin(String nombreSkin, String nombreJugador) throws SQLException;
     List<Skin> sacarSkinJugador(String nombreUS) throws SQLException;
     boolean updatePrecio(String nombre, int nuevoPrecio) throws SQLException;
-    boolean updateTablero(String nombre, String nuevoTablero) throws SQLException;
-    boolean updateAliadas(String nombre, String nuevaAliada) throws SQLException;
-    boolean updateEnemigas(String nombre, String nuevaEnemiga) throws SQLException;
 }
