@@ -11,16 +11,15 @@ import backend.ACCIONES.SoloAtras;
 import backend.gestor.GestorCartasAccion;
 
 public class CartaAccion {
-    private String nombre, accion, estado, img;
+    private String nombre, accion, estado;
     private int puntosMin, equipo;
     private GestorCartasAccion gestor;
     private Accion accionEjecutable;
     
-    public CartaAccion(String nombre, String accion, int puntosMin, String img){
+    public CartaAccion(String nombre, String accion, int puntosMin){
         this.nombre = nombre;
         this.accion = accion;
         this.puntosMin = puntosMin;
-        this.img = img;
         this.estado = "VISION"; //Esta en modo vision (Para ver en la tienda)
         this.equipo = -1;
         gestor = new GestorCartasAccion();
@@ -51,11 +50,10 @@ public class CartaAccion {
     }
 
     //Constructor para cartas en partida, con estado y equipo
-    public CartaAccion(String nombre, String accion, int puntosMin, String img, String estado, int equipo){
+    public CartaAccion(String nombre, String accion, int puntosMin, String estado, int equipo){
         this.nombre = nombre;
         this.accion = accion;
         this.puntosMin = puntosMin;
-        this.img = img;
         this.estado = estado;
         this.equipo = equipo;
         gestor = new GestorCartasAccion();
@@ -131,14 +129,6 @@ public class CartaAccion {
 
     public boolean estaActiva(){
         return estado.equals("ACTIVA");
-    }
-
-    public String getImg() {
-        return img;
-    }
-
-    public void setImg(String img) {
-        this.img = img;
     }
 
     public String getEstado() {

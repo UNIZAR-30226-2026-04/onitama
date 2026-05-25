@@ -37,10 +37,6 @@ public class GestorCartasMov {
         return cartasMovJdbc.updatePuntosMin(nombre, puntos);
     }
 
-    public boolean updateImg(String nombre, String img) throws SQLException {
-        return cartasMovJdbc.updateImg(nombre, img);
-    }
-
     public void borrar(String nombre) throws SQLException {
         cartasMovJdbc.borrar(nombre);
     }

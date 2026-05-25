@@ -34,7 +34,7 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
     }
     
     public boolean crearCarta(CartaAccion accion) throws SQLException {
-        final String sql = "INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min, img) VALUES (?, ?, ?, ?)";
+        final String sql = "INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES (?, ?, ?)";
         
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -42,7 +42,6 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
             ps.setString(1, accion.getNombre());
             ps.setString(2, accion.getAccion());
             ps.setInt(3, accion.getPuntosMin());
-            ps.setString(4, accion.getImg());
             int filasAfectadas = ps.executeUpdate();
             return filasAfectadas > 0;
             
@@ -105,7 +104,7 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
     }
     
     public List<CartaAccion> sacarCartasPartida(int IDPartida) throws SQLException {
-        final String sql = "SELECT c.Nombre, c.Accion, c.Puntos_min, c.img, p.Estado, p.Equipo FROM Cartas_Accion c, Partida_Cartas_Accion p WHERE c.Nombre = p.ID_Carta_Accion AND ID_Partida = ?";
+        final String sql = "SELECT c.Nombre, c.Accion, c.Puntos_min, p.Estado, p.Equipo FROM Cartas_Accion c, Partida_Cartas_Accion p WHERE c.Nombre = p.ID_Carta_Accion AND ID_Partida = ?";
 
         List<CartaAccion> cartas = new ArrayList<>();
 
@@ -202,8 +201,7 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         return new CartaAccion(
             rs.getString("Nombre"),
             rs.getString("Accion"),
-            rs.getInt("Puntos_min"),
-            rs.getString("img")
+            rs.getInt("Puntos_min")
         );
     }
 
@@ -213,7 +211,6 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
             rs.getString("Nombre"),
             rs.getString("Accion"),
             rs.getInt("Puntos_min"),
-            rs.getString("img"),
             rs.getString("Estado"),
             rs.getInt("Equipo")
         );

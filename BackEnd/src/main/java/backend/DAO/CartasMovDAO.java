@@ -9,7 +9,6 @@ public interface CartasMovDAO {
     CartaMov buscarMovimiento(String nombre) throws SQLException;
     boolean updateMovimientos(String nombre, String nuevosMov) throws SQLException;
     boolean updatePuntosMin(String nombre, int puntos) throws SQLException;
-    boolean updateImg(String nombre, String img) throws SQLException;
     void borrar(String nombre) throws SQLException;
     List<CartaMov> sacarCartas() throws SQLException;
     List<CartaMov> sacarCartasPartida(int IDPartida) throws SQLException;

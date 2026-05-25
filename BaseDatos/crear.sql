@@ -3,8 +3,6 @@ CREATE TABLE Skin (
     Precio INTEGER
 );
 
--- cambiar colores en bbdd
-
 CREATE TABLE Jugador (
     Correo VARCHAR(255) UNIQUE,
     Nombre_US VARCHAR(100) PRIMARY KEY,
@@ -22,15 +20,13 @@ CREATE TABLE Jugador (
 CREATE TABLE Cartas_Mov (
     Nombre VARCHAR(50) PRIMARY KEY,
     Movimientos TEXT,
-    Puntos_min INTEGER,
-    img VARCHAR(30) DEFAULT 'SIN_IMG'
+    Puntos_min INTEGER
 );
 
 CREATE TABLE Cartas_Accion (
     Nombre VARCHAR(50) PRIMARY KEY,
     Accion TEXT,
-    Puntos_min INTEGER,
-    img VARCHAR(30) DEFAULT 'SIN_IMG' --La idea es que haya una imagen de error para todas que no tengan img
+    Puntos_min INTEGER
 );
 
 CREATE TABLE Partida (

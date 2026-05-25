@@ -8,16 +8,15 @@ import java.util.regex.Pattern;
 import backend.gestor.GestorCartasMov;
 
 public class CartaMov {
-    private String nombre, estado, img;
+    private String nombre, estado;
     private int puntosMin;
     private List<Posicion> movimientos;
     private GestorCartasMov gestor;
 
-    public CartaMov(String nombre, String mov, int puntosMin, String img){
+    public CartaMov(String nombre, String mov, int puntosMin){
         this.nombre = nombre;
         this.estado = "MAZO";
         this.puntosMin = puntosMin;
-        this.img = img;
         movimientos = new ArrayList<>();
         gestor = new GestorCartasMov();
         
@@ -34,11 +33,10 @@ public class CartaMov {
         }
     }
 
-    public CartaMov(String nombre, String mov, int puntosMin, String img, String estado){
+    public CartaMov(String nombre, String mov, int puntosMin, String estado){
         this.nombre = nombre;
         this.estado = estado;
         this.puntosMin = puntosMin;
-        this.img = img;
         movimientos = new ArrayList<>();
         gestor = new GestorCartasMov();
         
@@ -53,10 +51,6 @@ public class CartaMov {
             int y = Integer.parseInt(m.group(2));
             movimientos.add(new Posicion(x, y, null));
         }
-    }
-
-    public String getImg() {
-        return img;
     }
 
     public void marcarEquipo(int eq) {
@@ -74,10 +68,6 @@ public class CartaMov {
 
     public void marcarMazo() {
         estado = "MAZO";
-    }
-
-    public void setImg(String img) {
-        this.img = img;
     }
 
     public String getEstado() {
@@ -144,14 +134,6 @@ public class CartaMov {
 
     public void removeMovimiento(Posicion pos){
         movimientos.remove(pos);
-    }
-
-    public boolean cambiarImg(){
-        try {
-            return gestor.updateImg(nombre, img); 
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     public boolean actualizarBD(){
