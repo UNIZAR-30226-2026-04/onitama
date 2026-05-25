@@ -6,6 +6,8 @@ CREATE TABLE Skin (
     Color_Fichas_Enemigas VARCHAR(20)
 );
 
+-- cambiar colores en bbdd
+
 CREATE TABLE Jugador (
     Correo VARCHAR(255) UNIQUE,
     Nombre_US VARCHAR(100) PRIMARY KEY,
