@@ -23,11 +23,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -59,13 +56,11 @@ import com.example.onitama.api.CartasAPI
 import com.example.onitama.lib.Carta
 import com.example.onitama.lib.Cartas
 import com.example.onitama.lib.Movimiento
-import com.example.onitama.ui.activities.MenuPrincipalActivity
-import com.example.onitama.ui.amigos.Amigos_Activity
-import com.example.onitama.ui.perfil.Perfil_Activity
-import com.example.onitama.ui.tableros.Tableros_Activity
-import com.example.onitama.ui.tienda.Tienda_Activity
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
+import com.example.onitama.ui.activities.ajugar.MenuPrincipalActivity
+import com.example.onitama.ui.activities.amigos.Amigos_Activity
+import com.example.onitama.ui.activities.perfil.Perfil_Activity
+import com.example.onitama.ui.activities.tableros.Tableros_Activity
+import com.example.onitama.ui.activities.tienda.Tienda_Activity
 
 class Cartas_activity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

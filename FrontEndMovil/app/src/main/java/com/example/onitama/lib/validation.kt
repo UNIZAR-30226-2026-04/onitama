@@ -9,9 +9,3 @@ fun validar(contrasena: String): Boolean{
             contrasena.any { it.isLetter() } &&
             contrasena.any { it.isDigit() }
 }
-
-/**
- * Mensaje de ayuda para los requisitos de contraseña.
- * En Kotlin, las constantes de nivel superior son visibles en todo el módulo.
- */
-const val HINT_CONTRASENA = "Usa al menos 8 caracteres con letras y números";

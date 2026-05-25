@@ -42,16 +42,6 @@ val jsonPartida = Json {
 }
 
 
-fun invertirCoordenadasString(input: String?, end: Int = 6): String? {
-    if (input == null) return null
-    val regex = Regex("(\\d+),(\\d+)")
-    return regex.replace(input) { matchResult ->
-        val x = matchResult.groupValues[1].toInt()
-        val y = matchResult.groupValues[2].toInt()
-        "${end - x},${end - y}"
-    }
-}
-
 class Partida(
     private val wsUrl: String = Config.WS_URL
 ){

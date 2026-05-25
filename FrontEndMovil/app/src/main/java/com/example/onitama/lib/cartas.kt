@@ -39,7 +39,6 @@ object Cartas{
         Carta("Oso",   "🐻", listOf(Movimiento(1, 0), Movimiento(-1, 0), Movimiento(0, 1))),
         Carta("Aguila",   "🦅", listOf(Movimiento(-1, 0), Movimiento(-1, 1), Movimiento(-1,-1))),
         Carta("Cobra",   "🐍", listOf(Movimiento(-1, 0), Movimiento(1, 1), Movimiento(1,-1))),
-        Carta("Murcielago", "", listOf(Movimiento(-1, -1), Movimiento(1, 1), Movimiento(0, -3)))
 
     )
     fun selectRandomCards(n: Int):List<Carta>{

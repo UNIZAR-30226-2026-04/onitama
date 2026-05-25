@@ -12,9 +12,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class Auth(
-    // Esta variable se leerá de build.config (cuando la fijemos)
-    // No he implementado esto aún, pero he hecho una manera sencilla con un archivo config
-    // Para poder ir comprobando cosas con servidor
     private val wsUrl: String = Config.WS_URL
 ) {
 

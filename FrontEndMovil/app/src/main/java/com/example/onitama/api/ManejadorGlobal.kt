@@ -1,7 +1,6 @@
 package com.example.onitama.api
 
 import android.util.Log
-import com.example.onitama.Config
 import com.example.onitama.Config.WS_URL
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +20,7 @@ import org.json.JSONObject
 import kotlin.coroutines.resume
 
 object ManejadorGlobal {
-    val wsUrl = Config.WS_URL
+    val wsUrl = WS_URL
     private val client = OkHttpClient()
     // Guardamos la conexión activa aquí
     private var webSocketActivo: WebSocket? = null

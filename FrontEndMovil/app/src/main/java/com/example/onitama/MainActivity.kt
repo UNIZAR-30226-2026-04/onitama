@@ -6,8 +6,8 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.example.onitama.api.Auth
 import com.example.onitama.api.ManejadorGlobal
-import com.example.onitama.ui.inicial.Ini_Activity
-import com.example.onitama.ui.activities.MenuPrincipalActivity
+import com.example.onitama.ui.activities.inicial.Ini_Activity
+import com.example.onitama.ui.activities.ajugar.MenuPrincipalActivity
 import kotlinx.coroutines.runBlocking
 
 class MainActivity : AppCompatActivity() {
