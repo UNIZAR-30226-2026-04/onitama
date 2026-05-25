@@ -61,12 +61,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
 import com.example.onitama.PartidaActiva
 import com.example.onitama.R
 import com.example.onitama.api.Auth
 import com.example.onitama.AutoLogin
-import com.example.onitama.DatosPerfil
 import com.example.onitama.api.Partida
 import com.example.onitama.lib.Carta
 import com.example.onitama.lib.Cartas
