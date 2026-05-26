@@ -4,6 +4,7 @@ import backend.VO.Skin;
 import java.sql.SQLException;
 import java.util.List;
 
+// interfaz DAO para las skins -> CRUD, compra, asignación a jugadores y precio
 public interface SkinDAO {
     boolean crearSkin(Skin skin) throws SQLException;
     Skin buscarSkin(String nombre) throws SQLException;

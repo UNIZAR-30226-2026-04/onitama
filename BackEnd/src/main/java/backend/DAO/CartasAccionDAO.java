@@ -4,6 +4,7 @@ import backend.VO.CartaAccion;
 import java.sql.SQLException;
 import java.util.List;
 
+// interfaz DAO para las cartas de acción -> CRUD, asignación a partidas y actualización de estado
 public interface CartasAccionDAO {
     boolean crearCarta(CartaAccion accion) throws SQLException;
     CartaAccion buscarAccion(String nombre) throws SQLException;

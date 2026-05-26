@@ -4,6 +4,7 @@ import backend.VO.Jugador;
 import java.sql.SQLException;
 import java.util.List;
 
+// interfaz DAO para jugador -> definición de métodos de registro, perfil, amigos skins y estadísticas
 public interface JugadorDAO {
     boolean registrarse(Jugador jugador) throws SQLException;
     Jugador buscarJugador(String nombreUS) throws SQLException;

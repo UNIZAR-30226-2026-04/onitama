@@ -4,6 +4,7 @@ import backend.VO.Notificacion;
 import java.sql.SQLException;
 import java.util.List;
 
+// interfaz DAO para las notificaciones -> definición de métodos de creación, consulta, borrado y cambio de estado
 public interface NotificacionDAO {
     int crear(Notificacion notif) throws SQLException;
     Notificacion obtenerPorId(int idNotificacion) throws SQLException;

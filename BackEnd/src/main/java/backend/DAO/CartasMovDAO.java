@@ -4,6 +4,7 @@ import backend.VO.CartaMov;
 import java.sql.SQLException;
 import java.util.List;
 
+// interfaz DAO para las cartas de movimiento -> CRUD, asignación a partidas y actualización de estado
 public interface CartasMovDAO {
     boolean crearCarta(CartaMov movimiento) throws SQLException;
     CartaMov buscarMovimiento(String nombre) throws SQLException;

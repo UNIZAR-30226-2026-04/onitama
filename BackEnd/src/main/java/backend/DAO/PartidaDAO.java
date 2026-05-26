@@ -5,6 +5,7 @@ import java.util.List;
 
 import backend.VO.Partida;
 
+// interfaz DAO para las partidas -> definición de métodos de registro, estado, turno, fichas, trampas y resultado
 public interface PartidaDAO {
     int registrarPartida(Partida partida) throws SQLException;
     Partida buscarPorId(int idPartida) throws SQLException;
