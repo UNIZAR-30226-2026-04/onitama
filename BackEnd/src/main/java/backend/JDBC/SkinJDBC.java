@@ -32,8 +32,9 @@ public final class SkinJDBC implements SkinDAO {
         }
     }
     
+    // inserta una nueva skin en la tabla Skin con sus características
     public boolean crearSkin(Skin skin) throws SQLException {
-        final String sql = "INSERT INTO Skin (Nombre, Precio, Color_tablero, Color_Fichas_Aliadas, Color_Fichas_Enemigas) VALUES (?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO Skin (Nombre, Precio) VALUES (?, ?)";
 
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -48,6 +49,7 @@ public final class SkinJDBC implements SkinDAO {
         }
     }
 
+    // asocia una skin a un jugador insertando un nuevo registro en la tabla Jugador_Skin.
     public boolean comprarSkin(String nombre, String jugador) throws SQLException {
         final String sql = "INSERT INTO Jugador_Skins (Jugador, Skin) VALUES (?, ?)";
 
@@ -64,6 +66,7 @@ public final class SkinJDBC implements SkinDAO {
         }
     }
 
+    // busca skin por nombre, null si no existe
     public Skin buscarSkin(String nombre) throws SQLException {
         final String sql = "SELECT * FROM Skin WHERE Nombre = ?";
         try (Connection conn = dataSource.getConnection();
@@ -76,6 +79,7 @@ public final class SkinJDBC implements SkinDAO {
         }
     }
 
+    // actualiza el precio de una skin al buscarla por su nombre
     public boolean updatePrecio(String nombre, int nuevosPrecio) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Skin SET Precio = ? WHERE Nombre = ?")) { 
@@ -88,6 +92,7 @@ public final class SkinJDBC implements SkinDAO {
         }
     }
 
+    // devuelve la lista completa de skins disponibles en la tienda
     public List<Skin> sacarSkinDisp() throws SQLException {
         final String sql = "SELECT * FROM Skin";
 
@@ -105,6 +110,7 @@ public final class SkinJDBC implements SkinDAO {
         return tienda;
     }
 
+    // devuelve las skins que tiene un jugador concreto
     public List<Skin> sacarSkinJugador(String nombreUS) throws SQLException {
         final String sql = "SELECT s.Nombre, s.Precio FROM Skin s, Jugador_Skins js WHERE js.Skin = s.Nombre AND js.Jugador = ?";
 
@@ -123,6 +129,7 @@ public final class SkinJDBC implements SkinDAO {
         return jugador;
     }
 
+    // elimina una skin de la tabla por su nombre
     public void borrar(String nombre) throws SQLException {
         final String sql = "DELETE FROM Skin WHERE Nombre = ?";
         try (Connection conn = dataSource.getConnection();

@@ -8,6 +8,8 @@ import backend.JDBC.JugadorJDBC;
 import backend.VO.Skin;
 import backend.VO.Jugador;
 
+// GestorJugador actúa de capa intermedia entre las llamadas de un Value Object o del servidor a los JDBC para modificar la bbdd
+
 public class GestorJugador {
 
     private final JugadorJDBC jugadorJdbc;

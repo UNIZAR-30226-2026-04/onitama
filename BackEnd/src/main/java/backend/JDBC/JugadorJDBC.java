@@ -32,6 +32,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
     
+    // inserta un nuevo jugador en la tabla Jugador con todos sus campos, incluidos avatar (foto perfil) y skin (estilo tablero)
     public boolean registrarse(Jugador jugador) throws SQLException {
         final String sql = "INSERT INTO Jugador (Correo, Nombre_US, Contrasena_Hash, Puntos, Cores, Partidas_Ganadas, Partidas_Jugadas, avatar_id, skin_activa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
@@ -57,6 +58,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // busca un jugador por su  nombre de usuario
     public Jugador buscarJugador(String nombreUS) throws SQLException {
         // añadido avatar y skin
         final String sql = "SELECT Correo, Nombre_US, Contrasena_Hash, Puntos, Cores, Partidas_Ganadas, Partidas_Jugadas, avatar_id, skin_activa FROM Jugador WHERE Nombre_US = ?";
@@ -70,6 +72,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // devuelve una lista de jugadores cuyo nombre empieza por la cadena indicada (busqueda de autocompletado)
     public List<Jugador> buscarJugadoresPorRaiz(String nombreUS) throws SQLException {
         final String sql = "SELECT * FROM Jugador WHERE Nombre_US LIKE ?";
         List<Jugador> lista = new ArrayList<>();
@@ -88,6 +91,7 @@ public final class JugadorJDBC implements JugadorDAO {
         return lista; 
     }
 
+    // actualiza los puntos de un jugador
     public boolean updatePuntos(String nombreUS, int nuevosPuntos) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Puntos = ? WHERE Nombre_US = ?")) { 
@@ -100,6 +104,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // actualiza el hash de contraseña de un jugador
     public boolean updateContrasenya(String nombreUS, String psswd) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Contrasena_Hash = ? WHERE Nombre_US = ?")) { 
@@ -112,6 +117,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // actualiza en correo electrónico de un jugador
     public boolean updateCorreo(String nombreUS, String nuevoCorreo) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Correo = ? WHERE Nombre_US = ?")) { 
@@ -124,6 +130,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // actualiza los cores de un jugador (la moneda que pueden gastar en tableros)
     public boolean updateCores(String nombreUS, int nuevosCores) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Cores = ? WHERE Nombre_US = ?")) { 
@@ -136,6 +143,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // actualiza el contador de partidas ganadas de un jugador
     public boolean updatePartidasGanadas(String nombreUS, int nuevasPartidasGanadas) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Partidas_Ganadas = ? WHERE Nombre_US = ?")) { 
@@ -148,6 +156,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // actualiza el contador de partidas jugadas de un jugador
     public boolean updatePartidasJugadas(String nombreUS, int nuevasPartidasJugadas) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Jugador SET Partidas_Jugadas = ? WHERE Nombre_US = ?")) { 
@@ -173,6 +182,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // modifica qué skin está utilizando actualmente el jugador
     public boolean updateSkinActiva(String nombreUS, String nuevaSkin) throws SQLException {
         try(Connection c = dataSource.getConnection();
              PreparedStatement p = c.prepareStatement("UPDATE Jugador SET skin_activa = ? WHERE Nombre_US = ?")) {
@@ -203,6 +213,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // comprueba si dos jugadores son amigos entre sí
     public boolean sonAmigos(String jugadorA, String jugadorB) throws SQLException {
         if (jugadorA.equals(jugadorB)) return false;
         String j1 = jugadorA.compareTo(jugadorB) < 0 ? jugadorA : jugadorB;
@@ -218,6 +229,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // devuelve la lista completa de amigos de un jugador
     public List<Jugador> sacarAmigos(String nombreUS) throws SQLException {
         // añadido avatar y skin
         final String sql = "SELECT DISTINCT j.Correo, j.Nombre_US, j.Contrasena_Hash, j.Puntos, j.Cores, j.Partidas_Ganadas, j.Partidas_Jugadas, j.avatar_id, j.skin_activa FROM Jugador j, Amistades a WHERE (j.Nombre_US = a.Jugador_1 AND a.Jugador_2 = ?) OR (j.Nombre_US = a.Jugador_2 AND a.Jugador_1 = ?)";
@@ -238,6 +250,7 @@ public final class JugadorJDBC implements JugadorDAO {
         return amigos;
     }
 
+    // devuelve todos los jugadores de la base de datos
     public List<Jugador> sacarJugadoresDisp() throws SQLException {
         final String sql = "SELECT * FROM Jugador";
 
@@ -255,6 +268,7 @@ public final class JugadorJDBC implements JugadorDAO {
         return jugadores;
     }
 
+    // elimina la amistad entre dos jugadores
     public boolean borrarAmigo(String miNombre, String nombreAmigo) throws SQLException {
         if (miNombre.equals(nombreAmigo)) return false;
         String j1 = miNombre.compareTo(nombreAmigo) < 0 ? miNombre : nombreAmigo;
@@ -270,6 +284,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // añade una nueva skin comprada por el jugador a la lista de skins que posee
     public boolean desbloquearSkin(String miNombre, String skin) throws SQLException {
         final String sql = "INSERT INTO Jugador_Skins (Jugador, Skin) VALUES (?, ?)";
         
@@ -286,6 +301,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // elimina un jugador de la tabla jugador por nombre
     public void borrar(String nombreUS) throws SQLException {
         final String sql = "DELETE FROM Jugador WHERE Nombre_US = ?";
         try (Connection conn = dataSource.getConnection();
@@ -295,6 +311,7 @@ public final class JugadorJDBC implements JugadorDAO {
         }
     }
 
+    // busca a un jugador por su correo electrónico
     public Jugador buscarJugadorPorCorreo(String correo) throws SQLException {
         final String sql = "SELECT Correo, Nombre_US, Contrasena_Hash, Puntos, Cores, Partidas_Ganadas, Partidas_Jugadas, avatar_id, skin_activa FROM Jugador WHERE Correo = ?";
         try (Connection conn = dataSource.getConnection();

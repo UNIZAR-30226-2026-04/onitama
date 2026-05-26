@@ -10,6 +10,8 @@ import backend.JDBC.NotificacionJDBC;
 import backend.JDBC.PartidaJDBC;
 import backend.VO.Notificacion;
 
+// GestorNotificaciones actúa de capa intermedia entre las llamadas de un Value Object o del servidor a los JDBC para modificar la bbdd
+
 /**
  * Coordina la lógica de aceptar y rechazar notificaciones según su tipo.
  */

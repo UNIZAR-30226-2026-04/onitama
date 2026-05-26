@@ -33,6 +33,8 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         }
     }
     
+    // método para insertar una nueva carta de acción con cada una de sus características: nombre, su efecto en el tablero, y los
+    // puntos mínimos que debe poseer el jugador para poder tenerla desbloqueada
     public boolean crearCarta(CartaAccion accion) throws SQLException {
         final String sql = "INSERT INTO Cartas_Accion (Nombre, Accion, Puntos_min) VALUES (?, ?, ?)";
         
@@ -50,6 +52,7 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         }
     }
 
+    // busca una carta por nombre, devuelve null si no existe
     public CartaAccion buscarAccion(String nombre) throws SQLException {
         final String sql = "SELECT * FROM Cartas_Accion WHERE Nombre = ?";
         try (Connection conn = dataSource.getConnection();
@@ -62,6 +65,7 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         }
     }
 
+    // modifica la acción/ el efecto de una carta de acción
     public boolean updateAccion(String nombre, String nuevaAccion) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Cartas_Accion SET Accion = ? WHERE Nombre = ?")) { 
@@ -74,6 +78,7 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         }
     }
 
+    // actualiza la cantidad de puntos que debe poseer un jugador para usarla
     public boolean updatePuntosMin(String nombre, int nuevoPunt) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Cartas_Accion SET Puntos_min = ? WHERE Nombre = ?")) { 
@@ -86,6 +91,7 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         }
     }
 
+    // método que devuelve todas las cartas de la tabla
     public List<CartaAccion> sacarCartas() throws SQLException {
         final String sql = "SELECT * FROM Cartas_Accion";
 
@@ -103,6 +109,8 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         return cartas;
     }
     
+    // devuleve las cartas de una partida concreta con su estado y equipo al que pertenecen
+    // por equipo nos referimos al jugador que las posee.
     public List<CartaAccion> sacarCartasPartida(int IDPartida) throws SQLException {
         final String sql = "SELECT c.Nombre, c.Accion, c.Puntos_min, p.Estado, p.Equipo FROM Cartas_Accion c, Partida_Cartas_Accion p WHERE c.Nombre = p.ID_Carta_Accion AND ID_Partida = ?";
 
@@ -121,6 +129,7 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         return cartas;
     }
 
+    // asigna una carta a un equipo (jugador) dentro de una partida
     public boolean asignarEquipo(int IDPartida, String nombreCarta, int equipo) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida_Cartas_Accion SET Equipo = ? WHERE ID_Carta_Accion = ? AND ID_Partida = ?")) { 
@@ -134,6 +143,8 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         }
     }
 
+    // cambia el estado de una carta de acción en una partida (de MAZO a EN_JUEGO, por ejemplo, dependiendo de 
+    // si se está usando, si se posee y no se ha utilizado, etc.)
     public boolean updateEstadoEnPartida(int IDPartida, String nombreCarta, String estado) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida_Cartas_Accion SET Estado = ? WHERE ID_Carta_Accion = ? AND ID_Partida = ?")) { 
@@ -147,6 +158,7 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         }
     }
 
+    // asigna aleatoriamente 4 cartas (disponibles a los jugadores) a la partida
     public List<CartaAccion> asignar4CartasPartida(int IDPartida, int puntosMin) throws SQLException {
         List<CartaAccion> disponibles = sacarCartas();
         List<CartaAccion> usables = new ArrayList<>();
@@ -170,6 +182,7 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         return usables.subList(0, 4);
     }
 
+    // registra la carta de acción que se haya elegido en el sorteo con estado inicial MAZO a la partida
     public boolean asignarCartaPartida(int IDPartida, String nombreCarta) throws SQLException {
         final String sql = "INSERT INTO Partida_Cartas_Accion (ID_Partida, ID_Carta_Accion, Estado) VALUES (?, ?, ?)";
         
@@ -187,6 +200,7 @@ public final class CartasAccionJDBC implements CartasAccionDAO {
         }
     }
 
+    // elimina una carta de todas las cartas de acción existentes por nombre
     public void borrar(String nombre) throws SQLException {
         final String sql = "DELETE FROM Cartas_Accion WHERE Nombre = ?";
         try (Connection conn = dataSource.getConnection();

@@ -33,6 +33,8 @@ public final class CartasMovJDBC implements CartasMovDAO {
         }
     }
     
+    // registra una nueva carta de movimiento con su alcance en el tablero, su nombre y los puntos que un usuario tiene
+    // que poseer como mínimo para poder utilizarla
     public boolean crearCarta(CartaMov movimiento) throws SQLException {
         final String sql = "INSERT INTO Cartas_Mov (Nombre, Movimientos, Puntos_min) VALUES (?, ?, ?)";
         
@@ -50,6 +52,7 @@ public final class CartasMovJDBC implements CartasMovDAO {
         }
     }
 
+    // busca la info de una carta de movimiento en concreto
     public CartaMov buscarMovimiento(String nombre) throws SQLException {
         final String sql = "SELECT * FROM Cartas_Mov WHERE Nombre = ?";
         try (Connection conn = dataSource.getConnection();
@@ -62,6 +65,7 @@ public final class CartasMovJDBC implements CartasMovDAO {
         }
     }
 
+    // para modificar la configuración de una carta de movimiento: su alcance en el tablero
     public boolean updateMovimientos(String nombre, String nuevosMov) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Cartas_Mov SET Movimientos = ? WHERE Nombre = ?")) { 
@@ -74,6 +78,8 @@ public final class CartasMovJDBC implements CartasMovDAO {
         }
     }
 
+    // para modificar la configuración de una carta de movimiento: los puntos que hay que
+    // tener como mínimo para poder utilizarla
     public boolean updatePuntosMin(String nombre, int puntos) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Cartas_Mov SET Puntos_min = ? WHERE Nombre = ?")) { 
@@ -86,6 +92,7 @@ public final class CartasMovJDBC implements CartasMovDAO {
         }
     }
 
+    // obtiene todas las cartas de movimiento disponibles en el sistema
     public List<CartaMov> sacarCartas() throws SQLException {
         final String sql = "SELECT * FROM Cartas_Mov";
 
@@ -103,6 +110,7 @@ public final class CartasMovJDBC implements CartasMovDAO {
         return cartas;
     }
     
+    // obtiene todas las cartas de movimiento asociadas a una partida concreta
     public List<CartaMov> sacarCartasPartida(int IDPartida) throws SQLException {
         final String sql = "SELECT c.Nombre, c.Movimientos, c.Puntos_min, p.Estado FROM Cartas_Mov c, Partida_Cartas_Mov p WHERE c.Nombre = p.ID_Carta_Mov AND p.ID_Partida = ?";
 
@@ -121,6 +129,8 @@ public final class CartasMovJDBC implements CartasMovDAO {
         return cartas;
     }
 
+    // cambia el tipo de estado de una carta de movimiento durante la partida -> si está en posesión
+    // de uno de los jugadores, si está en el centro durante la rotación...
     public boolean updateEstadoEnPartida(int IDPartida, String nombreCarta, String estado) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida_Cartas_Mov SET Estado = ? WHERE ID_Carta_Mov = ? AND ID_Partida = ?")) { 
@@ -134,6 +144,7 @@ public final class CartasMovJDBC implements CartasMovDAO {
         }
     }
 
+    // elige aleatoriamente 7 cartas aptas y desbloqueadas a ambos jugadores para la partida actual
     public List<CartaMov> asignar7CartasPartida(int IDPartida, int puntosMin) throws SQLException {
         List<CartaMov> disponibles = sacarCartas(); //IMPORTANTE: Tiene que haber mas de 7 cartas para que funcione
         List<CartaMov> usables = new ArrayList<>();
@@ -156,6 +167,7 @@ public final class CartasMovJDBC implements CartasMovDAO {
         return usables.subList(0, 7);
     }
 
+    // método para vincular cartas en concreto de todas las disponibles al mazo de una partida en curso
     public boolean asignarCartaPartida(int IDPartida, String nombreCarta) throws SQLException {
         final String sql = "INSERT INTO Partida_Cartas_Mov (ID_Partida, ID_Carta_Mov, Estado) VALUES (?, ?, ?)";
         
@@ -173,6 +185,7 @@ public final class CartasMovJDBC implements CartasMovDAO {
         }
     }
 
+    // método para eliminar carta de movimiento de la base de datos
     public void borrar(String nombre) throws SQLException {
         final String sql = "DELETE FROM Cartas_Mov WHERE Nombre = ?";
         try (Connection conn = dataSource.getConnection();
@@ -182,7 +195,7 @@ public final class CartasMovJDBC implements CartasMovDAO {
         }
     }
 
-    //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo movimiento
+    //Metodo auxiliar que saca los campos de la BD y crea un objeto de tipo movimiento
     private CartaMov montarMovimiento(ResultSet rs) throws SQLException {
         return new CartaMov(
             rs.getString("Nombre"),
@@ -191,7 +204,7 @@ public final class CartasMovJDBC implements CartasMovDAO {
         );
     }
 
-    //Metodo auxiliar que saca los campod de la BD y crea un objeto de tipo movimiento
+    //Metodo auxiliar que saca los campos de la BD y crea un objeto de tipo movimiento
     private CartaMov montarMovimientoPartida(ResultSet rs) throws SQLException {
         return new CartaMov(
             rs.getString("Nombre"),

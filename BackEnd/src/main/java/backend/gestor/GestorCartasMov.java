@@ -8,6 +8,8 @@ import backend.JDBC.PartidaJDBC;
 import backend.VO.CartaMov;
 import backend.VO.Partida;
 
+// GestorCartasMov actúa de capa intermedia entre las llamadas de un Value Object o del servidor a los JDBC para modificar la bbdd
+
 public class GestorCartasMov {
 
     private final CartasMovJDBC cartasMovJdbc;

@@ -119,6 +119,7 @@ public final class NotificacionJDBC implements NotificacionDAO {
         return null;
     }
 
+    // elimina una notificación por su id
     public void borrar(int ID) throws SQLException {
         final String sql = "DELETE FROM Notificaciones WHERE ID_Notificacion = ?";
         try (Connection conn = dataSource.getConnection();
@@ -128,6 +129,7 @@ public final class NotificacionJDBC implements NotificacionDAO {
         }
     }
 
+    // construye un objeto Notificacion
     private Notificacion montarNotificacion(ResultSet rs) throws SQLException {
         int id = rs.getInt("ID_Notificacion");
         String tipo = rs.getString("Tipo");

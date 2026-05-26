@@ -34,6 +34,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // inserta una nueva partida y devuelve el ID generado por la BBDD, -1 si hay fallo
     public int registrarPartida(Partida partida) throws SQLException {
         final String sql = "INSERT INTO Partida (Estado, Tiempo, Tipo, Pos_Fichas_Eq1, Pos_Fichas_Eq2, FichasMuertas1, FichasMuertas2, J1, J2, Es_Ganador_J1, Es_Ganador_J2, Turno, Pos_Trampa_J1, Pos_Trampa_J2) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
@@ -71,6 +72,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // busca y devuelve una partida por su id, null si no existe
     public Partida buscarPorId(int idPartida) throws SQLException {
         final String sql = "SELECT * FROM Partida WHERE ID_Partida = ?";
         try (Connection conn = dataSource.getConnection();
@@ -85,6 +87,7 @@ public final class PartidaJDBC implements PartidaDAO {
         return null;
     }
 
+    // devuelve las 3 últimas partidas públicas en las que ha participado un jugador
     public List<Partida> buscarPartidasJugadorPublicas(String nombreUS) throws SQLException {
         final String sql = "SELECT * FROM Partida WHERE (J1 = ? OR J2 = ?) AND Tipo = 'PUBLICA' ORDER BY ID_Partida DESC LIMIT 3";
 
@@ -104,6 +107,7 @@ public final class PartidaJDBC implements PartidaDAO {
         return partidas;
     }
 
+    // devuelve las últimas 3 partidas privadas jugadas entre dos jugadores concretos 
     public List<Partida> buscarPartidasJugadorPrivadas(String miNombre, String nombreUS) throws SQLException {
         final String sql = "SELECT * FROM Partida WHERE ((J1 = ? AND J2 = ?) OR (J1 = ? AND J2 = ?)) AND Tipo = 'PRIVADA' ORDER BY ID_Partida DESC LIMIT 3";
 
@@ -125,6 +129,7 @@ public final class PartidaJDBC implements PartidaDAO {
         return partidas;
     }
 
+    // actualiza el turno actual de una partida
     public boolean updateTurno(int ID, int turno) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET Turno = ? WHERE ID_Partida = ?")) { 
@@ -137,6 +142,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // actualiza el estado de una partida (JUGANDOSE, FINALIZADA...)
     public boolean updateEstado(int ID, String nuevoEstado) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET Estado = ? WHERE ID_Partida = ?")) { 
@@ -149,6 +155,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // actualiza el tiempo transcurrido de una partida
     public boolean updateTiempo(int ID, int nuevoTiempo) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET Tiempo = ? WHERE ID_Partida = ?")) { 
@@ -161,6 +168,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // actualiza la posición de las fichas del equipo 1
     public boolean updatePosFichas1(int ID, String nuevoF1) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET Pos_Fichas_Eq1 = ? WHERE ID_Partida = ?")) { 
@@ -172,7 +180,8 @@ public final class PartidaJDBC implements PartidaDAO {
             return false; // Si hay una excepción, asumimos que no se creó
         }
     }
-
+    
+    // marca como FINALIZADA cualquier partida activa en la que participa alguno de los dos jugadores indicados
     public void terminarPartidasEnCurso(String j1, String j2) {
         final String sql = "UPDATE Partida SET Estado = 'FINALIZADA' WHERE (J1 = ? OR J2 = ? OR J1 = ? OR J2 = ?) AND Estado = 'JUGANDOSE'";
         try (Connection conn = dataSource.getConnection();
@@ -187,6 +196,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // actualiza la posición de las fichas del equipo 2
     public boolean updatePosFichas2(int ID, String nuevoF2) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET Pos_Fichas_Eq2 = ? WHERE ID_Partida = ?")) { 
@@ -199,6 +209,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // actualiza el contador de fichas muertas del equipo 1
     public boolean updateMuertesFichas1(int ID, int nuevoF1) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET FichasMuertas1 = ? WHERE ID_Partida = ?")) { 
@@ -211,6 +222,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // actualiza el contador de fichas muertas del equipo 2
     public boolean updateMuertesFichas2(int ID, int nuevoF2) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET FichasMuertas2 = ? WHERE ID_Partida = ?")) { 
@@ -223,6 +235,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // actualiza el jugador 1 asignado a una partida
     public boolean updateJ1(int ID, String nuevoJ1) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET J1 = ? WHERE ID_Partida = ?")) { 
@@ -235,6 +248,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // actualiza el jugador 2 asignado a una partida
     public boolean updateJ2(int ID, String nuevoJ2) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET J2 = ? WHERE ID_Partida = ?")) { 
@@ -247,6 +261,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // marca en la bbdd que el jugador 1 es el ganador de la partida
     public boolean updateGanadorJ1(int ID, boolean nuevoGanadorJ1) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET Es_Ganador_J1 = ? WHERE ID_Partida = ?")) { 
@@ -259,6 +274,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // marca en la bbdd que el jugador 2 es el ganador de la partida
     public boolean updateGanadorJ2(int ID, boolean nuevoGanadorJ2) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET Es_Ganador_J2 = ? WHERE ID_Partida = ?")) { 
@@ -275,6 +291,8 @@ public final class PartidaJDBC implements PartidaDAO {
     // registrarPartida todavía pone null en casillas trampa porque los jugadores no las han
     // elegido, entonces actualizarBD también las guardaba como null.
     // Este update se va a hacer una única vez por casilla trampa para poder recuperar las coordenadas.
+
+    // guarda la posición de casilla trampa del jugador 1
     public boolean updateTrampaJ1(int ID, String pos) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET Pos_Trampa_J1 = ? WHERE ID_Partida = ?")) { 
@@ -287,6 +305,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // guarda la posición de casilla trampa del jugador 2
     public boolean updateTrampaJ2(int ID, String pos) throws SQLException {
         try(Connection c = dataSource.getConnection(); 
             PreparedStatement p = c.prepareStatement("UPDATE Partida SET Pos_Trampa_J2 = ? WHERE ID_Partida = ?")) { 
@@ -299,6 +318,7 @@ public final class PartidaJDBC implements PartidaDAO {
         }
     }
 
+    // elimina una partida por su ID
     public void borrar(int IDPartida) throws SQLException {
         final String sql = "DELETE FROM Partida WHERE ID_Partida = ?";
         try (Connection conn = dataSource.getConnection();

@@ -8,6 +8,7 @@ import backend.JDBC.JugadorJDBC;
 import backend.VO.Partida;
 import backend.VO.Jugador;
 
+// GestorPartida actúa de capa intermedia entre las llamadas de un Value Object o del servidor a los JDBC para modificar la bbdd
 
 public class GestorPartida {
 
@@ -33,6 +34,7 @@ public class GestorPartida {
     }
 
     public List<Partida> buscarPartidasJugadorPrivadas(String miNombre, String nombreUS) throws SQLException {
+        // las partidas privadas sólo pueden jugarse con usuarios amigos, luego seleccionamos los que son amigos
         if (!jugadorJdbc.sonAmigos(miNombre, nombreUS)) {
             return List.of();
         }
@@ -98,7 +100,7 @@ public class GestorPartida {
     public boolean finalizarPartida(int idPartida, String ganador, String perdedor, boolean esJ1Ganador) throws SQLException {
        
         boolean estadoOk = partidaJdbc.updateEstado(idPartida, "TERMINADA");
-        // primero marcamos partida como terminada, actualizamos ganador y perdedir, buscamos ganador para sumarle
+        // primero marcamos partida como terminada, actualizamos ganador y perdedor, buscamos ganador para sumarle
         // una partida ganada más, y con el perdedor lo mismo, pero con partidas perdidas
         if (esJ1Ganador) {
             partidaJdbc.updateGanadorJ1(idPartida, true);
