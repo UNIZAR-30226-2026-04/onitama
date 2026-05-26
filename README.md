@@ -8,7 +8,7 @@
 
 **Pero... se podía mejorar, y este es el resultado.**
  
-Ampliamos el tablero a 7x7 y añadimos casillas trampa: cada jugador coloca una en secreto al inicio y el rival no la descubre hasta que pierde una pieza. Antes de empezar, cada jugador elige una carta de acción de dos posibles —la rechazada va al rival— y solo puede usarla una vez por partida. Por último, ampliamos el mazo de movimiento respecto al original, dando lugar a más combinaciones y partidas que nunca se repiten igual.
+Ampliamos el tablero a 7x7 y añadimos casillas trampa: cada jugador coloca una en secreto al inicio y el rival no la descubre hasta que pierde una pieza. Antes de empezar, cada jugador elige una carta de acción de dos posibles: la rechazada va al rival, y solo puede usarla una vez por partida. Por último, ampliamos el mazo de movimiento respecto al original, dando lugar a más combinaciones y partidas que nunca se repiten igual.
  
 ¡Esperamos que te guste!
 
