@@ -3,6 +3,8 @@ package backend.ACCIONES;
 import backend.VO.Ficha;
 import backend.VO.Partida;
 
+// acción REVIVIR coloca un peón propio en una posición válida del tablero
+
 public class Revivir extends Accion {
 
     private boolean eraTrampa;

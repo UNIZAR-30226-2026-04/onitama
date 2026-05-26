@@ -3,6 +3,8 @@ package backend.ACCIONES;
 import backend.VO.Ficha;
 import backend.VO.Partida;
 
+// acción SACRIFICIO elimina del tablero una ficha propia y una rival simultáneamente, sin afectar a los reyes
+
 public class Sacrificio extends Accion {
 
     public Sacrificio() {

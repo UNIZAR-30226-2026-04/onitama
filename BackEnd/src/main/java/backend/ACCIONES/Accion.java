@@ -2,6 +2,9 @@ package backend.ACCIONES;
 
 import backend.VO.Partida;
 
+// Accion.java es la clase abstracta base para todas las acciones y
+// define la estructura común de ejecutar y deshacer
+
 public abstract class Accion {
     private final String nombre;
 

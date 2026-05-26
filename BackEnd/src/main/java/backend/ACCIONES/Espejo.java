@@ -9,6 +9,8 @@ import backend.VO.CartaMov;
 import backend.VO.Partida;
 import backend.VO.Posicion;
 
+// acción ESPEJO invierte horizontalmente los movimientos de todas las cartas de movimiento en juego
+
 public class Espejo extends Accion {
     private Map<CartaMov, List<Posicion>> movimientosOriginales = new HashMap<>();
 

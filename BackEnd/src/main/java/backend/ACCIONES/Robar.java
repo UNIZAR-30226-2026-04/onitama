@@ -5,6 +5,8 @@ import java.util.List;
 import backend.VO.CartaMov;
 import backend.VO.Partida;
 
+// acción ROBAR transfiere una carta de movimiento del rival al equipo propio y repone al oponente desde el mazo
+
 public class Robar extends Accion {
     public Robar() {
         super("ROBAR");

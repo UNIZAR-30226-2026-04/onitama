@@ -3,6 +3,8 @@ package backend.ACCIONES;
 import backend.VO.Ficha;
 import backend.VO.Partida;
 
+// acción SALVAR_REY coloca el rey en una nueva posición válida del tablero
+
 public class SalvarRey extends Accion {
 
     private boolean eraTrampa = false;

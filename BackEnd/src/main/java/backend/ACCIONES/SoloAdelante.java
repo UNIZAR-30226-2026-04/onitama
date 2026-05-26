@@ -2,6 +2,8 @@ package backend.ACCIONES;
 
 import backend.VO.Partida;
 
+// acción SOLO_PARA_ADELANTE restricción que impide moverse hacia atrás durante el turno
+
 public class SoloAdelante extends Accion {
 
     public SoloAdelante() {
