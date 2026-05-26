@@ -31,14 +31,19 @@ class ViewModelEditar() : ViewModel() {
 
     private val _partidasRecientes = MutableStateFlow<List<PartidaReciente>>(emptyList())
     val partidasRecientes: StateFlow<List<PartidaReciente>> = _partidasRecientes.asStateFlow()
+
+    //Función que se ejecuta al cambiar el campo de texto de la nueva contraseña
     fun onPass1Change(contrasenya: String) {
         newPass1.value =  contrasenya
     }
 
+    //Función que se ejecuta al cambiar el campo de texto de la repetición de la nueva contraseña
     fun onPass2Change(contrasenya: String) {
         newPass2.value = contrasenya
     }
 
+
+    //Función que se ejecuta al cambiar el campo de texto de la antigua contraseña
     fun onOldPassChange(contrasenya: String) {
         oldPass.value = contrasenya
     }
@@ -86,6 +91,7 @@ class ViewModelEditar() : ViewModel() {
         return !error
     }
 
+    //Función que se usa para sacar las 3 últimas partidas públicas del usuario
     fun getPartidas(nombre: String){
         viewModelScope.launch {
             try {

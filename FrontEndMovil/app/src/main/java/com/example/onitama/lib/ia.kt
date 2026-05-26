@@ -703,6 +703,10 @@ fun evaluate (
 
 // ─── SEARCH LOGIC (Move Ordering, Quiescence, AlfaBeta) ───────────────────────
 
+
+/**
+ * Función que saca la puntuación de moverse a una determinada casilla
+ * **/
 fun scoreMove (
     e: EstadoSim,
     m: JugadaSim,
@@ -916,6 +920,12 @@ fun minimaxAB (
 }
 // ─── API PÚBLICA (INTERFAZ EXPORTADA) ─────────────────────────────────────────
 
+
+
+/**
+ * Devuelve la mejor jugada disponible para la ia en base al estado del juego, el equipo al que pertenece y la dificultad
+ *
+ * **/
 fun calcularMejorMovimientoIA (
     estado: EstadoJuego,
     equipoIA: EquipoID,

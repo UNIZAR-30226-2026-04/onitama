@@ -36,6 +36,11 @@ class ViewModelTableros : ViewModel() {
         observarMensajes()
     }
 
+    /**
+     * Función que se ejecuta al crear el ViewModel.
+     * Observa los mensajes entrantes del servidor.
+     * Y filtra los que nos convengan.
+     * */
     private fun observarMensajes() {
         viewModelScope.launch {
             ManejadorGlobal.mensajesEntrantes.collect { json ->
@@ -71,12 +76,14 @@ class ViewModelTableros : ViewModel() {
         }
     }
 
+    // Función para obtener todas las skins de un usuario usando la api de Skin para envíarle la solicitud al servidor
     fun obtenerSkins(usuario: String) {
         viewModelScope.launch {
             skinApi.obtenerTiendaSkins(usuario)
         }
     }
 
+    // Función para activar una skin que hace uso de la api de Skin para envíarle la solicitud al servidor
     fun activarSkin(usuario: String, skinId: String) {
         viewModelScope.launch {
             skinApi.activarSkin(usuario, skinId)

@@ -72,6 +72,7 @@ class Buscar_PartidaActivity: AppCompatActivity() {
             //esta sirve para guardar el valor de la función de cancelar
             var funcionCancelar by remember { mutableStateOf<(() -> Unit)?>(null) }
             val servPartida = remember { BuscarPartida() }
+            //Usamos una corrutina para lanzar la búsqueda de forma paralela, pero con remember para que al salir de la pantalla se cancele la búsqueda
             val scope = rememberCoroutineScope()
             // Un contenedor base opcional (útil para temas y colores de fondo por defecto)
             Surface(
@@ -146,7 +147,6 @@ class Buscar_PartidaActivity: AppCompatActivity() {
                     if (tipoPartida == "PRIVADA") "Esperando al amigo..." else "Buscando Oponente..."
 
                 WaitingPublicScreen(
-                    nombre = nombreUsuario,
                     cores = valorCores,
                     katanas = valorKatanas,
                     tiempo = 120,
@@ -160,7 +160,6 @@ class Buscar_PartidaActivity: AppCompatActivity() {
 
     @Composable
     fun WaitingPublicScreen(
-        nombre: String = "Jugador",
         cores: Int = 0,
         katanas: Int = 0,
         tiempo: Int = 0,

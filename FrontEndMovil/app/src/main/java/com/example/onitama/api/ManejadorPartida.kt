@@ -1,18 +1,15 @@
 package com.example.onitama.api
 
-import com.example.onitama.api.Amigos.MensajeServidor
-import com.example.onitama.api.Auth.MensajeCambiarContrasegna
+
 import com.example.onitama.api.Auth.MensajeCliente
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.json.JSONObject
-import kotlin.apply
+
 
 
 @Serializable
@@ -23,11 +20,6 @@ data class MensajeInvitacionPartida(
 ): MensajeCliente()
 
 
-@Serializable
-@SerialName("CANCELAR_NOTIFICACION")
-data class MensajeCancelarNotificacion(
-    val idNotificacion: Int
-): MensajeCliente()
 
 @Serializable
 @SerialName("ACEPTAR_INVITACION")
@@ -77,6 +69,12 @@ private val jsonSerializer = Json {
     ignoreUnknownKeys = true
     classDiscriminator = "tipo"
 }
+
+
+/**
+ * Esta clase se encarga de manejar los mensajes referentes a la creación de partidas privadas,
+ * como invitar a una partida, o solicitar una reanudación
+ **/
 class ManejadorPartidaAPI {
     fun enviarInvitacion(
         remitente: String,
@@ -86,17 +84,6 @@ class ManejadorPartidaAPI {
         val mensaje = MensajeInvitacionPartida(remitente, destinatario)
         val jsonMsg = jsonSerializer.encodeToString<MensajeCliente>(mensaje)
 
-        ManejadorGlobal.enviarMensaje(jsonMsg)
-    }
-
-    fun cancelarNotificacionEnviada(
-        idNotificacion: Int
-    ) {
-        if (idNotificacion == -1) {
-            return
-        }
-        val mensaje = MensajeCancelarNotificacion(idNotificacion)
-        val jsonMsg = jsonSerializer.encodeToString<MensajeCliente>(mensaje)
         ManejadorGlobal.enviarMensaje(jsonMsg)
     }
 

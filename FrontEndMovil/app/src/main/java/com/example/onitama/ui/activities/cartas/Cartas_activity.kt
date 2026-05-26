@@ -77,8 +77,6 @@ class Cartas_activity: AppCompatActivity() {
                 color = MaterialTheme.colorScheme.background
             ) {
                 CartasScreen(
-                    nombre = nombreUsuario,
-                    cores = valorCores,
                     katanas = valorKatanas
                 )
             }
@@ -88,8 +86,6 @@ class Cartas_activity: AppCompatActivity() {
 
 @Composable
 fun CartasScreen(
-    nombre: String = "Jugador",
-    cores: Int = 0,
     katanas: Int = 0
 ) {
     val quattrocentoBold = FontFamily(Font(R.font.quattrocento_bold))

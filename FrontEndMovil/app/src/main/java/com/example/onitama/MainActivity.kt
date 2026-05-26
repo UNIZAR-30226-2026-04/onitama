@@ -13,7 +13,7 @@ import kotlinx.coroutines.runBlocking
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        //caso 1: hay sesión activa, se inicia el menu principal
         if (AutoLogin.haySesionActiva(this)){
             // Creación del Intent
             val credenciales = AutoLogin.datosIni(this)
@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
+        //caso 2 no hay sesión activa, se abre la pantalla inicial
         else {
             // Creación del Intent
             val intent = Intent(this, Ini_Activity::class.java)

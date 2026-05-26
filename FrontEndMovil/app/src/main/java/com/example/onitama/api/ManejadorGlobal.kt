@@ -25,21 +25,29 @@ object ManejadorGlobal {
     // Guardamos la conexión activa aquí
     private var webSocketActivo: WebSocket? = null
 
+    //se hace una cola con los mensajes entrantes, es mutable para que el resto de objetos vea cuando cambia,
+    // pero es privada para evitar que ningún proceso sea capaz de modificarla accidentalmente, solo se vaciará cuando se llene
     private val _mensajesEntrantes = MutableSharedFlow<JSONObject>(extraBufferCapacity = 10)
+    //esta sí es pública porque solo es de lectura
     val mensajesEntrantes = _mensajesEntrantes.asSharedFlow()
 
     private val jsonSerializer = Json {
         ignoreUnknownKeys = true
         classDiscriminator = "tipo"
     }
-
+    //lista mutable de notificaciones de amistad
     private val _notificaciones = MutableStateFlow<List<Amigos.MensajeSolicitudAmistadS>>(emptyList())
+    //version de solo lectura
     val notificaciones = _notificaciones.asStateFlow()
 
+    //lista mutable de notificaciones de solicitud de partida
     private val _notificacionesPartida = MutableStateFlow<List<Amigos.MensajeServidor>>(emptyList())
+    //versión pública de solo lectura
     val notificacionesPartida = _notificacionesPartida.asStateFlow()
 
     init {
+        //se lanza como una corrutina en segundo plano que permanecerá siempre, cada vez que llegue un mensaje por
+        //el websocket, se guarda en la cola de mensajes entrantes, o en las de notificaciones según corresponda
         CoroutineScope(Dispatchers.IO).launch {
             mensajesEntrantes.collect { json ->
                 val tipo = json.optString("tipo")
@@ -92,6 +100,7 @@ object ManejadorGlobal {
         return suspendCancellableCoroutine { continuation ->
             val request = Request.Builder().url(wsUrl).build()
 
+            //se define el listener y lo que hará en cada caso
             val listener = object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     webSocketActivo = webSocket
@@ -108,8 +117,7 @@ object ManejadorGlobal {
                     try {
                         val json = JSONObject(text)
 
-                        // En lugar de procesarlo todo aquí y que este archivo tenga 1000 líneas,
-                        // simplemente tiramos el mensaje a la cinta transportadora:
+                        // En lugar de procesarlo aquí metemos el mensaje a la cinta transportadora:
                         CoroutineScope(Dispatchers.IO).launch {
                             _mensajesEntrantes.emit(json)
                         }
@@ -136,7 +144,6 @@ object ManejadorGlobal {
 
     fun desconectar() {
         // Al cerrar este "cable", el servidor web se dará cuenta al instante,
-        // igual que cuando cierras la pestaña en Chrome, y liberará la cuenta.
         webSocketActivo?.close(1000, "Cierre de sesión voluntario")
         webSocketActivo = null
     }

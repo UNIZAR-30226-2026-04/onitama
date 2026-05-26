@@ -1,7 +1,5 @@
 package com.example.onitama.api
 
-
-import android.util.Log
 import com.example.onitama.Config
 import com.example.onitama.PartidaActiva
 import com.example.onitama.api.ManejadorGlobal.mensajesEntrantes
@@ -16,24 +14,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.WebSocket
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
-import okhttp3.Response
 import org.json.JSONObject
 
 /**
  * Cliente API – Buscar Partida Pública.
  * Envía BUSCAR_PARTIDA al servidor vía WebSocket y espera PARTIDA_ENCONTRADA.
  *
- * Cambios respecto a la versión inicial:
- *  - Ahora envía `nombre` y `puntos` para el sistema de matchmaking por puntuación.
- *  - NO cierra el WebSocket al recibir PARTIDA_ENCONTRADA: lo traspasa a
- *    api/partida.ts (setWsActivo) para que la pantalla de partida lo reutilice.
- *  - Guarda los datos completos de la partida en sessionStorage para que
- *    /partida/page.tsx los lea al inicializarse.
  *
  * Si el servidor no está disponible, el fallback mock sigue funcionando igual.
  */
@@ -62,6 +50,9 @@ class BuscarPartida(
         val oponentePt: Int?
     )
 
+    /**
+     * Función que se usa en caso de que no haya servidor (se usaba en las primeras pruebas)
+     **/
 
     suspend fun mockBuscarPartida(): RespuestaBuscarPartida {
         delay(1500)
@@ -75,11 +66,21 @@ class BuscarPartida(
         )
     }
 
+    /**
+     * Esta clase contiene
+     * una promesa que es más o menos un puntero que por el momento está vacío, pero que nos avisará cuando deje de estarlo, que será cuando encontremos una partida
+     * y una función para cancelar la búsqueda
+     **/
     data class ResultadoBusqueda(
         val promise: Deferred<RespuestaBuscarPartida>,
         val cancel: () -> Unit
     )
 
+    /**
+     * La función que se usa para enviarle el mensaje de búsqueda al servidor, devuelve un dato del tipo definido anteriormente y
+     * se queda esperando de forma concurrente en la corutina que se pasa en el valor scope durante timeout milisegundo
+     * Cuando la promesa se complete, sabremos si se ha encontrado una partida o no
+     **/
     fun buscarPartida(scope: CoroutineScope, nombre: String = "Jugador", puntos: Int = 0, timeout: Long = 30000): ResultadoBusqueda {
         if (!usarServidor) {
             return ResultadoBusqueda(
@@ -116,8 +117,7 @@ class BuscarPartida(
                             tipo == "PARTIDA_ENCONTRADA" || tipo == "PARTIDA_PRIVADA_ENCONTRADA"
                         }
                         .first()
-                    // Aquí puedes usar tu PartidaActiva.datosPartida = ...
-                    // Igual que hacías antes.
+
                     val jsonTolerante = Json {
                         ignoreUnknownKeys = true
                         classDiscriminator =

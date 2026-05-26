@@ -1,19 +1,18 @@
 package com.example.onitama.api
 
 import android.util.Log
-import com.example.onitama.Config
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+
+/**
+ * Clase que contiene todos los mensajes que se pueden enviar al servidor en lo referente a comprar o activar skins de tablero y fichas
+ **/
 class Skin (
-    private val wsUrl: String = Config.WS_URL
+
 ){
-    val usarServidor: Boolean get() = !(wsUrl.isEmpty())
 
     @Serializable
     sealed class MensajeCliente
@@ -92,6 +91,7 @@ class Skin (
 
     /**
      * Envía un mensaje al servidor para obtener las skins de la tienda.
+     * usuario: cliente que quiere obtener las skins de la tienda
      */
     fun obtenerTiendaSkins(usuario: String) {
         try {
@@ -105,6 +105,8 @@ class Skin (
 
     /**
      * Envía un mensaje al servidor para comprar una skin.
+     * usuario: cliente que quiere comprar la skin
+     * skinId: id de la skin que quiere comprar
      */
     fun comprarSkin(usuario: String, skinId: String) {
         try {
@@ -118,6 +120,8 @@ class Skin (
 
     /**
      * Envía un mensaje al servidor para activar una skin.
+     * usuario: cliente que quiere activar la skin
+     * skinId: id de la skin que quiere activar
      */
     fun activarSkin(usuario: String, skinId: String) {
         try {

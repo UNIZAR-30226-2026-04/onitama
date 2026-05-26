@@ -40,21 +40,23 @@ import kotlinx.serialization.json.Json
 
 class PartidaViewModel : ViewModel() {
 
-    val END = 6;
+    val END = 6; //necesaria para invertir posiciones
     var modoJuegoActual: ModoJuego = ModoJuego.BOT
-        private set
+        private set //modo de juego por defecto bot
     var nivelDificultadBot: Dificultad = Dificultad.FACIL
-        private set
+        private set //nivel del bot por defecto facil
 
     private val _estado = MutableStateFlow(crearEstadoInicial())
+    //el estado es provate por seguridad
     var razon: String? = null
     val estado: StateFlow<EstadoJuego> = _estado.asStateFlow()
+    //versión readOnly a la que sí podrá acceder la activity
 
-    var cartaAccionEnUso: String? = null
-    private var sacrificioPieza: Posicion? = null
-    private var estadoAntesCartaAccion: EstadoJuego? = null
+    var cartaAccionEnUso: String? = null //indica la carta de acción que se está usando
+    private var sacrificioPieza: Posicion? = null //indica la posición de la pieza que se está sacrificando si la hay
+    private var estadoAntesCartaAccion: EstadoJuego? = null //guarda el estado antes de usar una carta de acción por si hay que deshacerla
 
-    private val _mensajeCartaAccion = MutableStateFlow<String>("")
+    private val _mensajeCartaAccion = MutableStateFlow<String>("") //String que acompaña a toda carta de accion describiendo su función
     val mensajeCartaAccion = _mensajeCartaAccion.asStateFlow()
 
     var mostrarPopPausa by mutableStateOf(false)
@@ -152,11 +154,11 @@ class PartidaViewModel : ViewModel() {
                                 Log.i("conexion servidor", "Mensaje de movimiento recibido")
 
                                 val resultado = ejecutarMovimiento(
-                                    estado = actual, 
-                                    origen, 
-                                    destino, 
-                                    carta, 
-                                    equipoPropio, 
+                                    estado = actual,
+                                    origen,
+                                    destino,
+                                    carta,
+                                    equipoPropio,
                                     trampaActivada = mensaje.trampa_activada?: false
                                 )
 
@@ -247,7 +249,7 @@ class PartidaViewModel : ViewModel() {
                                     fasePartida = FasePartida.JUGANDO,
                                     cartasAccionPropia = mensaje.cartas_accion.map { it.nombre },
                                     cartaAccionInicialElegida = null,
-                                    cartaAccionYaUsada = false 
+                                    cartaAccionYaUsada = false
                                 )
                             }
 
@@ -383,7 +385,7 @@ class PartidaViewModel : ViewModel() {
                         mensajeErrorTrampa = mensaje,
                         posicionErrorTrampa = pos
                     )
-                    
+
                     viewModelScope.launch {
                         delay(2000)
                         val estadoActual = _estado.value
@@ -416,7 +418,7 @@ class PartidaViewModel : ViewModel() {
                         fila = END - pos.fila,
                         columna = END - pos.col
                     )
-                    
+
                 } else {
                     val mensaje = "Debe colocarse en la 2º o 3º fila de tu lado."
 
@@ -424,7 +426,7 @@ class PartidaViewModel : ViewModel() {
                         mensajeErrorTrampa = mensaje,
                         posicionErrorTrampa = pos
                     )
-                    
+
                     viewModelScope.launch {
                         delay(2000)
                         val estadoActual = _estado.value
@@ -543,10 +545,10 @@ class PartidaViewModel : ViewModel() {
                                 _estado.value = actual.copy(
                                     fichaSeleccionada = pos,
                                     movimientosValidos = calcularMovimientosValidos(
-                                        actual.tablero, 
+                                        actual.tablero,
                                         pos.fila,
-                                        pos.col, 
-                                        actual.cartaSeleccionada, 
+                                        pos.col,
+                                        actual.cartaSeleccionada,
                                         actual.turnoActual,
                                         actual.restriccionSolo
                                     )
@@ -570,16 +572,16 @@ class PartidaViewModel : ViewModel() {
         if (actual.cartaAccionInicialElegida != null) {
             return
         }
-        
+
         if (actual.fasePartida == FasePartida.ELEGIR_CARTA_ACCION) {
             _estado.value = actual.copy(
                 cartaAccionInicialElegida = nombreCarta
             )
-            
+
             partida.enviarSeleccionAccion(
-                nombreCarta, 
+                nombreCarta,
                 equipoPropio.id
-            )        
+            )
         }
     }
 
@@ -615,8 +617,8 @@ class PartidaViewModel : ViewModel() {
     fun desSeleccionarCarta() {
         val actual = _estado.value
         _estado.value = actual.copy(
-            cartaSeleccionada = null, 
-            fichaSeleccionada = null, 
+            cartaSeleccionada = null,
+            fichaSeleccionada = null,
             movimientosValidos = emptyList(),
             modoAccion = null
         )
@@ -631,19 +633,19 @@ class PartidaViewModel : ViewModel() {
             val carta = obtenerCartaAccion(nombreCarta) ?: return
 
             cartaAccionEnUso = nombreCarta
-        
-            if (carta == "ESPEJO" || 
+
+            if (carta == "ESPEJO" ||
                 carta == "CEGAR" ||
                 carta == "SOLO_PARA_ADELANTE" ||
                 carta == "SOLO_PARA_ATRAS") {
                 ejecucionCartaAccion(nombreCarta, carta)
-            }   
+            }
             else {
                 _estado.value = actual.copy(
                     modoAccion = carta
                 )
                 _mensajeCartaAccion.value = when (carta) {
-                    "REVIVIR" -> "Selecciona una casilla vacía de tu campo." 
+                    "REVIVIR" -> "Selecciona una casilla vacía de tu campo."
                     "SACRIFICIO" -> "Selecciona uno de tus peones."
                     "SALVAR_REY" -> "Selecciona destino para tu rey."
                     else -> ""
@@ -655,6 +657,7 @@ class PartidaViewModel : ViewModel() {
         }
     }
 
+    //obtiene la acción de la carta a partir de su nombre
     private fun obtenerCartaAccion(
         nombre: String
     ): String? {
@@ -671,6 +674,7 @@ class PartidaViewModel : ViewModel() {
         }
     }
 
+    //Aquí es donde usamos la función de la biblioteca de juego para ejecutar la carta de acción.
     fun ejecucionCartaAccion(
         nombreCarta: String,
         cartaAccion: String,
@@ -720,7 +724,7 @@ class PartidaViewModel : ViewModel() {
         }
     }
 
-
+    //Función que le comunica al servidor que se ha pulsado el botón de pausa para que envíe una solicitud de pausa al oponente
     fun activarPausa() {
         val datos = PartidaActiva.datosPartida ?: return
 
@@ -735,6 +739,7 @@ class PartidaViewModel : ViewModel() {
         )
     }
 
+    //Función que le comunica al servidor la aceptación a la solicitud de pausa del oponente
     fun enviarAceptarPausa(
         idNotificacion: Int,
         miNombre: String
@@ -749,6 +754,7 @@ class PartidaViewModel : ViewModel() {
         }
     }
 
+    //Función que le comunica al servidor el rechazo a la solicitud de pausa del oponente
     fun enviarRechazarPausa(
         idNotificacion: Int,
         miNombre: String
@@ -763,6 +769,7 @@ class PartidaViewModel : ViewModel() {
         }
     }
 
+    /**Función que llama a la biblioteca ia.kt para calcular el movimiento del bot y posteriormente lo ejecuta con una función auxiliar**/
     private fun jugarTurnoBot() {
         val estadoActual = _estado.value
 
@@ -794,6 +801,10 @@ class PartidaViewModel : ViewModel() {
         }
     }
 
+
+    /**
+     * Función que aplica una jugada realizada por la IA en modo local.
+     * **/
     private fun aplicarJugadaEnEstado(jugada: JugadaIA) {
         val actual = _estado.value
 

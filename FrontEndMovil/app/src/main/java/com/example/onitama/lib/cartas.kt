@@ -1,18 +1,5 @@
 package com.example.onitama.lib
 
-import android.graphics.drawable.Drawable
-import android.icu.text.CaseMap.toLower
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-
-
-
-
 data class Movimiento(val dc: Int, val df:Int)
 
 data class Carta(
@@ -21,6 +8,12 @@ data class Carta(
     val movimientos: List<Movimiento>
 )
 
+
+/**
+ * Objeto global que contiene una lista con todas las cartas de movimiento disponibles en el juego.
+ *
+ *
+ **/
 object Cartas{
     val todas_cartas = listOf(
         Carta("Tigre",   "🐯", listOf(Movimiento(0, -1), Movimiento(0, 2))),
@@ -41,15 +34,25 @@ object Cartas{
         Carta("Cobra",   "🐍", listOf(Movimiento(-1, 0), Movimiento(1, 1), Movimiento(1,-1))),
 
     )
+    /**
+     *Función que selecciona n cartas distintas aleatorias de la lista de cartas.
+     **/
     fun selectRandomCards(n: Int):List<Carta>{
         return todas_cartas.shuffled().take(n)
 
     }
 
+
+    /**
+     *Función que devuelve el nombre en minusculas de una carta que coincidirá con el nombre de su imagen
+     **/
     fun imagenCarta(carta: Carta): String {
         return carta.nombre.lowercase()
     }
 
+    /**
+     *Función que devuelve la carta cuyo nombre coincida con el parámetro que se pasa
+     **/
     fun getCarta(nombre: String): Carta {
         return todas_cartas.find { it.nombre == nombre }!!
     }

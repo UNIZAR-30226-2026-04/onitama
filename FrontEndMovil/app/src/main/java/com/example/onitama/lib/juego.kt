@@ -5,11 +5,12 @@ import com.example.onitama.PartidaActiva
 import com.example.onitama.api.Partida
 
 // ─── Constantes del tablero ───────────────────────────────────────────────────
-const val DIM = 7
-const val CENTRO = (DIM/2)
+const val DIM = 7// Dimensión del tablero (7x7)
+const val CENTRO = (DIM/2) // Columna central donde se ubican los tronos (índice 3)
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
+/** Representa las modalidades de emparejamiento del juego. */
 enum class ModoJuego {
     PUBLICA,
     PRIVADA,
@@ -39,6 +40,11 @@ data class Celda (
     val esTrampaEquipo: Int? = null
 )
 
+/**
+ * esta clase represeta en que fase esta la partida,
+ * es necesaria para poder añadir las funcionalidades de colocar trampa y
+ * seleccionar carta de acción.
+ * **/
 enum class FasePartida {
     COLOCAR_TRAMPA,
     ELEGIR_CARTA_ACCION,
@@ -52,6 +58,10 @@ data class Posicion (
     val col: Int
 )
 
+/**
+ * Estado completo y centralizado de la partida (Single Source of Truth).
+ * Contiene el tablero, cartas de movimientos, variables de interfaz (UI) y efectos activos.
+ */
 data class EstadoJuego (
     val fasePartida: FasePartida,
 
@@ -86,82 +96,78 @@ data class EstadoJuego (
     /** Origen y destino del último movimiento (para feedback visual) */
     val ultimoMovimiento: Pair<Posicion, Posicion>? = null,
 
-    
+    /** Cartas de acción especiales disponibles y su estado */
     val cartasAccionPropia : List<String> = emptyList(),
     val cartasAccionRival: List<String> = emptyList(),
 
     val cartaAccionInicialElegida: String? = null,
     val cartaAccionYaUsada: Boolean = false,
 
-    val modoAccion: String? = null,
-    
-    val equipoCiego: EquipoID? = null,
+    val modoAccion: String? = null, // Tipo de acción especial en ejecución
 
-    val espejoActivadoPor: EquipoID? = null,
+    val equipoCiego: EquipoID? = null, // Restringe la visibilidad del equipo afectado
 
-    val restriccionSolo: RestriccionSolo? = null,
-    
+    val espejoActivadoPor: EquipoID? = null, // Almacena qué equipo activó el efecto espejo
+
+    val restriccionSolo: RestriccionSolo? = null, // Limitación de vectores de movimiento
+
+    // Gestión de errores y previsualización de trampas en la UI
     val posicionTrampa: Posicion? = null,
     val mensajeErrorTrampa: String? = null,
     val posicionErrorTrampa: Posicion? = null
 )
 
+/** Modificadores direccionales impuestos por efectos de cartas especiales. */
 enum class TipoRestriccion {
     SOLO_PARA_ADELANTE,
     SOLO_PARA_ATRAS
 }
 
+/** Almacena una restricción de movimiento activa y quién la aplicó. */
 data class RestriccionSolo(
     val tipo: TipoRestriccion,
 
     /** Quien jugó la carta Dama/Finisterre */
     val caster: EquipoID,
 )
-
+/**
+ * Evalúa si una restricción direccional debe disiparse tras un movimiento.
+ * Se elimina si el rival del 'caster' ha realizado su turno.
+ */
 fun resolverRestrccionSoloTrasMovimiento (
     r: RestriccionSolo?,
     equipoQueMueve : EquipoID
 ) : RestriccionSolo ? {
-    if (r == null) {
-        return null
-    }
+    if (r == null) return null
 
-    var rivalDelCaster = equipoQueMueve != r.caster
-
-    return if (rivalDelCaster) {
-        null
-    }
-    else {
-        r
-    }
+    val rivalDelCaster = equipoQueMueve != r.caster
+    return if (rivalDelCaster) null else r
 }
 
+/** Inicializa una nueva restricción direccional de movimiento. */
 fun activarRestriccionSolo (
     caster: EquipoID,
     tipo: TipoRestriccion
 ) : RestriccionSolo {
-    return RestriccionSolo (
-        tipo,
-        caster
-    )
+    return RestriccionSolo (tipo, caster)
 }
 
-/** Misma transformación que al aplicar ESPEJO (invertir dc en cada vector). */
+/** Invierte horizontalmente (Delta Columna) los vectores de un conjunto de cartas (Efecto Espejo). */
 fun invertirCartasEspejo (
     cartas: List<Carta>
 ) : List<Carta> {
     return cartas.map { carta ->
         carta.copy(
-            movimientos = carta.movimientos.map { mov -> 
-                mov.copy(dc = -mov.dc)
+            movimientos = carta.movimientos.map { mov ->
+                mov.copy(dc = -mov.dc) // Invierte el eje de las columnas
             }
         )
     }
 }
 
 /**
- * Si el servidor habría deshecho ESPEJO en este movimiento (mueve quien no jugó Pensatorium),
- * alinea las cartas del cliente con Partida.moverFicha.
+ * Reestablece las cartas a su estado original si el rival consumió su turno
+ * bajo los efectos del modificador ESPEJO.
  */
 fun deshacerEspejoTrasMovimientoRival (
     estado: EstadoJuego,
@@ -169,36 +175,34 @@ fun deshacerEspejoTrasMovimientoRival (
 ) : EstadoJuego {
     val c = estado.espejoActivadoPor
 
+    // Si no hay espejo activo o quien movió fue el mismo que lo activó, no cambia nada
     if (c == null || c == equipoQueMueve) {
         return estado
     }
 
+    // Deshace la inversión aplicando el espejo nuevamente a todas las barajas
     return estado.copy(
-            cartasJugador = invertirCartasEspejo(estado.cartasJugador),
-            cartasOponente = invertirCartasEspejo(estado.cartasOponente),
-            cartasSiguientes = invertirCartasEspejo(estado.cartasSiguientes),
-            espejoActivadoPor = null
-        )
+        cartasJugador = invertirCartasEspejo(estado.cartasJugador),
+        cartasOponente = invertirCartasEspejo(estado.cartasOponente),
+        cartasSiguientes = invertirCartasEspejo(estado.cartasSiguientes),
+        espejoActivadoPor = null
+    )
 }
 
 // ─── Creación del estado inicial ──────────────────────────────────────────────
 
-/** Construye el tablero 7×7 con fichas en posición inicial */
+/** Construye el tablero 7×7 posicionando Reyes y Peones en los extremos opuestos. */
 fun crearTableroInicial(): List<List<Celda>> {
     return List(DIM) { fila ->
         List(DIM) { col ->
             var ficha: Ficha? = null
             val esTronoSuperior = fila == 0 && col == CENTRO
             val esTronoInferior = fila == DIM - 1 && col == CENTRO
+
+            // Colocación de piezas en la primera y última fila
             if (fila == 0 || fila == DIM - 1){
-                val equipo: EquipoID
-                if (fila == 0){
-                    equipo = EquipoID.ROJO
-                }
-                else {
-                    equipo = EquipoID.AZUL
-                }
-                ficha = Ficha(equipo, col == CENTRO)
+                val equipo = if (fila == 0) EquipoID.ROJO else EquipoID.AZUL
+                ficha = Ficha(equipo, col == CENTRO) // El Rey se ubica en el centro
             }
             Celda(
                 ficha = ficha,
@@ -210,8 +214,8 @@ fun crearTableroInicial(): List<List<Celda>> {
 }
 
 /**
- * Crea el estado inicial de una partida local (mock).
- * Se reparten 7 cartas aleatorias: 2 jugador + 2 oponente + 3 en cola.
+ * Crea el estado inicial para pruebas locales (Mock).
+ * Selecciona 7 cartas aleatorias de la baraja global y distribuye las manos.
  */
 fun crearEstadoInicial(): EstadoJuego {
     val cartas = Cartas.selectRandomCards(7)
@@ -226,9 +230,8 @@ fun crearEstadoInicial(): EstadoJuego {
 }
 
 /**
- * Devuelve las casillas a las que puede moverse la ficha en (fila, col)
- * utilizando la carta dada.
- *
+ * Calcula las coordenadas válidas a las que puede desplazarse una ficha dada una carta.
+ * Filtra los límites del tablero, colisiones aliadas, trampas detonadas y restricciones activas.
  */
 fun calcularMovimientosValidos (
     tablero: List<List<Celda>>,
@@ -238,12 +241,13 @@ fun calcularMovimientosValidos (
     equipoFicha: EquipoID,
     restriccion: RestriccionSolo? = null
 ): List<Posicion> {
+    // El bando Azul avanza hacia arriba (matemáticamente resta filas) y el Rojo hacia abajo (suma filas)
     val signo = if(equipoFicha == EquipoID.AZUL) 1 else -1
-
     val validos = mutableListOf<Posicion>()
 
     for (movimientos in cartaMov.movimientos){
-         if (restriccion != null) {
+        // Filtrado por restricciones direccionales (Cartas Dama/Finisterre)
+        if (restriccion != null) {
             if (restriccion.tipo == TipoRestriccion.SOLO_PARA_ADELANTE && movimientos.df < 0) {
                 continue
             }
@@ -252,17 +256,21 @@ fun calcularMovimientosValidos (
             }
         }
 
+        // Mapeo vectorial relativo a la posición actual de la pieza
         val nf = fila - (movimientos.df * signo)
         val nc = col + (movimientos.dc * signo)
 
+        // Fuera de los límites del tablero 7x7
         if (nf < 0 || nf >= DIM || nc < 0 || nc>= DIM){
             continue
         }
 
+        // Colisión con una pieza del mismo equipo
         if (tablero[nf][nc].ficha?.equipo == equipoFicha){
             continue
         }
 
+        // La casilla contiene una trampa ya detonada (-1 es injugable)
         if (tablero[nf][nc].esTrampaEquipo == -1) {
             continue
         }
@@ -272,28 +280,28 @@ fun calcularMovimientosValidos (
     return validos
 }
 
+/**
+ * Verifica si un bando tiene movimientos reglamentarios disponibles en su turno.
+ * Evita bloqueos blandos (soft-locks) si el jugador posee cartas de acción o jugadas válidas.
+ */
 fun tieneMovimientosPosibles(
-    estado: EstadoJuego, 
+    estado: EstadoJuego,
     equipo: EquipoID
 ): Boolean {
     val tieneCartaAccion = if (equipo == EquipoID.AZUL) {
         estado.cartasAccionPropia.isNotEmpty()
-    }
-    else {
+    } else {
         estado.cartasAccionRival.isNotEmpty()
     }
 
+    // Si tiene una carta especial lista para activarse, se asume que retiene movilidad
     if (tieneCartaAccion && estado.modoAccion == null) {
         return true
     }
 
-    val cartas = if (equipo == EquipoID.AZUL) {
-        estado.cartasJugador
-    }
-    else {
-        estado.cartasOponente
-    }
+    val cartas = if (equipo == EquipoID.AZUL) estado.cartasJugador else estado.cartasOponente
 
+    // Escaneo completo del tablero buscando al menos una jugada legal
     for (f in 0 until DIM) {
         for (c in 0 until DIM) {
             val celda = estado.tablero[f][c]
@@ -301,14 +309,8 @@ fun tieneMovimientosPosibles(
             if (celda.ficha?.equipo == equipo) {
                 for (carta in cartas) {
                     val validos = calcularMovimientosValidos(
-                        estado.tablero,
-                        f,
-                        c,
-                        carta,
-                        equipo,
-                        estado.restriccionSolo
+                        estado.tablero, f, c, carta, equipo, estado.restriccionSolo
                     )
-
                     if (validos.isNotEmpty()){
                         return true
                     }
@@ -316,100 +318,67 @@ fun tieneMovimientosPosibles(
             }
         }
     }
-
     return false
 }
 
+/**
+ * Modifica el estado del juego tras la invocación de una Carta de Acción mística.
+ * Modifica las posiciones de las fichas o altera el comportamiento de las barajas.
+ */
 fun aplicarCartaAccion(
     estado: EstadoJuego,
     equipo: EquipoID,
     cartaNombre: String,
-    x: Int,
-    y: Int,
-    x_op: Int,
-    y_op: Int,
+    x: Int, y: Int,          // Coordenadas objetivo aliadas
+    x_op: Int, y_op: Int,    // Coordenadas objetivo rivales
     cartaRobar: String,
     tipo: String?
 ): EstadoJuego {
-    val tablero = estado.tablero.map {
-        fila -> fila.toMutableList()
-    }.toMutableList()
+    val tablero = estado.tablero.map { fila -> fila.toMutableList() }.toMutableList()
     Log.d("LOG de partida", "Intentando Aplicar acción: $tipo")
+
+    // ─── Ejecución de efectos físicos en el tablero ───
     when (tipo) {
         "REVIVIR" -> {
             if (y in 0 until DIM && x in 0 until DIM) {
-                tablero[y][x] = tablero[y][x].copy(
-                    ficha = Ficha(
-                        equipo, 
-                        false
-                    )
-                )
+                tablero[y][x] = tablero[y][x].copy(ficha = Ficha(equipo, false)) // Revive un peón
             }
         }
 
         "SALVAR_REY" -> {
+            // Remueve al rey de su posición actual previa teletransportación
             for (f in 0 until DIM) {
                 for (c in 0 until DIM) {
                     val ficha = tablero[f][c].ficha
                     if (ficha?.esRey == true && ficha.equipo == equipo) {
-                        tablero[f][c] = tablero[f][c].copy(
-                            ficha = null
-                        )
+                        tablero[f][c] = tablero[f][c].copy(ficha = null)
                     }
                 }
             }
-
             if (y in 0 until DIM && x in 0 until DIM) {
-                tablero[y][x] = tablero[y][x].copy(
-                    ficha = Ficha(
-                        equipo, 
-                        true
-                    )
-                )
+                tablero[y][x] = tablero[y][x].copy(ficha = Ficha(equipo, true))
             }
         }
 
         "SACRIFICIO" -> {
+            // Elimina fulminantemente ambas fichas designadas
             if (y in 0 until DIM && x in 0 until DIM) {
-                tablero[y][x] = tablero[y][x].copy(
-                    ficha = null
-                )
+                tablero[y][x] = tablero[y][x].copy(ficha = null)
             }
             if (y_op in 0 until DIM && x_op in 0 until DIM) {
-                tablero[y_op][x_op] = tablero[y_op][x_op].copy(
-                    ficha = null
-                )
+                tablero[y_op][x_op] = tablero[y_op][x_op].copy(ficha = null)
             }
         }
     }
 
+    // La carta 'ROBAR' no otorga cambio de turno inmediato al oponente
     val cambioTurno = (tipo != "ROBAR")
-    val siguiente = if (equipo == EquipoID.AZUL) {
-        EquipoID.ROJO
-    }
-    else {
-        EquipoID.AZUL
-    }
-    val nuevoTurno = if (cambioTurno) {
-        siguiente 
-    }
-    else {
-        equipo
-    } 
+    val siguiente = if (equipo == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL
+    val nuevoTurno = if (cambioTurno) siguiente else equipo
 
-    val nuevasCartasAccionPropia = if (equipo == EquipoID.AZUL) {
-        estado.cartasAccionPropia - cartaNombre
-    }
-    else {
-        estado.cartasAccionPropia
-    }
-
-    val nuevasCartasAccionRival = if (equipo == EquipoID.ROJO) {
-        estado.cartasAccionRival - cartaNombre
-    }
-    else {
-        estado.cartasAccionRival
-    }
+    // Actualización de los listados de cartas de acción consumidas
+    val nuevasCartasAccionPropia = if (equipo == EquipoID.AZUL) estado.cartasAccionPropia - cartaNombre else estado.cartasAccionPropia
+    val nuevasCartasAccionRival = if (equipo == EquipoID.ROJO) estado.cartasAccionRival - cartaNombre else estado.cartasAccionRival
 
     var nuevoEstado = estado.copy(
         tablero = tablero,
@@ -422,34 +391,19 @@ fun aplicarCartaAccion(
         cartasAccionRival = nuevasCartasAccionRival,
     )
 
+    // ─── Ejecución de efectos lógicos y estructurales ───
     return when(tipo) {
         "ROBAR" -> {
             val miEquipo = PartidaActiva.datosPartida!!.obtenerEquipoID()
-            val misCartas = if (equipo == miEquipo) {
-                estado.cartasJugador
-            }
-            else {
-                estado.cartasOponente
-            }
-
-            val susCartas = if (equipo == miEquipo) {
-                estado.cartasOponente
-            }
-            else {
-                estado.cartasJugador
-            }
-
+            val misCartas = if (equipo == miEquipo) estado.cartasJugador else estado.cartasOponente
+            val susCartas = if (equipo == miEquipo) estado.cartasOponente else estado.cartasJugador
             val siguientes = estado.cartasSiguientes.toMutableList()
-            val robar = susCartas.find {
-                it.nombre == cartaRobar
-            }
+            val robar = susCartas.find { it.nombre == cartaRobar }
 
             if (robar != null && siguientes.isNotEmpty()) {
                 val nueva = siguientes.removeAt(0)
                 val nuevasJugador = misCartas + robar
-                val nuevasOponente = susCartas.filter {
-                    it.nombre != cartaRobar
-                } + nueva
+                val nuevasOponente = susCartas.filter { it.nombre != cartaRobar } + nueva
 
                 nuevoEstado.copy(
                     cartasJugador = if (equipo == miEquipo) nuevasJugador else nuevasOponente,
@@ -457,8 +411,7 @@ fun aplicarCartaAccion(
                     cartasSiguientes = siguientes,
                     turnoActual = equipo
                 )
-            }
-            else {
+            } else {
                 nuevoEstado
             }
         }
@@ -474,21 +427,15 @@ fun aplicarCartaAccion(
 
         "CEGAR" -> {
             val victima = if (equipo == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL
-            nuevoEstado.copy(
-                equipoCiego = victima
-            )
+            nuevoEstado.copy(equipoCiego = victima)
         }
 
         "SOLO_PARA_ADELANTE" -> {
-            nuevoEstado.copy(
-                restriccionSolo = activarRestriccionSolo(equipo, TipoRestriccion.SOLO_PARA_ADELANTE)
-            )
+            nuevoEstado.copy(restriccionSolo = activarRestriccionSolo(equipo, TipoRestriccion.SOLO_PARA_ADELANTE))
         }
 
         "SOLO_PARA_ATRAS" -> {
-            nuevoEstado.copy(
-                restriccionSolo = activarRestriccionSolo(equipo, TipoRestriccion.SOLO_PARA_ATRAS)
-            )
+            nuevoEstado.copy(restriccionSolo = activarRestriccionSolo(equipo, TipoRestriccion.SOLO_PARA_ATRAS))
         }
 
         else -> nuevoEstado
@@ -497,34 +444,25 @@ fun aplicarCartaAccion(
 
 // ─── Creación del estado a partir de datos del servidor ──────────────────────
 
-/**
- * Formato de carta tal como la envía el servidor en PARTIDA_ENCONTRADA.
- * El servidor incluye los movimientos con coordenadas {x, y} sacadas de la BD.
- * Convención: x = delta de columna (dc), y = delta de fila (df).
- * Ambos valores son equivalentes a los dc/df del catálogo local (cartas.ts).
- */
+/** Estructura de transferencia de vectores proveniente del backend. */
 data class MovimientoServidor (
-    val x: Int,
-    val y: Int
+    val x: Int, // Desplazamiento horizontal (Delta Columna)
+    val y: Int  // Desplazamiento vertical (Delta Fila)
 )
 
+/** Modelo de carta serializado enviado por la API del servidor. */
 data class CartaServidor (
     val nombre: String,
     val movimientos: List<MovimientoServidor>
 )
 
 /**
- * Convierte una carta del formato servidor al formato frontend.
- * Si el servidor no envía movimientos (retrocompatibilidad mock), se busca
- * por nombre en el catálogo local.
+ * Transforma un objeto dinámico del servidor (`Any`) al formato interno `Carta`.
+ * Soporta compatibilidad con cadenas de texto (Mocks antiguos) u objetos estructurados.
  */
-fun convertirCarta(cartaS: Any):Carta{
-    // Formato antiguo: solo nombre (mock o versión anterior del servidor)
+fun convertirCarta(cartaS: Any): Carta {
     if (cartaS is String){
-        val encontrada = Cartas.todas_cartas.find {
-            it.nombre == cartaS
-        }
-
+        val encontrada = Cartas.todas_cartas.find { it.nombre == cartaS }
         if (encontrada == null){
             println("[juego] Carta \"$cartaS\" no encontrada en catálogo. Usando primera disponible.")
             return Cartas.todas_cartas[0]
@@ -533,28 +471,24 @@ fun convertirCarta(cartaS: Any):Carta{
     }
 
     if (cartaS is CartaServidor){
-        // Formato nuevo: objeto con nombre y movimientos del servidor
-        val imagen = Cartas.todas_cartas.find {
-            it.nombre == cartaS.nombre
-        }?.imagen ?: "🃏"
-
+        val imagen = Cartas.todas_cartas.find { it.nombre == cartaS.nombre }?.imagen ?: "🃏"
         return Carta(
             nombre = cartaS.nombre,
-            imagen,
-            movimientos = cartaS.movimientos?.map {
-                Movimiento(dc = it.x, df = it.y)
-            }?: emptyList()
+            imagen = imagen,
+            movimientos = cartaS.movimientos.map { Movimiento(dc = it.x, df = it.y) }
         )
     }
     return Cartas.todas_cartas[0]
 }
 
+/**
+ * Reconstruye la matriz bidimensional del tablero procesando cadenas formateadas del servidor.
+ * **Importante:** Invierte los ejes `(END - pos)` para adaptar la perspectiva del rival en espejo.
+ */
 fun tableroDesdeServidor(
-    trampa1: String,
-    trampa2: String,
-    eq1: String,
-    eq2: String
-) : List<List<Celda>> {
+    trampa1: String, trampa2: String,
+    eq1: String, eq2: String
+): List<List<Celda>> {
     val nuevoTablero = MutableList(DIM) { fila ->
         MutableList(DIM) { col ->
             Celda(
@@ -565,22 +499,16 @@ fun tableroDesdeServidor(
         }
     }
 
+    // Expresiones regulares para parsear fichas. Ejemplos: [X,Y] para Rey, (X,Y) para Peón
     val reyRe = Regex("\\[(-?\\d+),(-?\\d+)\\]")
     val peonRe = Regex("\\((-?\\d+),(-?\\d+)\\)")
+    val END = DIM - 1 // Índice máximo (6)
 
-
-    // Misma constante que usas en el ViewModel para invertir (asumo que DIM - 1 es 6)
-    val END = DIM - 1
-
-    fun colocar(
-        data: String,
-        equipo: EquipoID
-    ) {
+    // Función anidada para parsear y posicionar las piezas en la matriz local
+    fun colocar(data: String, equipo: EquipoID) {
         reyRe.findAll(data).forEach { m ->
             val colServidor = m.groupValues[1].toInt()
             val filaServidor = m.groupValues[2].toInt()
-
-            // ¡Aplicamos la inversión aquí!
             val col = END - colServidor
             val fila = END - filaServidor
 
@@ -592,8 +520,6 @@ fun tableroDesdeServidor(
         peonRe.findAll(data).forEach { m ->
             val colServidor = m.groupValues[1].toInt()
             val filaServidor = m.groupValues[2].toInt()
-
-            // ¡Aplicamos la inversión aquí!
             val col = END - colServidor
             val fila = END - filaServidor
 
@@ -606,10 +532,9 @@ fun tableroDesdeServidor(
     colocar(eq1, EquipoID.AZUL)
     colocar(eq2, EquipoID.ROJO)
 
-
+    // Parsea y ubica las trampas activas/detonadas guardadas en la BD
     fun colocarTrampaManual(datos: String?, equipo: EquipoID) {
         if (datos.isNullOrBlank()) return
-
         try {
             val partes = datos.split(",")
             if (partes.size == 3) {
@@ -638,58 +563,33 @@ fun tableroDesdeServidor(
     return nuevoTablero
 }
 
-
 /**
- * Construye el estado inicial de la partida usando los datos recibidos del servidor
- * en el mensaje PARTIDA_ENCONTRADA.
- *
- * El servidor envía las cartas con sus movimientos (x,y) ya calculados desde la BD.
- * Acepta tanto el formato nuevo { nombre, movimientos } como el antiguo string (mock).
- *
- * Convención de turnos: equipo 1 siempre empieza (Ciro no envía TU_TURNO,
- * la pantalla de partida lo gestiona con aguardandoInicio según el equipo asignado).
- *
+ * Inicializa o reanuda una partida usando el paquete de datos del WebSocket.
+ * Si es una reanudación, reconstruye el tablero y aplica secuencialmente los efectos persistentes.
  */
 fun crearEstadoServidor (
     cartas_jugador: List<Any>,
     cartas_oponente: List<Any>,
     carta_siguiente: List<Any>,
-    tablero_eq1: String?,
-    tablero_eq2: String?,
+    tablero_eq1: String?, tablero_eq2: String?,
     esReanudada: Boolean,
-    trampa_eq1: String?,
-    trampa_eq2: String?,
-    
-    /** Turno numérico del servidor: par=equipo1, impar=equipo2 */
+    trampa_eq1: String?, trampa_eq2: String?,
     turno: Int?,
-
-    /** Cartas de acción (para partidas reanudadas). Puede venir como array [propia, rival]
-    *  o como campos individuales carta_accion_propia / carta_accion_rival. */
     cartas_accion_propia: List<Partida.CartaAccionJson>?,
     cartas_accion_rival: List<Partida.CartaAccionJson>?,
     equipoNuestro: EquipoID
 ): EstadoJuego {
     Log.d("LOG de partida", "Partida reanudada?: $esReanudada")
+
     val tablero = if (esReanudada) {
-        tableroDesdeServidor(eq1 = tablero_eq1!!, eq2 = tablero_eq2!!,trampa1 = trampa_eq1!!, trampa2 = trampa_eq2!!)
-    }
-    else {
+        tableroDesdeServidor(eq1 = tablero_eq1!!, eq2 = tablero_eq2!!, trampa1 = trampa_eq1!!, trampa2 = trampa_eq2!!)
+    } else {
         crearTableroInicial()
     }
 
-
-    val turnoActual = if ((turno ?: 0) % 2 == 0) {
-        EquipoID.AZUL // El turno 0 (par) siempre es del Equipo 1 (Azul)
-    } else {
-        EquipoID.ROJO // El turno 1 (impar) siempre es del Equipo 2 (Rojo)
-    }
-
-    val faseP = if (esReanudada) {
-        FasePartida.JUGANDO
-    }
-    else {
-        FasePartida.COLOCAR_TRAMPA
-    }
+    // El turno 0 o pares pertenecen al bando Azul (Equipo 1)
+    val turnoActual = if ((turno ?: 0) % 2 == 0) EquipoID.AZUL else EquipoID.ROJO
+    val faseP = if (esReanudada) FasePartida.JUGANDO else FasePartida.COLOCAR_TRAMPA
 
     var estadoAPriori = EstadoJuego (
         fasePartida = faseP,
@@ -701,38 +601,37 @@ fun crearEstadoServidor (
         cartasAccionPropia = cartas_accion_propia?.map { it.nombre } ?: emptyList(),
         cartasAccionRival = cartas_accion_rival?.map { it.nombre } ?: emptyList()
     )
+
+    // Re-aplicación de estados lógicos místicas (Cartas de acción activadas antes de la desconexión)
     var estadoIntermedio = estadoAPriori
     var estadoAPosteriori = estadoAPriori
     val equipoContrario = if(equipoNuestro == EquipoID.AZUL) EquipoID.ROJO else EquipoID.AZUL
+
     if (cartas_accion_propia != null) {
-        for( carta in cartas_accion_propia){
+        for(carta in cartas_accion_propia){
             if(carta.estado == "ACTIVA"){
                 Log.d("LOG de partida", "Intentando aplicar carta acción propia: ${carta.nombre} al reanudar partida")
                 estadoIntermedio = aplicarCartaAccion(estadoAPriori, equipoNuestro, carta.nombre, 0, 0, 0, 0, "", carta.accion)
                 estadoIntermedio = estadoIntermedio.copy(cartaAccionYaUsada = true)
             }
             else if(carta.estado == "NO USABLE"){
-                Log.d("LOG de partida", "Intentando aplicar carta acción propia: ${carta.nombre} al reanudar partida")
                 estadoIntermedio = estadoIntermedio.copy(cartaAccionYaUsada = true)
             }
         }
     }
-    if( cartas_accion_rival != null){
-        for( carta in cartas_accion_rival){
+    if(cartas_accion_rival != null){
+        for(carta in cartas_accion_rival){
             if(carta.estado == "ACTIVA"){
                 Log.d("LOG de partida", "Intentando aplicar carta acción del rival: ${carta.nombre} al reanudar partida")
                 estadoAPosteriori = aplicarCartaAccion(estadoIntermedio, equipoContrario, carta.nombre, 0, 0, 0, 0, "", carta.accion)
             }
         }
     }
-    
-    return estadoAPosteriori
 
+    return estadoAPosteriori
 }
 
-/**
- * Ejecución de un movimiento
- */
+/** Envoltorio de retorno que describe el impacto y las consecuencias de una jugada. */
 data class ResultadoMovimiento (
     val nuevoEstado: EstadoJuego,
     val capturado: Boolean,
@@ -740,23 +639,10 @@ data class ResultadoMovimiento (
     val victoriaPorTrono: Boolean
 )
 
-
 /**
- * Ejecuta el movimiento indicado y rota la cola de cartas:
- *  1. El jugador activo pierde la carta usada.
- *  2. Recibe cartasSiguientes[0] (la primera de la cola).
- *  3. La carta usada pasa al final de la cola.
- *  4. La cola queda con 3 cartas de nuevo.
- *
- * TODO (servidor): cuando el servidor esté listo, esta función solo se usará
- * para actualizar el estado visual tras recibir la confirmación del servidor
- * via mensaje WebSocket tipo MOVER.
- */
-/**
- * equipoLocal: equipo del jugador local en esta pestaña (1 o 2).
- * Determina qué array (cartasJugador / cartasOponente) recibe la carta nueva
- * de la cola tras un movimiento, independientemente de quién mueva en este turno.
- * Por defecto 2 para mantener compatibilidad con el modo mock.
+ * Realiza el movimiento físico de una ficha, procesa capturas ordinarias y muertes por trampa.
+ * Se encarga de la rotación cíclica de las cartas (la carta usada va al fondo de la reserva
+ * y el jugador toma la carta del frente de la fila de espera).
  */
 fun ejecutarMovimiento (
     estado: EstadoJuego,
@@ -766,132 +652,79 @@ fun ejecutarMovimiento (
     equipoLocal: EquipoID,
     trampaActivada: Boolean = false
 ): ResultadoMovimiento {
-    val tablero = estado.tablero.map { fila ->
-        fila.toMutableList()
-    }.toMutableList()
-
+    val tablero = estado.tablero.map { fila -> fila.toMutableList() }.toMutableList()
     val fichaMovida = tablero[origen.fila][origen.col].ficha!!
 
     var capturado = false
     var esReyCapturado = false
 
-    val esTrampaOponente = tablero[destino.fila][destino.col].esTrampaEquipo != null && 
-                           tablero[destino.fila][destino.col].esTrampaEquipo != fichaMovida.equipo.id
+    // Validación si se pisa una trampa enemiga
+    val esTrampaOponente = tablero[destino.fila][destino.col].esTrampaEquipo != null &&
+            tablero[destino.fila][destino.col].esTrampaEquipo != fichaMovida.equipo.id
 
     if (trampaActivada || esTrampaOponente) {
         capturado = true
         esReyCapturado = fichaMovida.esRey
 
-        tablero[destino.fila][destino.col] = tablero[destino.fila][destino.col].copy(
-            ficha = null,
-            esTrampaEquipo = -1
-        )
-
-        tablero[origen.fila][origen.col] = tablero[origen.fila][origen.col].copy(
-            ficha = null
-        )
+        // Destrucción de la ficha y cambio de la celda a estado Injugable (-1)
+        tablero[destino.fila][destino.col] = tablero[destino.fila][destino.col].copy(ficha = null, esTrampaEquipo = -1)
+        tablero[origen.fila][origen.col] = tablero[origen.fila][origen.col].copy(ficha = null)
     }
     else {
+        // Captura tradicional por asalto de casillas
         val fichaDestino = tablero[destino.fila][destino.col].ficha
-        
         if (fichaDestino != null) {
             capturado = true
             esReyCapturado = fichaDestino.esRey
         }
 
-        tablero[destino.fila][destino.col] = tablero[destino.fila][destino.col].copy(
-            ficha = fichaMovida
-        )
-
-        tablero[origen.fila][origen.col] = tablero[origen.fila][origen.col].copy(
-            ficha = null
-        )
+        tablero[destino.fila][destino.col] = tablero[destino.fila][destino.col].copy(ficha = fichaMovida)
+        tablero[origen.fila][origen.col] = tablero[origen.fila][origen.col].copy(ficha = null)
     }
 
-    /** Victoria por trono: el rey llega al trono enemigo */
+    /** Condición de Victoria "La Senda del Arroyo": El rey reclama el trono inicial del rival */
     val victoriaPorTrono = fichaMovida.esRey && destino.col == CENTRO &&
             ((fichaMovida.equipo == EquipoID.AZUL && destino.fila == 0) ||
                     (fichaMovida.equipo == EquipoID.ROJO && destino.fila == DIM - 1))
 
     val equipoActual = estado.turnoActual
-
-    val cartasMovedor = if (equipoActual == equipoLocal) {
-        estado.cartasJugador
-    }
-    else {
-        estado.cartasOponente
-    }
-
+    val cartasMovedor = if (equipoActual == equipoLocal) estado.cartasJugador else estado.cartasOponente
     val tieneCartaExtra = cartasMovedor.size > 2
 
-    /** El jugador recibe la primera carta de la cola; la carta usada va al final.*/
+    /** ─── Mecánica del Ciclo de Cartas de Onitama ─── */
     var cartaRecibida: Carta? = null
     val nuevasSiguientes: List<Carta>
 
     if (tieneCartaExtra) {
+        // Si tiene más de dos cartas por efectos especiales, devuelve la usada al fondo sin robar
         nuevasSiguientes = estado.cartasSiguientes + carta
-    }
-    else {
+    } else {
+        // Toma la primera de la cola [0] e inserta la usada en el extremo final [2]
         cartaRecibida = estado.cartasSiguientes[0]
         nuevasSiguientes = estado.cartasSiguientes.drop(1) + carta
     }
 
-    /**
-     * Si el equipo que mueve ahora ES el jugador local → actualizar cartasJugador.
-     * Si el equipo que mueve ahora ES el oponente → actualizar cartasOponente.
-     */
+    // Actualiza los mazos de la interfaz según quién efectuó el movimiento
     val nuevasCartasJugador = if (equipoActual == equipoLocal) {
         if (tieneCartaExtra) {
-            estado.cartasJugador.filter {
-                it.nombre != carta.nombre
-            }
-        } 
-        else {
-            estado.cartasJugador.map {
-            if (it.nombre == carta.nombre) {
-                cartaRecibida!!
-            } 
-            else {
-                it
-            } 
-            }
+            estado.cartasJugador.filter { it.nombre != carta.nombre }
+        } else {
+            estado.cartasJugador.map { if (it.nombre == carta.nombre) cartaRecibida!! else it }
         }
-    } 
-    else {
-        estado.cartasJugador
-    } 
+    } else estado.cartasJugador
 
     val nuevasCartasOponente = if (equipoActual != equipoLocal) {
         if (tieneCartaExtra) {
-            estado.cartasOponente.filter {
-                it.nombre != carta.nombre
-            }
+            estado.cartasOponente.filter { it.nombre != carta.nombre }
+        } else {
+            estado.cartasOponente.map { if (it.nombre == carta.nombre) cartaRecibida!! else it }
         }
-        else {
-            estado.cartasOponente.map {
-            if (it.nombre == carta.nombre) {
-                cartaRecibida!!
-            } 
-            else {
-                it
-            }
-        }
-        } 
-    } 
-    else {
-        estado.cartasOponente
-    } 
+    } else estado.cartasOponente
 
-    var ganador: EquipoID?
-    if (esReyCapturado || victoriaPorTrono){
-        ganador = equipoActual
-    }
-    else {
-        ganador = null
-    }
-
+    // Fin de juego si el rey fue ejecutado o se tomó un trono
+    val ganador = if (esReyCapturado || victoriaPorTrono) equipoActual else null
     val siguiente = if (equipoActual == EquipoID.ROJO) EquipoID.AZUL else EquipoID.ROJO
-    
+
     var nuevoEstado = estado.copy(
         fasePartida = if (ganador != null) FasePartida.TERMINADA else estado.fasePartida,
         tablero = tablero,
@@ -908,6 +741,7 @@ fun ejecutarMovimiento (
         restriccionSolo = resolverRestrccionSoloTrasMovimiento(estado.restriccionSolo, equipoActual)
     )
 
+    // Revierte efectos ópticos de espejo si se cumplen las condiciones
     val estadoFinal = deshacerEspejoTrasMovimientoRival(nuevoEstado, equipoActual)
 
     return ResultadoMovimiento(estadoFinal, capturado, esReyCapturado, victoriaPorTrono)

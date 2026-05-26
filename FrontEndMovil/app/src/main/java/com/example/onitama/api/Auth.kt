@@ -11,6 +11,15 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+
+/**
+ * Esta clase sirve para autenticar al usuario en el servidor y llevar a cabo operaciones que tengan que ver con leer o cambiar datos del usuario.
+ * Cuenta con 5 funciones base
+ * IniciarSesion que sirve para solicitarle al servidor entrar a una cuenta existente
+ * Registrarse que sirve para crear una nueva cuenta
+ * ObtenerPerfil que sirve para obtener los datos de un usuario existente
+ * CambiarAvatar y CambiarContrasegna que sirven para cambiar los datos de un usuario
+ * **/
 class Auth(
     private val wsUrl: String = Config.WS_URL
 ) {
@@ -120,6 +129,10 @@ class Auth(
         val avatar_id: String
     ) : MensajeServidor()
 
+    /**
+     * Valor que se usará para convertir strings a objetos y viceversa,
+     * tuvimos que hacerlo permisivo porque el que viene por defecto daba problemas en las pruebas intermedias
+     **/
     private val jsonSerializer = Json {
         ignoreUnknownKeys = true
         classDiscriminator = "tipo"
@@ -270,7 +283,7 @@ class Auth(
         }
     }
 
-
+    // ─── Cambio de imagen de avatar ──────────────────────────────
     suspend fun cambiarAvatar(nombre: String, avatar: String?) {
         if (!usarServidor) return
 
@@ -304,6 +317,7 @@ class Auth(
         }
     }
 
+    // ─── Cambio de contraseña ──────────────────────────────
     suspend fun cambiarContrasegna(nombre: String, oldPass: String, newPass: String) {
         if (!usarServidor) return
 

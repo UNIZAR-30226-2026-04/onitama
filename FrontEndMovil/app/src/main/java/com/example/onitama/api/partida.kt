@@ -41,7 +41,9 @@ val jsonPartida = Json {
     classDiscriminator = "tipo"
 }
 
-
+/**
+ * esta clase contiene los mensajes que durante una partida se intercambian entre jugadores
+ **/
 class Partida(
     private val wsUrl: String = Config.WS_URL
 ){

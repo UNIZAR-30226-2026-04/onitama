@@ -1,16 +1,12 @@
 package com.example.onitama.ui.activities.notificaciones
 
-import android.util.Log
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.onitama.api.Amigos
 import com.example.onitama.api.ManejadorGlobal
 import com.example.onitama.api.ManejadorPartidaAPI
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 
 class ViewModelNotificaciones : ViewModel() {
     private val amigosApi = Amigos()
@@ -39,6 +35,9 @@ class ViewModelNotificaciones : ViewModel() {
         }
     }
 
+    /**
+     * Acepta una invitación de partida privada.
+     */
     fun aceptarInvitacionPartida(idNotificacion: Int, nombreUsuario: String) {
          viewModelScope.launch {
             partidaApi.responderInvitacion(
@@ -50,6 +49,9 @@ class ViewModelNotificaciones : ViewModel() {
         }
     }
 
+    /**
+     * rechaza una invitación de partida privada.
+     **/
     fun rechazarInvitacionPartida(idNotificacion: Int, nombreUsuario: String) {
          viewModelScope.launch {
             partidaApi.responderInvitacion(
@@ -61,6 +63,10 @@ class ViewModelNotificaciones : ViewModel() {
         }
     }
 
+
+    /**
+     * Acepta una solicitud de reanudación partida privada.
+     */
     fun aceptarReanudacionPartida(idNotificacion: Int, nombreUsuario: String) {
          viewModelScope.launch {
             partidaApi.responderReanudacion(
@@ -72,6 +78,10 @@ class ViewModelNotificaciones : ViewModel() {
         }
     }
 
+
+    /**
+     * Rechaza una solicitud de reanudación partida privada.
+     */
     fun rechazarReanudacionPartida(idNotificacion: Int, nombreUsuario: String) {
          viewModelScope.launch {
             partidaApi.responderReanudacion(

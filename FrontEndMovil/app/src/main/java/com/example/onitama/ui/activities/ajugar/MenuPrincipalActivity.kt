@@ -43,7 +43,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -95,15 +94,12 @@ class MenuPrincipalActivity : AppCompatActivity() {
 fun MainMenuScreen(
 ) {
     val quattrocentoBold = FontFamily(Font(R.font.quattrocento_bold))
-    val scope = rememberCoroutineScope()
 
     val context = LocalContext.current
     val datosUsuario by AutoLogin.sesion.collectAsState()
 
     val manejadorPartidaAPI = remember { ManejadorPartidaAPI() }
     val amigosAPI = remember { Amigos() }
-
-    val partidaAPI = remember { Partida() }
 
     var menuPrivadoDesplegado by remember { mutableStateOf(false) }
     var menuEntrenamientoDesplegado by remember  {mutableStateOf(false) }

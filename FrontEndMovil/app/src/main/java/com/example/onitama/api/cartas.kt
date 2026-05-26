@@ -55,7 +55,7 @@ class CartasAPI(
 
     /**
      * Esta función se encarga de enviar y recibir los mensajes
-     * correspondientes al servidor para obtener la lista de cartas.
+     * correspondientes al servidor para obtener la lista de cartas de movimiento.
      *
      * @return Lista de cartas disponibles con sus puntos necesarios.
      */
@@ -97,7 +97,12 @@ class CartasAPI(
         }
     }
 
-
+    /**
+     * Esta función se encarga de enviar y recibir los mensajes
+     * correspondientes al servidor para obtener la lista de cartas de accion.
+     *
+     * @return Lista de cartas disponibles con sus puntos necesarios.
+     */
     suspend fun obtenerCartasAccion(): List<CartaYPuntos> {
         if (!usarServidor) {
         }

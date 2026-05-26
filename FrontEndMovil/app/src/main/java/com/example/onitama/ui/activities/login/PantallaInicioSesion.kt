@@ -132,6 +132,7 @@ fun PantallaInicioSesion(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    //checkbox para mantener la sesión iniciada
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = spacedBy(5.dp)

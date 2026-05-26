@@ -24,30 +24,44 @@ class ViewModelRegistro() : ViewModel() {
     private val _estadoUI = MutableStateFlow(EstadoRegistro())
     val uiState: StateFlow<EstadoRegistro> = _estadoUI.asStateFlow()
 
+    /**
+     * Función que se ejecuta al cambiar el textfield del nombre
+     */
     fun onNombreChange(nombre: String) {
         _estadoUI.value = _estadoUI.value.copy(nombre = nombre)
     }
 
+    /**
+     * Función que se ejecuta al cambiar el textfield del correo
+     */
     fun onCorreoChange(correo: String) {
         _estadoUI.value = _estadoUI.value.copy(correo = correo)
     }
 
+    /**
+     * Función que se ejecuta al cambiar el textfield de la contraseña
+     */
     fun onContrasenyaChange(contrasenya: String) {
         _estadoUI.value = _estadoUI.value.copy(contrasenya = contrasenya)
     }
 
+    /**
+     * Función que se ejecuta al cambiar el textfield de la confirmación de la contraseña
+     */
     fun onContrasenyaRChange(contrasenyaR: String) {
         _estadoUI.value = _estadoUI.value.copy(contrasenyaR = contrasenyaR)
     }
 
+    /**
+     * Función que se ejecuta al cambiar el avatarID
+     */
     fun onAvatarChange(avatar: String?){
         _estadoUI.value = _estadoUI.value.copy(avatar = avatar)
     }
 
     /**
      * Función que se ejecuta al hacer clic en el botón 'Registrarse'.
-     * Comprueba que los datos se han rellenado correctamente y envía
-     * la solicitud al servidor.
+     * Comprueba que los datos se han rellenado correctamente
      */
     fun onCrearClick(): Boolean {
 
@@ -76,6 +90,10 @@ class ViewModelRegistro() : ViewModel() {
 
     }
 
+    /**
+     * Función que se ejecuta al confirmar la elección del avatar.
+     * Envía la solicitud de registro al servidor
+     */
     fun registrarDelTodo(context: Context, keepLogged: Boolean){
         val estadoActual = _estadoUI.value
         viewModelScope.launch {
