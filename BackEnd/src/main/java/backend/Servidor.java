@@ -62,8 +62,7 @@ class Pareja {
     Partida partida;
     int eleccion;
 
-    // NUEVO
-    // constructor para reanudar partidas pausadas, y así en lugar de crear
+    // Constructor para reanudar partidas pausadas, y así en lugar de crear
     // una partida nueva en BD, recibe Partida ya cargada desde la base en 
     // gestionarRespuestaReanudar y la asigna directamente.
     // Así los dos jugadores vuelven a estar emparejados en memoria con su
@@ -94,8 +93,7 @@ class Pareja {
         return p1.ws == _p1 || p2.ws == _p1;
     }
 
-    // PREVIAMENTE if p1.ws return p1, pero eso devolvía el mismo jugador,
-    // entonces lo he cambiado para que devuelva el oponente.
+    //Devuelve la informacion del oponente de la conexion _p1
     public InfoJugador getOponente(WebSocket _p1) {
         if (p1.ws == _p1) {
             return p2;
@@ -106,8 +104,6 @@ class Pareja {
         }
     }
 }
-
-// BORRO PARTIDA
 
 public class Servidor extends WebSocketServer {
     private List<InfoJugador> conectados;
@@ -132,7 +128,7 @@ public class Servidor extends WebSocketServer {
     // evitando que se mande ERROR_NO_UNIDO cuando ya no hace falta.
     // El <?> indica que no nos importa el tipo de retorno de la tarea, porque solo
     // vamos a cancelarla.
-    // NUEVO: AÑADIMOS SEGUNDO MAPA DE TIMERS PARA PODER REANUDAR PARTIDAS
+    // AÑADIMOS SEGUNDO MAPA DE TIMERS PARA PODER REANUDAR PARTIDAS
     private Map<Integer, ScheduledFuture<?>> timersInvitacion = new ConcurrentHashMap<>();
     private Map<Integer, ScheduledFuture<?>> timersReanudar = new ConcurrentHashMap<>();
 
@@ -953,7 +949,7 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    // nuevo: rechazar solicitud de amistad eliminando la notificación de la BD
+    // rechazar solicitud de amistad eliminando la notificación de la BD
     private void rechazarAmistad(WebSocket conn, JSONObject obj) {
         GestorNotificaciones gestorNotif = new GestorNotificaciones();
         try {
@@ -984,7 +980,7 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    // nuevo: envío de solicitud de partida privada
+    // envío de solicitud de partida privada
     private void gestionarInvitacionPartida(WebSocket conn, JSONObject obj) {
         String remitente = obj.getString("remitente");
         String destinatario = obj.getString("destinatario");
@@ -1034,7 +1030,7 @@ public class Servidor extends WebSocketServer {
         ScheduledFuture<?>[] timer = new ScheduledFuture<?>[1];
         timer[0] = temporizador.schedule(() -> {
             timersInvitacion.remove(idNotifFinal);
-            // arreglado: al terminar el timer, actualiza el estado a RECHAZADA
+            // al terminar el timer, actualiza el estado a RECHAZADA
             // para que aceptarInvitacion() rechace cualquier intento de aceptar
             // después de los 2 minutos.
             try {
@@ -1055,7 +1051,7 @@ public class Servidor extends WebSocketServer {
                 "Invitación privada: " + remitente + " -> " + destinatario + " (notif " + idNotificacion + ")");
     }
 
-    // nuevo: invitación a partida privada aceptada
+    // invitación a partida privada aceptada
     private void aceptarInvitacion(WebSocket conn, JSONObject obj) {
         int idNotificacion = obj.getInt("idNotificacion");
 
@@ -1074,7 +1070,7 @@ public class Servidor extends WebSocketServer {
                 conn.send(new JSONObject().put("tipo", "ERROR_BD").toString());
                 return;
             }
-            // arreglado: verifica que la notificación esté PENDIENTE y
+            // verifica que la notificación esté PENDIENTE y
             // si está RECHAZADA (porque expiró), rechaza la aceptación con ERROR_NO_UNIDO. 
             if (!Notificacion.ESTADO_PENDIENTE.equals(notif.getEstado())) {
                 conn.send(new JSONObject().put("tipo", "ERROR_NO_UNIDO").toString());
@@ -1119,7 +1115,7 @@ public class Servidor extends WebSocketServer {
         }
     }
 
-    // nueva: invitación a partida privada rechazada
+    // invitación a partida privada rechazada
     private void rechazarInvitacion(WebSocket conn, JSONObject obj) {
         int idNotificacion = obj.getInt("idNotificacion");
 
@@ -1159,7 +1155,7 @@ public class Servidor extends WebSocketServer {
         String nombre = obj.getString("nombre");
         String contrasena = obj.getString("password");
 
-        // nuevo añadimos avatar a la hora de registrar (skin no, va por defecto en inserción en base de datos)
+        // añadimos avatar a la hora de registrar (skin no, va por defecto en inserción en base de datos)
         // y añadimos campo avatar al constructor
         String avatar_id = obj.isNull("avatar_id") ? null : obj.optString("avatar_id", null);
         Jugador prueba = new Jugador(correo, nombre, contrasena, avatar_id); // El constructor ya hashea la contraseña internamente
