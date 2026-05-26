@@ -35,17 +35,6 @@ import backend.gestor.GestorCartasMov;
 import backend.gestor.GestorCartasAccion;
 import backend.gestor.GestorEmail;
 
-//POR HACER:
-// -> El xml que querias hacer: PRIORIDAD ALTA <-- Puedes empezar con esto si quieres 
-// todavía por commitear, añado primero las actualizaciones a servidor.java
-// -> Solicitudes de amistad: PRIORIDAD ALTA
-// he terminado rechazar que he vsto que era lo que faltaba
-// -> Solicitudes de partida privadas: PRIORIDAD MEDIA (Antes hay que hacer lo anterior)
-// he planteado las solicitudes de partida privadas, también en el readme
-
-// -> Reanudar/Pausar una partida privada: PRIORIDAD MEDIA (Antes hay que hacer lo anterior)
-// -> Cartas de Accion: PRIORIDAD BAJA (No lo necesitamos para la primera entrega)
-
 
 // NOTAS: 
 
