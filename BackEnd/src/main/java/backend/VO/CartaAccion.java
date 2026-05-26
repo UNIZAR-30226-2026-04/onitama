@@ -23,6 +23,8 @@ public class CartaAccion {
         this.estado = "VISION"; //Esta en modo vision (Para ver en la tienda)
         this.equipo = -1;
         gestor = new GestorCartasAccion();
+
+        //Generamos la accion segun el String
         switch (accion) {
             case "ESPEJO":
                 accionEjecutable = new Espejo();
@@ -83,6 +85,7 @@ public class CartaAccion {
         }
     }
 
+    //Devuelve 1 si el rey que se movio con la accion murio por caer en una trampa y 2 si paso lo mismo pero con un peon. 0 si no paso nada
     public int eraTrampa(){
         if(accionEjecutable instanceof SalvarRey){
             SalvarRey acc1 = (SalvarRey)accionEjecutable;
@@ -98,6 +101,7 @@ public class CartaAccion {
         return 0;
     }
 
+    //Devuelve true si la carta restringe movimientos
     public boolean esTipoRestriccion(){
         return accionEjecutable != null && accionEjecutable.esTipoRestriccion();
     }
@@ -175,15 +179,15 @@ public class CartaAccion {
         this.puntosMin = puntosMin;
     }
 
+    //Mira si la accion permite un movimiento dado
     public boolean permiteMovimiento(int x, int y){
-        // CEGAR es solo visual y no restringe movimientos.
-        // Además, evitamos NPE en acciones sin ejecutor concreto.
         if (accionEjecutable == null) {
             return true;
         }
         return accionEjecutable.esMovPermitido(x, y);
     }
 
+    //Juega la accion en la carta si se puede usar
     public boolean jugarCarta(Partida partida, int x, int y, int equipo, int xOp, int yOp, String nomCarta){
         if (puedeUsarse() &&  equipo == this.equipo && accion.equals("CEGAR")) {
             marcarActivada();
@@ -197,12 +201,14 @@ public class CartaAccion {
         return false;
     }
 
+    //Deshace la accion de la carta
     public void deshacerCarta(Partida partida){
         if (accionEjecutable != null) {
             accionEjecutable.deshacer(partida);
         }
     }
 
+    //Actualiza la informacion de la carta en la BD
     public boolean actualizarBD(){
         try {
             return gestor.updatePuntosMin(nombre, puntosMin) | gestor.updateAccion(nombre, accion);
@@ -211,6 +217,7 @@ public class CartaAccion {
         }
     }
 
+    //Actualiza la informacion de la carta en la partida
     public boolean actualizarDatosPartida(int IDPartida){
         try {
             return gestor.updateEstadoEnPartida(IDPartida, nombre, estado) | gestor.asignarEquipo(IDPartida, nombre, equipo);
@@ -218,16 +225,4 @@ public class CartaAccion {
             return false;
         }
     }
-
-    /*
-    //Marca la carta como usada cambiando su estado
-    public void marcarComoUsada(){
-        this.estado = "USADA";
-    }
-
-    //Marca la carta como usada y actualiza en la BD para la partida dada
-    public boolean marcarComoUsada(int IDPartida){
-        this.estado = "USADA";
-        return actualizarDatosPartida(IDPartida);
-    }*/
 }

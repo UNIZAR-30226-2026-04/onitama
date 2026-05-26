@@ -256,6 +256,7 @@ public class Tablero {
         return n;
     }
 
+    //Comprueba si el equipo tiene movimiento posible en el tablero
     public boolean existeMovimiento(List<Posicion> mov, int equipo, CartaAccion J1, CartaAccion J2){
         for (int i = 0; i < DIM; i++) {
             for (int j = 0; j < DIM; j++) {

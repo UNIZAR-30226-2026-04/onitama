@@ -13,11 +13,10 @@ public class Partida{
     private static final int BASE_PUNTOS_DERROTA = 30;
 
     private int IDPartida, tiempo, muertesJ1, muertesJ2, turno;
-    private String estado, tipo, trampaPosJ1, trampaPosJ2; //Cambiar fichas por su correspondiente clase
+    private String estado, tipo, trampaPosJ1, trampaPosJ2; 
     private boolean j1Ganador, j2Ganador, trampaJ1, trampaJ2, eleccionCartaAccionJ1, eleccionCartaAccionJ2, accionActivadaJ2, accionActivadaJ1;
     private Jugador jugador1, jugador2;
     private CartaAccion cartaAccionJugadaJ1, cartaAccionJugadaJ2;
-    /** Restricción Dama del Mar / Finisterre: no se mutan cartas; solo validación por turno -> QUITADO POR CIRO, lo veia muy extraño (esa informacion la tenias ya en cartaActiva) */
     private List<CartaAccion> cartasA;
     private List<CartaMov> cartasM;
     private Tablero tablero;
@@ -37,7 +36,7 @@ public class Partida{
         cartaAccionJugadaJ1 = null;
         cartaAccionJugadaJ2 = null;
         accionActivadaJ2 = false;
-        accionActivadaJ2 = false; //CAMBIAR POR UNA FUNCION QUE DEVUELVA TRUE SI NO HAY NINGUNA CARTA USADA Y FALSE EN CASO CONTRARIO
+        accionActivadaJ2 = false; 
         boolean esNueva = (p1 == null || p1.isEmpty()) && (p2 == null || p2.isEmpty());
         eleccionCartaAccionJ1 = estado != null && (estado.equals("JUGANDOSE") || estado.equals("FINALIZADA")) && !esNueva; 
         eleccionCartaAccionJ2 = estado != null && (estado.equals("JUGANDOSE") || estado.equals("FINALIZADA")) && !esNueva; 
@@ -67,7 +66,7 @@ public class Partida{
         aplicarTrampaGuardada(this.trampaPosJ2);
 
         try {
-            // 1. Buscamos los objetos Jugador
+            //Buscamos los Jugadores
             this.jugador1 = gestorJugador.buscarJugador(jugador1);
             this.jugador2 = gestorJugador.buscarJugador(jugador2);
 
@@ -77,6 +76,7 @@ public class Partida{
         }
     }
 
+    //Devuelve 1 si el rey que se movio con la accion murio por caer en una trampa y 2 si paso lo mismo pero con un peon. 0 si no paso nada y -1 si error
     public int eraTrampa(String cartaAc){
         for(CartaAccion ca : cartasA){
             if(ca.getNombre().equals(cartaAc)){
@@ -86,6 +86,7 @@ public class Partida{
         return -1;
     }
 
+    //Aplica la trampa que estaba guardada en la base de datos
     private void aplicarTrampaGuardada(String trampaGuardada) {
         if (trampaGuardada == null || trampaGuardada.trim().isEmpty()) return;
         String[] partes = trampaGuardada.split(",");
@@ -104,6 +105,7 @@ public class Partida{
         }
     }
 
+    //Desactiva la casilla donde habia explotado la tramapa (para partidas reanudadas)
     private void marcarTrampaDisparada(Posicion destino) {
         String pos = destino.getX() + "," + destino.getY();
         try {
@@ -129,7 +131,7 @@ public class Partida{
 
     public boolean registrarPartida(){
         try {
-            turno = 0; //Ciro: Mi idea es que siempre uno de los jugadores (siempre J1 por ejemplo)
+            turno = 0; 
             IDPartida = gestorPartida.registrarPartida(this);
             return IDPartida >= 0; //Se devuelve el id que asigna la base a la partida, si hay algun problema devuelve -1
         } catch (Exception e) {
@@ -137,6 +139,7 @@ public class Partida{
         }
     }
 
+    //Saca las cartas de forma aleatoria de la base de datos
     public void asignarCartas(){
         try {
             int puntosMin = Math.min(this.jugador1.getPuntos(), this.jugador2.getPuntos());
@@ -171,7 +174,6 @@ public class Partida{
     }
 
     public String getPos_Fichas_Eq1(){
-        //return fichasJ1; //Parche de compilacion
         StringPorReferencia p1 = new StringPorReferencia("");
         StringPorReferencia p2 = new StringPorReferencia("");
         tablero.getPosicionesEquipos(p1, p2);
@@ -179,7 +181,6 @@ public class Partida{
     }
 
     public String getPos_Fichas_Eq2(){
-        //return fichasJ2; //Parche de compilacion
         StringPorReferencia p1 = new StringPorReferencia("");
         StringPorReferencia p2 = new StringPorReferencia("");
         tablero.getPosicionesEquipos(p1, p2);
@@ -278,6 +279,7 @@ public class Partida{
         this.jugador2 = j;
     }
 
+    //Cambia el equipo de la carta de accion
     public boolean setEquipoCartaAccion(String nomCarta, int equipo){
         boolean cartaEncontrada = false;
         CartaAccion cartaA = null;
@@ -305,6 +307,7 @@ public class Partida{
         return cartaEncontrada;
     }
 
+    //Reparte las cartas entre los equipos y el mazo
     public void repartirCartas() {
         int i = 0;
         for (CartaAccion ca : cartasA) {
@@ -398,8 +401,9 @@ public class Partida{
 
     /**
      * Katanas según merecimiento: base ± (mis piezas en tablero − piezas rivales).
-     * Victoria: {@code BASE_VICTORIA + diff}. Derrota: {@code -BASE_DERROTA + diff}.
-     * {@code diff} = fichas de mi equipo − fichas del otro (al finalizar).
+     * Victoria: BASE_VICTORIA + diff. 
+     * Derrota: -BASE_DERROTA + diff.
+     * diff = fichas de mi equipo − fichas del otro (al finalizar).
      */
     private int puntosKatanasSegunTablero(boolean victoria, int miEquipo) {
         int f1 = tablero.contarFichasEquipo(1);
@@ -414,7 +418,7 @@ public class Partida{
     //Finaliza la partida y actualiza las estadisticas de los jugadores
     public boolean finalizarPartida(){
         this.estado = "FINALIZADA";
-        // Cores: +10 victoria, 0 derrota (sin cambio por tablero)
+        // Cores: +10 
         if (j1Ganador && jugador1 != null) {
             if(tipo.equals("PRIVADA")){
                 jugador1.registrarPartida(0, 0, true);
@@ -446,6 +450,7 @@ public class Partida{
         return actualizarBD();
     }
 
+    //Coloca la trampa en el tablero, devuelve:
     //-1 -> error
     // 0 -> nada
     // 1 -> todas las trampas puestas
@@ -491,6 +496,7 @@ public class Partida{
         }
     }
 
+    //Ejecuta una accion en la partida. Devuelve:
     // 0 -> Accion realizada con exito
    // 1 -> equipo 1 gana
    // 2 -> equipo 2 gana
@@ -556,6 +562,7 @@ public class Partida{
         return (cartaEncontrada) ? 0 : -1;
     }
 
+    //Mueve una fiche del tablero. Devuelve:
    // 0 -> Movimiento realizado con exito
    // 1 -> equipo 1 gana
    // 2 -> equipo 2 gana
@@ -696,7 +703,6 @@ public class Partida{
         }
     }
 
-    //REVISAR (Ciro): Creo que igual seria mejor actualizar la base al abandonar, parar, o terminar la partida
     //Rota las cartas de movimiento segun la mecanica de Onitama:
     //La carta usada por un equipo pasa al mazo y se le asigna una del mazo
     public boolean rotarCartas(String cartaUsada, int equipo){

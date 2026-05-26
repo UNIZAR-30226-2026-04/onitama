@@ -6,12 +6,10 @@ import java.util.List;
 import backend.gestor.GestorJugador;
 import backend.gestor.GestorSkin;
 
-//Faltan las skins
 public class Jugador {
     private String nombre, password, correo;
     private int puntos, cores, partidasGanadas, partidasJugadas;
-    // NUEVOS ATRIBUTOS: AVATAR Y SKIN ACTUAL
-    private String avatarId; 
+    private String avatarId; //Id del avatar en el frontend
     private String skinActiva;
 
     private List<Jugador> amigos;
@@ -29,7 +27,6 @@ public class Jugador {
         this.cores = cores;
         this.partidasGanadas = partidasGanadas;
         this.partidasJugadas = partidasJugadas;
-        // NUEVO: ASIGNAMOS AVATAR Y SKIN
         this.avatarId = avatarId;      
         this.skinActiva = skinActiva;
 
@@ -49,8 +46,6 @@ public class Jugador {
     public boolean registrarse(){
         try {
             return gestorJugador.registrarse(this);
-        // he cambiado que tire Exception en lugar de SQLEx. pq debería haber abstracción e igual
-        // que hemos quitado interacciones con la bbdd usando jdbc estos errores no deberían ser SQL
         } catch (Exception e) {
             return false;
         }
@@ -232,8 +227,6 @@ public class Jugador {
         this.cores += coresGanados;
         actualizarBD();
     }
-
-    // GETTERS Y SETTERS NUEVOS
 
     public String getAvatarId() {
         return avatarId;

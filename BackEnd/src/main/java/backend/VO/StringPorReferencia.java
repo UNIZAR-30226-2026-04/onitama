@@ -1,5 +1,6 @@
 package backend.VO;
 
+//Forma de pasar un String por referencia para que un metodo sea capaz de modificarlo
 public class StringPorReferencia{
     private String valor;
 

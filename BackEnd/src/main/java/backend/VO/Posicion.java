@@ -42,6 +42,7 @@ public class Posicion {
         return ficha;
     }
 
+    //Coloca/Mueve una ficha en el tablero, si habia un enemigo ahí, lo mata
     public int setFicha(Ficha F){
         if (F != null && this.ocupado() != -1 && this.ocupado() != F.getEquipo()) {
             boolean reyMatado = this.matar(); // Mata la ficha actual ANTES de reemplazarla

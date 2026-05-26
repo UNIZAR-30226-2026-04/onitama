@@ -3,9 +3,6 @@ package backend.VO;
 import java.sql.Timestamp;
 import backend.gestor.GestorNotificaciones;
 
-/**
- * Value Object para notificaciones unificadas: amistad, invitación partida, pausa, reanudar.
- */
 public class Notificacion {
     public static final String TIPO_SOLICITUD_AMISTAD = "SOLICITUD_AMISTAD";
     public static final String TIPO_INVITACION_PARTIDA = "INVITACION_PARTIDA";

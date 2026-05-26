@@ -106,6 +106,7 @@ public class CartaMov {
         this.movimientos = movimientos;
     }
 
+    //Devuelve los movimientos en forma de String
     public String getMovimientos(){
         if (movimientos == null || movimientos.isEmpty()) {
             return "";
@@ -136,6 +137,7 @@ public class CartaMov {
         movimientos.remove(pos);
     }
 
+    //Actualiza la informacion de la carta en la BD
     public boolean actualizarBD(){
         try {
             return gestor.updateMovimientos(nombre, getMovimientos()) | gestor.updatePuntosMin(nombre, puntosMin); //| para que se ejecuten todos
@@ -144,6 +146,7 @@ public class CartaMov {
         }
     }
 
+    //Actualiza la informacion de la carta en la partida
     public boolean actualizarDatosPartida(int IDPartida){
         try {
             return gestor.updateEstadoEnPartida(IDPartida, nombre, estado);
